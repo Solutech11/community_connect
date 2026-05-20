@@ -1,0 +1,20 @@
+HTTP/1.1 200 OK
+Content-Type: text/html
+X-GUploader-UploadID: AAVLpEhzEVSZGblHTQr_gQmvzqhR1OWjM6uSIJiD2S_da32Ao5RCBgSVbuTGASUYHh9UVkRKESscEA
+Vary: Origin
+Content-Security-Policy: sandbox, default-src 'none', frame-ancestors 'none'
+Cross-Origin-Embedder-Policy: require-corp
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-site
+X-Content-Security-Policy: sandbox
+X-Content-Type-Options: nosniff
+Content-Disposition: attachment; filename=""
+Date: Tue, 19 May 2026 23:41:57 GMT
+Expires: Tue, 19 May 2026 23:41:57 GMT
+Cache-Control: private, max-age=0
+X-Goog-Hash: crc32c=KCM+Ww==
+Content-Length: 7435
+Server: UploadServer
+Alt-Svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+Content-Security-Policy: sandbox allow-scripts
+

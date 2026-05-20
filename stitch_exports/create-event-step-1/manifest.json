@@ -1,0 +1,26 @@
+﻿[
+    {
+        "title":  "Onboarding Welcome Screen",
+        "id":  "projects/16466013169190289245/screens/3896310357884f1ba2be33548a1658e1",
+        "screenshot":  "C:\\Users\\Solutech\\Documents\\Lincoln\\LincolnFinalyrEventapp\\community_connect\\stitch_exports\\create-event-step-1\\onboarding-welcome-screen.png",
+        "html":  "C:\\Users\\Solutech\\Documents\\Lincoln\\LincolnFinalyrEventapp\\community_connect\\stitch_exports\\create-event-step-1\\onboarding-welcome-screen.html",
+        "screenshotBytes":  122617,
+        "htmlBytes":  6957
+    },
+    {
+        "title":  "Onboarding Slide 3 - Full Bleed Refresh",
+        "id":  "projects/16466013169190289245/screens/12baf58ab6214549ac48f23bb74e48cd",
+        "screenshot":  "C:\\Users\\Solutech\\Documents\\Lincoln\\LincolnFinalyrEventapp\\community_connect\\stitch_exports\\create-event-step-1\\onboarding-slide-3-full-bleed-refresh.png",
+        "html":  "C:\\Users\\Solutech\\Documents\\Lincoln\\LincolnFinalyrEventapp\\community_connect\\stitch_exports\\create-event-step-1\\onboarding-slide-3-full-bleed-refresh.html",
+        "screenshotBytes":  141784,
+        "htmlBytes":  6930
+    },
+    {
+        "title":  "Onboarding Slide 2 - Discover Events",
+        "id":  "projects/16466013169190289245/screens/6312bd199d01448780e19e1401f197b1",
+        "screenshot":  "C:\\Users\\Solutech\\Documents\\Lincoln\\LincolnFinalyrEventapp\\community_connect\\stitch_exports\\create-event-step-1\\onboarding-slide-2-discover-events.png",
+        "html":  "C:\\Users\\Solutech\\Documents\\Lincoln\\LincolnFinalyrEventapp\\community_connect\\stitch_exports\\create-event-step-1\\onboarding-slide-2-discover-events.html",
+        "screenshotBytes":  97919,
+        "htmlBytes":  7435
+    }
+]

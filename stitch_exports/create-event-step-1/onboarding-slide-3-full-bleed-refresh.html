@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Join Your Tribe - CommuniTree</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "overlay-gradient": "linear-gradient(to top, rgba(0,0,0,0.8), transparent)",
+                        "surface-light": "#ffffff",
+                        "primary-dark": "#0fb654",
+                        "surface-dark": "#1a2e22",
+                        "background-dark": "#102218",
+                        "glass-white": "rgba(255, 255, 255, 0.2)",
+                        "background-light": "#f8fcfa",
+                        "text-main": "#0d1b13",
+                        "text-muted": "#4c9a6c",
+                        "text-inverse": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "card-padding": "0.75rem",
+                        "element-gap": "1rem",
+                        "container-padding": "1.5rem",
+                        "section-gap": "2rem",
+                        "inline-gap": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "label-bold": ["Plus Jakarta Sans"],
+                        "navigation": ["Plus Jakarta Sans"],
+                        "display-xl": ["Plus Jakarta Sans"],
+                        "body-base": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "label-bold": ["0.75rem", {"lineHeight": "1", "letterSpacing": "0.02em", "fontWeight": "700"}],
+                        "navigation": ["10px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                        "display-xl": ["1.5rem", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                        "body-base": ["0.875rem", {"lineHeight": "1.5", "letterSpacing": "0", "fontWeight": "500"}],
+                        "headline-md": ["1.125rem", {"lineHeight": "1.4", "letterSpacing": "-0.01em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hero-gradient {
+            background: linear-gradient(to top, rgba(16, 34, 24, 0.95) 0%, rgba(16, 34, 24, 0.8) 30%, rgba(16, 34, 24, 0.4) 60%, transparent 100%);
+        }
+        .neon-glow {
+            box-shadow: 0 0 20px rgba(15, 182, 84, 0.3);
+        }
+        body {
+            background-color: #102218;
+            color: #ffffff;
+            overflow-x: hidden;
+            min-height: 100dvh;
+        }
+    </style>
+</head>
+<body class="font-body-base text-text-inverse flex flex-col min-h-screen">
+<!-- Main Container implementing Screen 9 layout -->
+<main class="relative min-h-screen w-full flex flex-col justify-end overflow-hidden">
+<!-- Hero Image Section (Full Bleed like Screen 9) -->
+<div class="absolute inset-0 z-0">
+<img alt="Community gathering in a vibrant urban space" class="h-full w-full object-cover" data-alt="A high-fidelity organic photograph of a diverse community gathering in a lush, tech-fresh urban garden. People are collaborating and talking in a space filled with vibrant greenery and modern glassmorphic accents. The lighting is warm and optimistic, reflecting an energetic community-driven atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCfNmc3-53ajy0UitvUEOkwylBuSZdMUrFJ3w-QMi998Gxm8P9cgrEs6Fw9tG1OVor7td3WElpPAdu7Iczmqrt0GfRnpZcE9udOhcLPTbAWeRRknQlTw_LGvwHVLbIDpwQ0edpbCOSk-6ROgHbDd6w3qVtGzB3QJhMvhD6GZ7-rJxgdZ99DPfeW2xE5SKGrtdyUjGoiCiwRDehQDi--sMm3hNMBrwI5Bjxoi3Om3rY83vt0lbqbTzdUaolChwjIYmSw5I3KeH8vX2Oi"/>
+<!-- Fade Overlay to transition to content -->
+<div class="absolute inset-0 hero-gradient"></div>
+</div>
+<!-- Content Canvas -->
+<div class="relative z-10 px-container-padding flex flex-col items-center text-center pb-16">
+<!-- Brand Logo Mark (From Screen 9 style) -->
+<div class="mb-section-gap">
+<div class="w-16 h-16 bg-surface-light rounded-xl flex items-center justify-center shadow-card mb-4 mx-auto neon-glow">
+<span class="material-symbols-outlined text-primary-dark text-4xl" data-icon="groups">groups</span>
+</div>
+<h1 class="font-display-xl text-display-xl text-text-inverse">
+                    CommuniTree
+                </h1>
+</div>
+<!-- Value Proposition (Updated with user's content) -->
+<div class="max-w-sm space-y-element-gap mb-10">
+<h2 class="font-headline-md text-headline-md text-text-inverse px-4">
+                    Join Your Tribe
+                </h2>
+<p class="font-body-base text-body-base text-surface-light/80 px-2">
+                    Connect with local groups, share interests, and start meaningful conversations with your neighbors.
+                </p>
+</div>
+<!-- Actions -->
+<div class="w-full max-w-sm space-y-4">
+<!-- Primary Button (Styled as per Screen 9) -->
+<button class="w-full bg-primary-dark text-surface-light font-label-bold py-4 rounded-full shadow-lg active:scale-95 transition-all duration-200 neon-glow flex items-center justify-center gap-2">
+                    Get Started
+                    <span class="material-symbols-outlined text-[20px]" data-icon="arrow_forward">arrow_forward</span>
+</button>
+<!-- Secondary Action -->
+<div class="pt-2">
+<p class="font-body-base text-surface-light/80">
+                        Already have an account? 
+                        <button class="text-primary-dark font-label-bold ml-1 active:opacity-70 transition-opacity">
+                            Log In
+                        </button>
+</p>
+</div>
+</div>
+<!-- Decorative Element (Bottom Progress Indicator - Slide 3) -->
+<div class="mt-8 flex gap-2">
+<div class="h-1.5 w-2 bg-surface-light/20 rounded-full"></div>
+<div class="h-1.5 w-2 bg-surface-light/20 rounded-full"></div>
+<div class="h-1.5 w-8 bg-primary-dark rounded-full"></div>
+</div>
+</div>
+<!-- Backdrop Blur Accents from Screen 9 -->
+<div class="absolute top-10 left-10 w-32 h-32 bg-primary-dark/20 rounded-full blur-3xl"></div>
+<div class="absolute top-1/4 right-0 w-48 h-48 bg-primary-dark/10 rounded-full blur-3xl"></div>
+</main>
+</body></html>
