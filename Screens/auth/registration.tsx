@@ -1,11 +1,12 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
+import AppIcon from '../Components/app-icon';
 import FormField from '../Components/form-field';
+import LinkText from '../Components/link-text';
 import PrimaryButton from '../Components/primary-button';
 import SelectField from '../Components/select-field';
-import SocialRow from '../Components/social-row';
 import { colors } from '../Components/theme';
 import SetupLayout from '../Layouts/setup-layout';
 import type { RootStackParamList } from '../navigation';
@@ -20,6 +21,7 @@ export default function RegistrationScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [gender, setGender] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   return (
     <SetupLayout step={setupSteps.register} onBack={() => navigation.goBack()}>
@@ -64,30 +66,50 @@ export default function RegistrationScreen({ navigation }: Props) {
           icon="male-female"
           value={gender}
           onChange={setGender}
-          options={['Female', 'Male', 'Non-binary', 'Prefer not to say']}
+          options={['Female', 'Male']}
         />
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: acceptedTerms }}
+          onPress={() => setAcceptedTerms((current) => !current)}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}
+        >
           <View
             style={{
               height: 18,
               width: 18,
               borderRadius: 9,
               borderWidth: 1,
-              borderColor: colors.line,
-              backgroundColor: colors.white,
+              borderColor: acceptedTerms ? colors.lime : colors.line,
+              backgroundColor: acceptedTerms ? colors.lime : colors.white,
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
-          />
+          >
+            {acceptedTerms ? <AppIcon name="checkmark" color={colors.ink} size={13} /> : null}
+          </View>
           <Text selectable style={{ flex: 1, color: colors.muted, fontSize: 12 }}>
             I agree to the Terms and Privacy Policy
           </Text>
-        </View>
+        </Pressable>
 
-        <PrimaryButton label="Create Account" onPress={() => navigation.navigate('VerifyEmail')} />
-        <SocialRow />
-        <Text selectable style={{ color: colors.muted, fontSize: 12, textAlign: 'center' }}>
-          Already a member? Login
-        </Text>
+        <PrimaryButton
+          label="Create Account"
+          disabled={!acceptedTerms}
+          onPress={() => navigation.navigate('VerifyEmail')}
+        />
+        {!acceptedTerms ? (
+          <Text selectable style={{ color: colors.muted, fontSize: 12, textAlign: 'center' }}>
+            Accept the terms and privacy policy to continue.
+          </Text>
+        ) : null}
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
+          <Text selectable style={{ color: colors.muted, fontSize: 12 }}>
+            Already a member?
+          </Text>
+          <LinkText label="Login" onPress={() => navigation.navigate('Login')} />
+        </View>
       </View>
     </SetupLayout>
   );
