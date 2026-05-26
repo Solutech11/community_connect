@@ -11,8 +11,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import BrandMark from '../Components/brand-mark';
-import { colors } from '../Components/theme';
+import BrandMark from '../components/ui/brand-mark';
+import { colors } from '../styles/theme';
 
 type Props = {
   children: React.ReactNode;

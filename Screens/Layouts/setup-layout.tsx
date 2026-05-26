@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, View, useWindowDimensions } from 'react-native';
 
-import ProgressBar from '../Components/progress-bar';
-import ScreenShell from '../Components/screen-shell';
-import TopBar from '../Components/top-bar';
-import { setupStepTotal } from '../setup-flow';
+import ProgressBar from '../components/ui/progress-bar';
+import ScreenShell from '../components/ui/screen-shell';
+import TopBar from '../components/ui/top-bar';
+import { setupStepTotal } from '../types/setup-flow';
 
 type Props = {
   children: React.ReactNode;
