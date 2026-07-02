@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors } from '../../styles/theme';
+import { colors, fonts } from '../../styles/theme';
 
 export default function PendingScreen({ title }: { title: string }) {
   return (
@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
   title: {
     color: colors.ink,
     fontSize: 26,
-    fontWeight: '900',
+    fontFamily: fonts.extraBold,
     marginTop: 18,
   },
   subtitle: {

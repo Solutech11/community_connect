@@ -1,7 +1,7 @@
 import { Text, TextInput, View } from 'react-native';
 
 import AppIcon, { AppIconName } from './app-icon';
-import { colors } from '../../styles/theme';
+import { colors, fonts } from '../../styles/theme';
 
 type Props = {
   label: string;
@@ -30,7 +30,7 @@ export default function FormField({
 }: Props) {
   return (
     <View style={{ gap: 8 }}>
-      <Text selectable style={{ color: colors.ink, fontSize: 13, fontWeight: '800' }}>
+      <Text selectable style={{ color: colors.ink, fontSize: 13, fontFamily: fonts.extraBold }}>
         {label}
       </Text>
       <View
@@ -60,7 +60,7 @@ export default function FormField({
             flex: 1,
             color: colors.ink,
             fontSize: 15,
-            fontWeight: '600',
+            fontFamily: fonts.semiBold,
           }}
         />
         {rightIcon ? (

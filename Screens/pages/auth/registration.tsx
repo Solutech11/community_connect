@@ -7,7 +7,7 @@ import FormField from '../../components/ui/form-field';
 import LinkText from '../../components/ui/link-text';
 import PrimaryButton from '../../components/ui/primary-button';
 import SelectField from '../../components/ui/select-field';
-import { colors } from '../../styles/theme';
+import { colors, fonts } from '../../styles/theme';
 import SetupLayout from '../../layouts/setup-layout';
 import type { RootStackParamList } from '../../types/navigation';
 import { setupSteps } from '../../types/setup-flow';
@@ -27,7 +27,7 @@ export default function RegistrationScreen({ navigation }: Props) {
     <SetupLayout step={setupSteps.register} onBack={() => navigation.goBack()}>
       <View style={{ gap: 14 }}>
         <View style={{ gap: 6 }}>
-          <Text selectable style={{ color: colors.ink, fontSize: 26, lineHeight: 30, fontWeight: '900' }}>
+          <Text selectable style={{ color: colors.ink, fontSize: 26, lineHeight: 30, fontFamily: fonts.extraBold }}>
             Join{'\n'}CommunityConnect
           </Text>
           <Text selectable style={{ color: colors.muted, fontSize: 13, lineHeight: 19 }}>

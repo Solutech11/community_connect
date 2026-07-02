@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 
 import AppIcon from './app-icon';
-import { colors } from '../../styles/theme';
+import { colors, fonts } from '../../styles/theme';
 
 type Props = {
   onBack?: () => void;
@@ -25,12 +25,12 @@ export default function TopBar({ onBack, center, actionLabel, onAction }: Props)
           <AppIcon name="chevron-back" color={colors.ink} size={24} />
         ) : null}
       </Pressable>
-      <Text selectable style={{ color: colors.softMuted, fontSize: 11, fontWeight: '800' }}>
+      <Text selectable style={{ color: colors.softMuted, fontSize: 11, fontFamily: fonts.extraBold }}>
         {center}
       </Text>
       <Pressable accessibilityRole="button" onPress={onAction} style={{ width: 60, alignItems: 'flex-end' }}>
         {actionLabel ? (
-          <Text selectable style={{ color: colors.moss, fontSize: 12, fontWeight: '700' }}>
+          <Text selectable style={{ color: colors.moss, fontSize: 12, fontFamily: fonts.bold }}>
             {actionLabel}
           </Text>
         ) : null}

@@ -2,7 +2,7 @@ import { Pressable, Text } from 'react-native';
 
 import AppIcon from './app-icon';
 import { lightTap } from '../../hooks/haptics';
-import { colors } from '../../styles/theme';
+import { colors, fonts } from '../../styles/theme';
 
 type Props = {
   label: string;
@@ -55,7 +55,7 @@ export default function PrimaryButton({
         opacity: disabled ? 0.72 : 1,
       })}
     >
-      <Text selectable style={{ color: colors.ink, fontSize: 15, fontWeight: '900' }}>
+      <Text selectable style={{ color: colors.ink, fontSize: 15, fontFamily: fonts.extraBold }}>
         {label}
       </Text>
       {variant === 'primary' && showArrow ? (

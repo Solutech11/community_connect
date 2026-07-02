@@ -8,7 +8,7 @@ import IconBubble from '../../components/ui/icon-bubble';
 import LinkText from '../../components/ui/link-text';
 import PrimaryButton from '../../components/ui/primary-button';
 import ScreenShell from '../../components/ui/screen-shell';
-import { colors } from '../../styles/theme';
+import { colors, fonts } from '../../styles/theme';
 import type { RootStackParamList } from '../../types/navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
@@ -109,7 +109,7 @@ export default function LoginScreen({ navigation }: Props) {
                   color: colors.ink,
                   fontSize: 30,
                   lineHeight: 36,
-                  fontWeight: '900',
+                  fontFamily: fonts.extraBold,
                   textAlign: 'center',
                 }}
               >
@@ -122,7 +122,7 @@ export default function LoginScreen({ navigation }: Props) {
                   fontSize: 15,
                   lineHeight: 22,
                   textAlign: 'center',
-                  fontWeight: '600',
+                  fontFamily: fonts.semiBold,
                 }}
               >
                 Sign in to connect with your community.
@@ -153,7 +153,7 @@ export default function LoginScreen({ navigation }: Props) {
             />
             <View style={{ alignItems: 'flex-end', marginTop: -4 }}>
               <Pressable onPress={() => navigation.navigate('ForgotPassword')}>
-                <Text selectable style={{ color: '#34445c', fontSize: 14, fontWeight: '800' }}>
+                <Text selectable style={{ color: '#34445c', fontSize: 14, fontFamily: fonts.extraBold }}>
                   Forgot Password?
                 </Text>
               </Pressable>

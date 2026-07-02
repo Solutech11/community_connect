@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '../styles/theme';
+import { colors, fonts } from '../styles/theme';
 import HomeScreen from '../pages/dashboard/home';
 import PendingScreen from '../pages/tabs/pending-screen';
 
@@ -99,10 +99,10 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   tabLabelActive: {
-    fontWeight: '800',
+    fontFamily: fonts.extraBold,
   },
   activeIconWrap: {
     alignItems: 'center',

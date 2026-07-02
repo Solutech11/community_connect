@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BrandMark from '../components/ui/brand-mark';
 import PrimaryButton from '../components/ui/primary-button';
-import { colors } from '../styles/theme';
+import { colors, fonts } from '../styles/theme';
 
 type Props = {
   activeIndex: number;
@@ -135,10 +135,10 @@ export default function OnboardingLayout({
         }}
       >
         <View style={{ width: contentWidth, alignItems: 'center', gap: 12 }}>
-          <Text selectable style={{ color: colors.ink, fontSize: 24, fontWeight: '900', textAlign: 'center' }}>
+          <Text selectable style={{ color: colors.ink, fontSize: 24, fontFamily: fonts.extraBold, textAlign: 'center' }}>
             {title}
           </Text>
-          <Text selectable style={{ color: colors.ink, fontSize: 16, lineHeight: 23, fontWeight: '700', textAlign: 'center' }}>
+          <Text selectable style={{ color: colors.ink, fontSize: 16, lineHeight: 23, fontFamily: fonts.bold, textAlign: 'center' }}>
             {eyebrow}
           </Text>
           <Text selectable style={{ color: colors.muted, fontSize: 14, lineHeight: 22, textAlign: 'center' }}>

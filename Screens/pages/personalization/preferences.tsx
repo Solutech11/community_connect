@@ -4,7 +4,7 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 
 import AppIcon from '../../components/ui/app-icon';
 import PrimaryButton from '../../components/ui/primary-button';
-import { colors } from '../../styles/theme';
+import { colors, fonts } from '../../styles/theme';
 import SetupLayout from '../../layouts/setup-layout';
 import type { RootStackParamList } from '../../types/navigation';
 import { setupSteps } from '../../types/setup-flow';
@@ -21,7 +21,7 @@ export default function PreferencesScreen({ navigation }: Props) {
     <SetupLayout step={setupSteps.preferences} onBack={() => navigation.goBack()}>
       <View style={{ flex: 1, gap: 18 }}>
         <View style={{ gap: 7 }}>
-          <Text selectable style={{ color: colors.ink, fontSize: 29, fontWeight: '900' }}>
+          <Text selectable style={{ color: colors.ink, fontSize: 29, fontFamily: fonts.extraBold }}>
             Preferences
           </Text>
           <Text selectable style={{ color: colors.muted, fontSize: 14, lineHeight: 20 }}>
@@ -29,7 +29,7 @@ export default function PreferencesScreen({ navigation }: Props) {
           </Text>
         </View>
 
-        <Text selectable style={{ color: colors.ink, fontSize: 14, fontWeight: '900' }}>
+        <Text selectable style={{ color: colors.ink, fontSize: 14, fontFamily: fonts.extraBold }}>
           Do you prefer?
         </Text>
         <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -53,7 +53,7 @@ export default function PreferencesScreen({ navigation }: Props) {
               }}
             >
               <AppIcon name={item === 'Indoor' ? 'home' : 'trail-sign'} color={colors.ink} size={20} />
-              <Text selectable style={{ color: colors.ink, fontSize: 13, fontWeight: '800' }}>
+              <Text selectable style={{ color: colors.ink, fontSize: 13, fontFamily: fonts.extraBold }}>
                 {item}
               </Text>
             </Pressable>
@@ -61,7 +61,7 @@ export default function PreferencesScreen({ navigation }: Props) {
           })}
         </View>
 
-        <Text selectable style={{ color: colors.ink, fontSize: 14, fontWeight: '900' }}>
+        <Text selectable style={{ color: colors.ink, fontSize: 14, fontFamily: fonts.extraBold }}>
           Preferred Group Size
         </Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -84,7 +84,7 @@ export default function PreferencesScreen({ navigation }: Props) {
                 paddingHorizontal: 8,
               }}
             >
-              <Text selectable style={{ color: colors.ink, fontSize: 11, fontWeight: '800', textAlign: 'center' }}>
+              <Text selectable style={{ color: colors.ink, fontSize: 11, fontFamily: fonts.extraBold, textAlign: 'center' }}>
                 {item}
               </Text>
             </Pressable>
@@ -92,7 +92,7 @@ export default function PreferencesScreen({ navigation }: Props) {
           })}
         </View>
 
-        <Text selectable style={{ color: colors.ink, fontSize: 14, fontWeight: '900' }}>
+        <Text selectable style={{ color: colors.ink, fontSize: 14, fontFamily: fonts.extraBold }}>
           I want to be an:
         </Text>
         <View
@@ -115,7 +115,7 @@ export default function PreferencesScreen({ navigation }: Props) {
               justifyContent: 'center',
             }}
           >
-            <Text selectable style={{ color: colors.ink, fontSize: 12, fontWeight: '800' }}>
+            <Text selectable style={{ color: colors.ink, fontSize: 12, fontFamily: fonts.extraBold }}>
               Participant
             </Text>
           </Pressable>
@@ -130,14 +130,14 @@ export default function PreferencesScreen({ navigation }: Props) {
               justifyContent: 'center',
             }}
           >
-            <Text selectable style={{ color: colors.muted, fontSize: 12, fontWeight: '800' }}>
+            <Text selectable style={{ color: colors.muted, fontSize: 12, fontFamily: fonts.extraBold }}>
               Organizer
             </Text>
           </Pressable>
         </View>
 
         <View style={{ gap: 8 }}>
-          <Text selectable style={{ color: colors.ink, fontSize: 13, fontWeight: '800' }}>
+          <Text selectable style={{ color: colors.ink, fontSize: 13, fontFamily: fonts.extraBold }}>
             Phone Number
           </Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -154,10 +154,10 @@ export default function PreferencesScreen({ navigation }: Props) {
                 gap: 6,
               }}
             >
-              <Text selectable style={{ color: colors.ink, fontSize: 14, fontWeight: '800' }}>
+              <Text selectable style={{ color: colors.ink, fontSize: 14, fontFamily: fonts.extraBold }}>
                 NG
               </Text>
-              <Text selectable style={{ color: colors.muted, fontSize: 14, fontWeight: '700' }}>
+              <Text selectable style={{ color: colors.muted, fontSize: 14, fontFamily: fonts.bold }}>
                 +234
               </Text>
             </View>
@@ -182,7 +182,7 @@ export default function PreferencesScreen({ navigation }: Props) {
                 keyboardType="phone-pad"
                 placeholder="801 234 5678"
                 placeholderTextColor="#9aa8b7"
-                style={{ flex: 1, color: colors.ink, fontSize: 15, fontWeight: '600' }}
+                style={{ flex: 1, color: colors.ink, fontSize: 15, fontFamily: fonts.semiBold }}
               />
             </View>
           </View>

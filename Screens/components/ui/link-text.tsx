@@ -1,6 +1,6 @@
 import { Pressable, Text } from 'react-native';
 
-import { colors } from '../../styles/theme';
+import { colors, fonts } from '../../styles/theme';
 
 type Props = {
   label: string;
@@ -10,7 +10,7 @@ type Props = {
 export default function LinkText({ label, onPress }: Props) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={{ alignSelf: 'center' }}>
-      <Text selectable style={{ color: colors.ink, fontSize: 14, fontWeight: '800' }}>
+      <Text selectable style={{ color: colors.ink, fontSize: 14, fontFamily: fonts.extraBold }}>
         {label}
       </Text>
     </Pressable>

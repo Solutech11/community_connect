@@ -1,6 +1,6 @@
 import { Pressable, Text } from 'react-native';
 
-import { colors } from '../../styles/theme';
+import { colors, fonts } from '../../styles/theme';
 
 type Props = {
   label: string;
@@ -27,7 +27,7 @@ export default function Chip({ label, selected, onPress }: Props) {
         style={{
           color: colors.ink,
           fontSize: 14,
-          fontWeight: '800',
+          fontFamily: fonts.extraBold,
         }}
       >
         {label}

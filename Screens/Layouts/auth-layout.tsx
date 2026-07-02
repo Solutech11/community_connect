@@ -12,7 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import BrandMark from '../components/ui/brand-mark';
-import { colors } from '../styles/theme';
+import { colors, fonts } from '../styles/theme';
 
 type Props = {
   children: React.ReactNode;
@@ -123,7 +123,7 @@ export default function AuthLayout({ children, image, eyebrow, title, body }: Pr
             style={{
               color: colors.mint,
               fontSize: 13,
-              fontWeight: '800',
+              fontFamily: fonts.extraBold,
               letterSpacing: 0,
               textTransform: 'uppercase',
             }}
@@ -136,7 +136,7 @@ export default function AuthLayout({ children, image, eyebrow, title, body }: Pr
               color: colors.paper,
               fontSize: compact ? 32 : 38,
               lineHeight: compact ? 38 : 44,
-              fontWeight: '900',
+              fontFamily: fonts.extraBold,
             }}
           >
             {title}
@@ -147,7 +147,7 @@ export default function AuthLayout({ children, image, eyebrow, title, body }: Pr
               color: colors.softWhite,
               fontSize: 15,
               lineHeight: 23,
-              fontWeight: '500',
+              fontFamily: fonts.medium,
             }}
           >
             {body}

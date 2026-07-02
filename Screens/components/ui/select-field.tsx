@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import AppIcon, { AppIconName } from './app-icon';
-import { colors } from '../../styles/theme';
+import { colors, fonts } from '../../styles/theme';
 
 type Props = {
   label: string;
@@ -25,7 +25,7 @@ export default function SelectField({
 
   return (
     <View style={{ gap: 8 }}>
-      <Text selectable style={{ color: colors.ink, fontSize: 13, fontWeight: '800' }}>
+      <Text selectable style={{ color: colors.ink, fontSize: 13, fontFamily: fonts.extraBold }}>
         {label}
       </Text>
       <Pressable
@@ -50,7 +50,7 @@ export default function SelectField({
             flex: 1,
             color: value ? colors.ink : '#9aa8b7',
             fontSize: 15,
-            fontWeight: '600',
+            fontFamily: fonts.semiBold,
           }}
         >
           {value || placeholder}
@@ -85,7 +85,7 @@ export default function SelectField({
                 backgroundColor: value === option ? colors.paleGreen : colors.white,
               }}
             >
-              <Text selectable style={{ color: colors.ink, fontSize: 14, fontWeight: '700' }}>
+              <Text selectable style={{ color: colors.ink, fontSize: 14, fontFamily: fonts.bold }}>
                 {option}
               </Text>
               {value === option ? <AppIcon name="checkmark-circle" color={colors.lime} size={18} /> : null}

@@ -5,7 +5,7 @@ import { Text, TextInput, View } from 'react-native';
 import IconBubble from '../../components/ui/icon-bubble';
 import LinkText from '../../components/ui/link-text';
 import PrimaryButton from '../../components/ui/primary-button';
-import { colors } from '../../styles/theme';
+import { colors, fonts } from '../../styles/theme';
 import SetupLayout from '../../layouts/setup-layout';
 import type { RootStackParamList } from '../../types/navigation';
 import { setupSteps } from '../../types/setup-flow';
@@ -29,12 +29,12 @@ export default function VerifyEmailScreen({ navigation }: Props) {
       <View style={{ flex: 1, gap: 22 }}>
         <View style={{ alignItems: 'center', gap: 18, paddingTop: 28 }}>
           <IconBubble name="mail-unread" size={118} />
-          <Text selectable style={{ color: colors.ink, fontSize: 25, fontWeight: '900' }}>
+          <Text selectable style={{ color: colors.ink, fontSize: 25, fontFamily: fonts.extraBold }}>
             Check your inbox
           </Text>
           <Text selectable style={{ color: colors.muted, fontSize: 14, lineHeight: 22, textAlign: 'center' }}>
             We have sent a 4-digit code to{' '}
-            <Text style={{ color: colors.ink, fontWeight: '900' }}>alex@email.com</Text>. Please enter it
+            <Text style={{ color: colors.ink, fontFamily: fonts.extraBold }}>alex@email.com</Text>. Please enter it
             below to verify your account.
           </Text>
         </View>
@@ -62,7 +62,7 @@ export default function VerifyEmailScreen({ navigation }: Props) {
                 color: colors.ink,
                 textAlign: 'center',
                 fontSize: 20,
-                fontWeight: '900',
+                fontFamily: fonts.extraBold,
               }}
             />
           ))}

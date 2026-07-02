@@ -12,3 +12,11 @@ export const colors = {
   paleGreen: '#e6faee',
   softWhite: 'rgba(246, 255, 248, 0.78)',
 };
+
+export const fonts = {
+  regular: 'Manrope_400Regular',
+  medium: 'Manrope_500Medium',
+  semiBold: 'Manrope_600SemiBold',
+  bold: 'Manrope_700Bold',
+  extraBold: 'Manrope_800ExtraBold',
+};

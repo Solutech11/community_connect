@@ -4,7 +4,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import AppIcon, { AppIconName } from '../../components/ui/app-icon';
 import PrimaryButton from '../../components/ui/primary-button';
-import { colors } from '../../styles/theme';
+import { colors, fonts } from '../../styles/theme';
 import SetupLayout from '../../layouts/setup-layout';
 import type { RootStackParamList } from '../../types/navigation';
 import { setupSteps } from '../../types/setup-flow';
@@ -43,7 +43,7 @@ export default function InterestsSelectionScreen({ navigation }: Props) {
     >
       <View style={{ flex: 1, gap: 16 }}>
         <View style={{ gap: 8 }}>
-          <Text selectable style={{ color: colors.ink, fontSize: 30, lineHeight: 34, fontWeight: '900' }}>
+          <Text selectable style={{ color: colors.ink, fontSize: 30, lineHeight: 34, fontFamily: fonts.extraBold }}>
             What are you looking{'\n'}for?
           </Text>
           <Text selectable style={{ color: colors.muted, fontSize: 14, lineHeight: 21 }}>
@@ -82,7 +82,7 @@ export default function InterestsSelectionScreen({ navigation }: Props) {
               >
                 <AppIcon name={icon as AppIconName} color={colors.ink} size={17} />
               </View>
-              <Text selectable style={{ color: colors.ink, fontSize: 15, fontWeight: '900' }}>
+              <Text selectable style={{ color: colors.ink, fontSize: 15, fontFamily: fonts.extraBold }}>
                 {title}
               </Text>
               <Text selectable style={{ color: colors.muted, fontSize: 11 }}>

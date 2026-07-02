@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors } from '../../styles/theme';
+import { colors, fonts } from '../../styles/theme';
 import { lightTap as tapFeedback } from '../../hooks/haptics';
 
 const categories = ['All', 'Fitness', 'Arts', 'Tech'];
@@ -227,12 +227,12 @@ const styles = StyleSheet.create({
   greeting: {
     color: '#129a56',
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: fonts.medium,
   },
   name: {
     color: colors.ink,
     fontSize: 28,
-    fontWeight: '900',
+    fontFamily: fonts.extraBold,
     marginTop: 5,
   },
   notificationButton: {
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   searchText: {
     color: '#299963',
     fontSize: 17,
-    fontWeight: '500',
+    fontFamily: fonts.medium,
   },
   categories: {
     gap: 15,
@@ -301,11 +301,11 @@ const styles = StyleSheet.create({
   categoryText: {
     color: '#18854e',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   categoryTextActive: {
     color: colors.ink,
-    fontWeight: '800',
+    fontFamily: fonts.extraBold,
   },
   sectionHeader: {
     alignItems: 'center',
@@ -317,12 +317,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: colors.ink,
     fontSize: 23,
-    fontWeight: '900',
+    fontFamily: fonts.extraBold,
   },
   seeAll: {
     color: '#00cf5a',
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   myEventsList: {
     gap: 17,
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
   timeText: {
     color: colors.white,
     fontSize: 15,
-    fontWeight: '800',
+    fontFamily: fonts.extraBold,
   },
   myEventCopy: {
     paddingBottom: 24,
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
   myEventTitle: {
     color: colors.white,
     fontSize: 26,
-    fontWeight: '900',
+    fontFamily: fonts.extraBold,
   },
   myEventLocation: {
     color: colors.white,
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
   dateText: {
     color: colors.ink,
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: fonts.extraBold,
   },
   upcomingBody: {
     paddingHorizontal: 10,
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
   upcomingTitle: {
     color: colors.ink,
     fontSize: 23,
-    fontWeight: '900',
+    fontFamily: fonts.extraBold,
   },
   locationRow: {
     alignItems: 'center',
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     color: '#329160',
     flex: 1,
     fontSize: 15,
-    fontWeight: '500',
+    fontFamily: fonts.medium,
   },
   bookmarkButton: {
     alignItems: 'center',
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
   interestedText: {
     color: colors.ink,
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: fonts.extraBold,
   },
   pressed: {
     opacity: 0.74,

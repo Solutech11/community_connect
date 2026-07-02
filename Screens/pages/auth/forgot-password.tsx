@@ -7,7 +7,7 @@ import IconBubble from '../../components/ui/icon-bubble';
 import LinkText from '../../components/ui/link-text';
 import PrimaryButton from '../../components/ui/primary-button';
 import ScreenShell from '../../components/ui/screen-shell';
-import { colors } from '../../styles/theme';
+import { colors, fonts } from '../../styles/theme';
 import TopBar from '../../components/ui/top-bar';
 import type { RootStackParamList } from '../../types/navigation';
 
@@ -22,7 +22,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
         <TopBar onBack={() => navigation.goBack()} />
         <View style={{ alignItems: 'center', gap: 18, paddingTop: 38 }}>
           <IconBubble name="refresh-circle" size={112} />
-          <Text selectable style={{ color: colors.ink, fontSize: 25, fontWeight: '900' }}>
+          <Text selectable style={{ color: colors.ink, fontSize: 25, fontFamily: fonts.extraBold }}>
             Forgot Password?
           </Text>
           <Text selectable style={{ color: colors.muted, fontSize: 14, lineHeight: 22, textAlign: 'center' }}>

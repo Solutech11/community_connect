@@ -1,14 +1,14 @@
 import { Pressable, Text, View } from 'react-native';
 
 import AppIcon from './app-icon';
-import { colors } from '../../styles/theme';
+import { colors, fonts } from '../../styles/theme';
 
 export default function SocialRow() {
   return (
     <View style={{ gap: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <View style={{ flex: 1, height: 1, backgroundColor: colors.line }} />
-        <Text selectable style={{ color: colors.muted, fontSize: 12, fontWeight: '700' }}>
+        <Text selectable style={{ color: colors.muted, fontSize: 12, fontFamily: fonts.bold }}>
           or continue with
         </Text>
         <View style={{ flex: 1, height: 1, backgroundColor: colors.line }} />
@@ -35,7 +35,7 @@ export default function SocialRow() {
             }}
           >
             <AppIcon name={item.icon} color={colors.ink} size={16} />
-            <Text selectable style={{ color: colors.ink, fontSize: 14, fontWeight: '800' }}>
+            <Text selectable style={{ color: colors.ink, fontSize: 14, fontFamily: fonts.extraBold }}>
               {item.label}
             </Text>
           </Pressable>
