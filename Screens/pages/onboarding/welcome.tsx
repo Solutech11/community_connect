@@ -8,21 +8,21 @@ type Props = NativeStackScreenProps<RootStackParamList, 'OnboardingWelcome'>;
 
 const slides = [
   {
-    image: require('../../../assets/onboarding-demo.png'),
+    image: require('../../../assets/onboarding-community-1.jpg'),
     title: 'CommunityConnect',
     eyebrow: 'Connect with Your Local Community',
     body: 'Discover local events, join passionate groups, and build meaningful connections in your neighborhood.',
     ctaLabel: 'Get Started',
   },
   {
-    image: require('../../../assets/onboarding-demo.png'),
+    image: require('../../../assets/onboarding-events-2.jpg'),
     title: 'Find Local Events',
     eyebrow: 'Discover events that feel close to you',
     body: 'Browse workshops, meetups, fitness sessions, and creative moments happening around your community.',
     ctaLabel: 'Next Step',
   },
   {
-    image: require('../../../assets/onboarding-demo.png'),
+    image: require('../../../assets/onboarding-connection-3.jpg'),
     title: 'Stay Connected',
     eyebrow: 'Keep your community plans organized',
     body: 'Save events, follow updates, and move from discovery to attendance without losing your momentum.',

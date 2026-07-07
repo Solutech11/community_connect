@@ -4,11 +4,15 @@ import ForgotPasswordScreen from '../pages/auth/forgot-password';
 import LoginScreen from '../pages/auth/login';
 import RegistrationScreen from '../pages/auth/registration';
 import VerifyEmailScreen from '../pages/auth/verify-email';
+import EventDetailsScreen from '../pages/dashboard/event-details';
+import MyEventsScreen from '../pages/dashboard/my-events';
 import OnboardingWelcomeScreen from '../pages/onboarding/welcome';
 import PersonalizationFormScreen from '../pages/personalization/form';
 import InterestsSelectionScreen from '../pages/personalization/interests-selection';
 import PreferencesScreen from '../pages/personalization/preferences';
 import PersonalizationTopicsScreen from '../pages/personalization/topics';
+import CommunityJoinScreen from '../pages/tabs/community-join';
+import CreateCommunityScreen from '../pages/tabs/create-community';
 import type { RootStackParamList } from '../types/navigation';
 import MainTabs from './main-tabs';
 
@@ -46,6 +50,10 @@ export default function RootStackNavigator() {
       />
       <Stack.Screen name="Preferences" component={PreferencesScreen} options={{ animation: 'fade' }} />
       <Stack.Screen name="Home" component={MainTabs} />
+      <Stack.Screen name="CommunityJoin" component={CommunityJoinScreen} options={{ animation: 'fade_from_bottom' }} />
+      <Stack.Screen name="CreateCommunity" component={CreateCommunityScreen} options={{ animation: 'fade_from_bottom' }} />
+      <Stack.Screen name="MyEvents" component={MyEventsScreen} options={{ animation: 'fade_from_bottom' }} />
+      <Stack.Screen name="EventDetails" component={EventDetailsScreen} options={{ animation: 'fade_from_bottom' }} />
     </Stack.Navigator>
   );
 }

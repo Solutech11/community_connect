@@ -57,6 +57,7 @@ Screens/
 - Keep forms composed and compact; avoid oversized auth controls.
 - Use rounded pills for main CTAs and chips, but keep cards restrained and readable.
 - Prefer reusable components over repeating field/button/chip code inside screens.
+- always use real images fetch from sources online
 
 ## Typography
 

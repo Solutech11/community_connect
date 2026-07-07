@@ -1,3 +1,4 @@
+import { CommonActions } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -68,6 +69,15 @@ export default function LoginScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
+
+  const handleSignIn = () => {
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'Home' }],
+      })
+    );
+  };
 
   return (
     <ScreenShell>
@@ -158,12 +168,7 @@ export default function LoginScreen({ navigation }: Props) {
                 </Text>
               </Pressable>
             </View>
-            <PrimaryButton
-              label="Sign In"
-              showArrow={false}
-              height={56}
-              onPress={() => navigation.navigate('VerifyEmail')}
-            />
+            <PrimaryButton label="Sign In" showArrow={false} height={56} onPress={handleSignIn} />
           </View>
 
           <View style={{ gap: 14 }}>

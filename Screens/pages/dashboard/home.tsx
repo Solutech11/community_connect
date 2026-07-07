@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useMemo, useState } from 'react';
 import {
   Image,
   ImageBackground,
@@ -7,42 +9,80 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, fonts } from '../../styles/theme';
 import { lightTap as tapFeedback } from '../../hooks/haptics';
+import { colors, fonts } from '../../styles/theme';
+import type { RootStackParamList } from '../../types/navigation';
 
-const categories = ['All', 'Fitness', 'Arts', 'Tech'];
+type EventCategory = 'All' | 'Fitness' | 'Arts' | 'Tech' | 'Community';
 
-const myEvents = [
+type EventCard = {
+  title: string;
+  location: string;
+  image: number;
+  category: Exclude<EventCategory, 'All'>;
+  description: string;
+  time?: string;
+  date?: string;
+};
+
+const categories: EventCategory[] = ['All', 'Fitness', 'Arts', 'Tech', 'Community'];
+
+const myEvents: EventCard[] = [
   {
     title: 'Morning Yoga Park',
     location: 'Central Park, North Lawn',
     time: '08:00 AM',
-    image: require('../../../assets/dashboard-yoga.png'),
+    category: 'Fitness',
+    description: 'Start the day with guided sunrise yoga and wellness networking.',
+    image: require('../../../assets/dashboard-yoga-real.jpg'),
   },
   {
     title: 'Code Mixer',
     location: 'Tech Hub, Downtown',
     time: '06:30 PM',
-    image: require('../../../assets/dashboard-code.png'),
+    category: 'Tech',
+    description: 'Meet builders, founders, and designers for an evening of demos.',
+    image: require('../../../assets/dashboard-tech-real.jpg'),
   },
 ];
 
-const upcomingEvents = [
+const upcomingEvents: EventCard[] = [
   {
-    title: 'City Marathon 2024',
+    title: 'City Marathon Weekend',
     location: 'Central Park, NYC',
     date: 'Sept 12',
-    image: require('../../../assets/dashboard-marathon.png'),
+    category: 'Fitness',
+    description: 'Community marathon, warm-up sessions, and family cheering zones.',
+    image: require('../../../assets/dashboard-marathon-real.jpg'),
   },
   {
     title: 'Abstract Art Gala',
     location: 'Main Gallery, Downtown',
     date: 'Sept 14',
-    image: require('../../../assets/dashboard-gala.png'),
+    category: 'Arts',
+    description: 'A modern art evening featuring installations, music, and creators.',
+    image: require('../../../assets/dashboard-art-real.jpg'),
+  },
+  {
+    title: 'Neighbourhood Food Fair',
+    location: 'Riverside Square',
+    date: 'Sept 16',
+    category: 'Community',
+    description: 'Local chefs, tasting booths, and live acoustic performances.',
+    image: require('../../../assets/dashboard-community-real.jpg'),
+  },
+  {
+    title: 'Startup Demo Night',
+    location: 'Innovation Loft',
+    date: 'Sept 20',
+    category: 'Tech',
+    description: 'Pitch showcases, product demos, and investor networking.',
+    image: require('../../../assets/dashboard-tech-real.jpg'),
   },
 ];
 
@@ -73,7 +113,7 @@ function CategoryChip({
   );
 }
 
-function MyEventCard({ event }: { event: (typeof myEvents)[number] }) {
+function MyEventCard({ event }: { event: EventCard }) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -99,7 +139,7 @@ function MyEventCard({ event }: { event: (typeof myEvents)[number] }) {
   );
 }
 
-function UpcomingEventCard({ event }: { event: (typeof upcomingEvents)[number] }) {
+function UpcomingEventCard({ event }: { event: EventCard }) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -142,15 +182,33 @@ function UpcomingEventCard({ event }: { event: (typeof upcomingEvents)[number] }
 }
 
 export default function HomeScreen() {
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [selectedCategory, setSelectedCategory] = useState<EventCategory>('All');
+  const [query, setQuery] = useState('');
+
+  const normalizedQuery = query.trim().toLowerCase();
+
+  const filteredMyEvents = useMemo(() => {
+    return myEvents.filter((event) => {
+      const matchesCategory = selectedCategory === 'All' || event.category === selectedCategory;
+      const haystack = [event.title, event.location, event.description, event.category].join(' ').toLowerCase();
+      const matchesQuery = normalizedQuery.length === 0 || haystack.includes(normalizedQuery);
+      return matchesCategory && matchesQuery;
+    });
+  }, [normalizedQuery, selectedCategory]);
+
+  const filteredUpcomingEvents = useMemo(() => {
+    return upcomingEvents.filter((event) => {
+      const matchesCategory = selectedCategory === 'All' || event.category === selectedCategory;
+      const haystack = [event.title, event.location, event.description, event.category].join(' ').toLowerCase();
+      const matchesQuery = normalizedQuery.length === 0 || haystack.includes(normalizedQuery);
+      return matchesCategory && matchesQuery;
+    });
+  }, [normalizedQuery, selectedCategory]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-        overScrollMode="never"
-      >
+      <View style={styles.headerShell}>
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>Good Morning,</Text>
@@ -161,19 +219,29 @@ export default function HomeScreen() {
             onPress={tapFeedback}
             style={({ pressed }) => [styles.notificationButton, pressed && styles.pressed]}
           >
-            <Ionicons name="notifications" size={23} color={colors.ink} />
+            <Ionicons name="notifications-outline" size={22} color={colors.ink} />
             <View style={styles.notificationDot} />
           </Pressable>
         </View>
+      </View>
 
-        <Pressable
-          accessibilityRole="search"
-          onPress={tapFeedback}
-          style={({ pressed }) => [styles.searchBar, pressed && styles.pressed]}
-        >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content} overScrollMode="never">
+        <View style={styles.searchBar}>
           <Ionicons name="search" size={25} color="#279d61" />
-          <Text style={styles.searchText}>Find events near you...</Text>
-        </Pressable>
+          <TextInput
+            accessibilityLabel="Search events"
+            onChangeText={setQuery}
+            placeholder="Find events near you..."
+            placeholderTextColor="#7bb694"
+            style={styles.searchInput}
+            value={query}
+          />
+          {query.length > 0 ? (
+            <Pressable accessibilityLabel="Clear search" hitSlop={10} onPress={() => setQuery('')}>
+              <Ionicons name="close-circle" size={22} color="#5aa378" />
+            </Pressable>
+          ) : null}
+        </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categories}>
           {categories.map((category) => (
@@ -188,21 +256,31 @@ export default function HomeScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>My Events</Text>
-          <Pressable onPress={tapFeedback} hitSlop={10}>
+          <Pressable onPress={() => navigation.navigate('MyEvents')} hitSlop={10}>
             <Text style={styles.seeAll}>See All</Text>
           </Pressable>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.myEventsList}>
-          {myEvents.map((event) => (
-            <MyEventCard key={event.title} event={event} />
-          ))}
+          {filteredMyEvents.length > 0 ? (
+            filteredMyEvents.map((event) => <MyEventCard key={event.title} event={event} />)
+          ) : (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>No saved events found</Text>
+              <Text style={styles.emptyBody}>Try another search or switch filters.</Text>
+            </View>
+          )}
         </ScrollView>
 
         <Text style={[styles.sectionTitle, styles.upcomingHeading]}>Upcoming Events</Text>
         <View style={styles.upcomingList}>
-          {upcomingEvents.map((event) => (
-            <UpcomingEventCard key={event.title} event={event} />
-          ))}
+          {filteredUpcomingEvents.length > 0 ? (
+            filteredUpcomingEvents.map((event) => <UpcomingEventCard key={event.title} event={event} />)
+          ) : (
+            <View style={styles.emptyUpcomingCard}>
+              <Text style={styles.emptyTitle}>No upcoming events match</Text>
+              <Text style={styles.emptyBody}>Adjust the category or search term to see more events.</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -214,9 +292,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.paper,
   },
+  headerShell: {
+    backgroundColor: colors.paper,
+    paddingBottom: 10,
+    paddingTop: 10,
+  },
   content: {
     paddingBottom: 118,
-    paddingTop: 34,
+    paddingTop: 8,
   },
   header: {
     alignItems: 'center',
@@ -238,25 +321,25 @@ const styles = StyleSheet.create({
   notificationButton: {
     alignItems: 'center',
     backgroundColor: colors.white,
-    borderRadius: 28,
-    height: 56,
+    borderRadius: 24,
+    height: 48,
     justifyContent: 'center',
-    shadowColor: '#d9e4dd',
+    shadowColor: '#d7e5dd',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.45,
-    shadowRadius: 18,
-    width: 56,
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    width: 48,
   },
   notificationDot: {
     backgroundColor: colors.lime,
     borderColor: colors.white,
-    borderRadius: 7,
+    borderRadius: 6,
     borderWidth: 2,
-    height: 14,
+    height: 12,
     position: 'absolute',
-    right: 15,
-    top: 13,
-    width: 14,
+    right: 12,
+    top: 10,
+    width: 12,
   },
   searchBar: {
     alignItems: 'center',
@@ -266,17 +349,19 @@ const styles = StyleSheet.create({
     gap: 13,
     height: 62,
     marginHorizontal: 29,
-    marginTop: 34,
+    marginTop: 16,
     paddingHorizontal: 22,
     shadowColor: '#e1ebe5',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.4,
     shadowRadius: 20,
   },
-  searchText: {
+  searchInput: {
     color: '#299963',
-    fontSize: 17,
+    flex: 1,
     fontFamily: fonts.medium,
+    fontSize: 17,
+    paddingVertical: 0,
   },
   categories: {
     gap: 15,
@@ -375,6 +460,7 @@ const styles = StyleSheet.create({
   },
   myEventLocation: {
     color: colors.white,
+    fontFamily: fonts.medium,
     fontSize: 16,
     marginTop: 5,
   },
@@ -399,7 +485,7 @@ const styles = StyleSheet.create({
   upcomingImage: {
     borderRadius: 22,
     height: 190,
-    width: '100%',
+    width: '100%'
   },
   datePill: {
     backgroundColor: colors.white,
@@ -465,6 +551,39 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 16,
     fontFamily: fonts.extraBold,
+  },
+  emptyCard: {
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderColor: colors.line,
+    borderRadius: 30,
+    borderWidth: 1,
+    justifyContent: 'center',
+    minHeight: 190,
+    paddingHorizontal: 24,
+    width: 344,
+  },
+  emptyUpcomingCard: {
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderColor: colors.line,
+    borderRadius: 32,
+    borderWidth: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 36,
+  },
+  emptyTitle: {
+    color: colors.ink,
+    fontFamily: fonts.extraBold,
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  emptyBody: {
+    color: colors.muted,
+    fontFamily: fonts.medium,
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
   },
   pressed: {
     opacity: 0.74,

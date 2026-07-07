@@ -1,9 +1,17 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, View, useWindowDimensions } from 'react-native';
+import {
+  Animated,
+  Easing,
+  KeyboardAvoidingView,
+  ScrollView,
+  View,
+  useWindowDimensions,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import ProgressBar from '../components/ui/progress-bar';
-import ScreenShell from '../components/ui/screen-shell';
 import TopBar from '../components/ui/top-bar';
+import { colors } from '../styles/theme';
 import { setupStepTotal } from '../types/setup-flow';
 
 type Props = {
@@ -14,6 +22,7 @@ type Props = {
 };
 
 export default function SetupLayout({ children, step, onBack, onSkip }: Props) {
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const translateX = useRef(new Animated.Value(width * 0.16)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -38,25 +47,50 @@ export default function SetupLayout({ children, step, onBack, onSkip }: Props) {
   }, [opacity, step, translateX, width]);
 
   return (
-    <ScreenShell>
-      <View style={{ flex: 1, gap: 14 }}>
-        <TopBar
-          onBack={onBack}
-          center={`Step ${step} of ${setupStepTotal}`}
-          actionLabel={onSkip ? 'Skip' : undefined}
-          onAction={onSkip}
-        />
-        <ProgressBar step={step} total={setupStepTotal} />
-        <Animated.View
-          style={{
-            flex: 1,
-            opacity,
-            transform: [{ translateX }],
+    <KeyboardAvoidingView
+      behavior={process.env.EXPO_OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1, backgroundColor: colors.paper }}
+    >
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: colors.paper,
+          paddingTop: insets.top + 12,
+          paddingHorizontal: 22,
+        }}
+      >
+        <View style={{ gap: 14, paddingBottom: 14 }}>
+          <TopBar
+            onBack={onBack}
+            center={`Step ${step} of ${setupStepTotal}`}
+            actionLabel={onSkip ? 'Skip' : undefined}
+            onAction={onSkip}
+          />
+          <ProgressBar step={step} total={setupStepTotal} />
+        </View>
+
+        <ScrollView
+          contentInsetAdjustmentBehavior="automatic"
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          showsVerticalScrollIndicator={false}
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingBottom: insets.bottom + 24,
           }}
         >
-          {children}
-        </Animated.View>
+          <Animated.View
+            style={{
+              flex: 1,
+              opacity,
+              transform: [{ translateX }],
+            }}
+          >
+            {children}
+          </Animated.View>
+        </ScrollView>
       </View>
-    </ScreenShell>
+    </KeyboardAvoidingView>
   );
 }

@@ -1,10 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated as RNAnimated, StyleSheet, Text } from 'react-native';
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
-import { colors, fonts } from '../styles/theme';
 import HomeScreen from '../pages/dashboard/home';
+import CommunityScreen from '../pages/tabs/community';
 import PendingScreen from '../pages/tabs/pending-screen';
+import { colors, fonts } from '../styles/theme';
 
 type MainTabParamList = {
   HomeTab: undefined;
@@ -30,20 +38,40 @@ function TabIcon({
   routeName: keyof MainTabParamList;
 }) {
   const meta = tabMeta[routeName];
+  const progress = useSharedValue(focused ? 1 : 0);
+
+  progress.value = withSpring(focused ? 1 : 0, {
+    damping: 16,
+    stiffness: 180,
+    mass: 0.8,
+  });
+
+  const activeWrapStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: interpolate(progress.value, [0, 1], [0, -4]) },
+      { scale: interpolate(progress.value, [0, 1], [0.94, 1]) },
+    ],
+  }));
+
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: interpolate(progress.value, [0, 1], [1, 1.1]) }],
+  }));
 
   if (focused) {
     return (
-      <View style={styles.activeIconWrap}>
-        <Ionicons name={meta.icon} size={24} color={colors.lime} />
-      </View>
+      <Animated.View style={[styles.activeIconWrap, activeWrapStyle]}>
+        <Animated.View style={iconStyle}>
+          <Ionicons name={meta.icon} size={24} color={colors.lime} />
+        </Animated.View>
+      </Animated.View>
     );
   }
 
-  return <Ionicons name={meta.icon} size={25} color="#4a9768" />;
-}
-
-function PendingCommunity() {
-  return <PendingScreen title="Community" />;
+  return (
+    <Animated.View style={iconStyle}>
+      <Ionicons name={meta.icon} size={24} color="#4a9768" />
+    </Animated.View>
+  );
 }
 
 function PendingChat() {
@@ -52,6 +80,39 @@ function PendingChat() {
 
 function PendingProfile() {
   return <PendingScreen title="Profile" />;
+}
+
+function AnimatedTabBarBackground() {
+  const translateY = useRef(new RNAnimated.Value(24)).current;
+  const opacity = useRef(new RNAnimated.Value(0)).current;
+
+  useEffect(() => {
+    RNAnimated.parallel([
+      RNAnimated.timing(translateY, {
+        toValue: 0,
+        duration: 360,
+        useNativeDriver: true,
+      }),
+      RNAnimated.timing(opacity, {
+        toValue: 1,
+        duration: 280,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [opacity, translateY]);
+
+  return (
+    <RNAnimated.View
+      pointerEvents="none"
+      style={[
+        styles.tabBarBackground,
+        {
+          opacity,
+          transform: [{ translateY }],
+        },
+      ]}
+    />
+  );
 }
 
 export default function MainTabs() {
@@ -69,11 +130,13 @@ export default function MainTabs() {
         ),
         tabBarIcon: ({ focused }) => <TabIcon focused={focused} routeName={route.name} />,
         tabBarStyle: styles.tabBar,
+        tabBarBackground: () => <AnimatedTabBarBackground />,
         tabBarItemStyle: styles.tabItem,
+        tabBarHideOnKeyboard: true,
       })}
     >
       <Tab.Screen name="HomeTab" component={HomeScreen} />
-      <Tab.Screen name="Community" component={PendingCommunity} />
+      <Tab.Screen name="Community" component={CommunityScreen} />
       <Tab.Screen name="Chat" component={PendingChat} />
       <Tab.Screen name="Profile" component={PendingProfile} />
     </Tab.Navigator>
@@ -82,20 +145,31 @@ export default function MainTabs() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: colors.white,
-    borderTopColor: '#edf3f4',
-    borderTopWidth: 1,
+    backgroundColor: 'transparent',
+    borderTopColor: 'transparent',
+    borderTopWidth: 0,
     elevation: 0,
-    height: 91,
-    paddingBottom: 14,
-    paddingTop: 10,
-    shadowColor: '#dce8e1',
-    shadowOffset: { width: 0, height: -7 },
-    shadowOpacity: 0.22,
-    shadowRadius: 20,
+    height: 92,
+    left: 0,
+    paddingBottom: 12,
+    paddingTop: 8,
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+  },
+  tabBarBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    shadowColor: '#86b998',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
   },
   tabItem: {
     gap: 4,
+    paddingTop: 4,
   },
   tabLabel: {
     fontSize: 12,
@@ -106,10 +180,14 @@ const styles = StyleSheet.create({
   },
   activeIconWrap: {
     alignItems: 'center',
-    backgroundColor: '#dcffe8',
+    backgroundColor: '#e8fff0',
     borderRadius: 22,
-    height: 44,
+    height: 46,
     justifyContent: 'center',
-    width: 57,
+    shadowColor: '#6bdd92',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    width: 58,
   },
 });

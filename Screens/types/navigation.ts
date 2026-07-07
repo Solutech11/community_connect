@@ -9,4 +9,8 @@ export type RootStackParamList = {
   PersonalizationForm: undefined;
   Preferences: undefined;
   Home: undefined;
+  CommunityJoin: { communityId: string };
+  CreateCommunity: undefined;
+  MyEvents: undefined;
+  EventDetails: { eventId: string };
 };
