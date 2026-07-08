@@ -28,6 +28,7 @@ type EventCard = {
   description: string;
   time?: string;
   date?: string;
+  eventId?: string;
 };
 
 const categories: EventCategory[] = ['All', 'Fitness', 'Arts', 'Tech', 'Community'];
@@ -53,12 +54,13 @@ const myEvents: EventCard[] = [
 
 const upcomingEvents: EventCard[] = [
   {
-    title: 'City Marathon Weekend',
-    location: 'Central Park, NYC',
-    date: 'Sept 12',
+    title: 'Sunset Yoga',
+    location: 'Central Park, New York',
+    date: 'Oct 12',
     category: 'Fitness',
-    description: 'Community marathon, warm-up sessions, and family cheering zones.',
+    description: 'Join a relaxing golden-hour yoga session with community wellness vibes.',
     image: require('../../../assets/dashboard-marathon-real.jpg'),
+    eventId: 'sunset-yoga',
   },
   {
     title: 'Abstract Art Gala',
@@ -67,6 +69,7 @@ const upcomingEvents: EventCard[] = [
     category: 'Arts',
     description: 'A modern art evening featuring installations, music, and creators.',
     image: require('../../../assets/dashboard-art-real.jpg'),
+    eventId: 'creative-tech',
   },
   {
     title: 'Neighbourhood Food Fair',
@@ -75,6 +78,7 @@ const upcomingEvents: EventCard[] = [
     category: 'Community',
     description: 'Local chefs, tasting booths, and live acoustic performances.',
     image: require('../../../assets/dashboard-community-real.jpg'),
+    eventId: 'sunset-yoga',
   },
   {
     title: 'Startup Demo Night',
@@ -83,6 +87,7 @@ const upcomingEvents: EventCard[] = [
     category: 'Tech',
     description: 'Pitch showcases, product demos, and investor networking.',
     image: require('../../../assets/dashboard-tech-real.jpg'),
+    eventId: 'creative-tech',
   },
 ];
 
@@ -140,10 +145,17 @@ function MyEventCard({ event }: { event: EventCard }) {
 }
 
 function UpcomingEventCard({ event }: { event: EventCard }) {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={tapFeedback}
+      onPress={() => {
+        tapFeedback();
+        if (event.eventId) {
+          navigation.navigate('EventDetails', { eventId: event.eventId });
+        }
+      }}
       style={({ pressed }) => [styles.upcomingCard, pressed && styles.pressed]}
     >
       <View>
@@ -485,7 +497,7 @@ const styles = StyleSheet.create({
   upcomingImage: {
     borderRadius: 22,
     height: 190,
-    width: '100%'
+    width: '100%',
   },
   datePill: {
     backgroundColor: colors.white,

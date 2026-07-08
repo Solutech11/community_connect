@@ -91,3 +91,15 @@ When adding font support, use Expo-compatible font loading with `expo-font` and 
 - Setup/account pages use the fixed header/progress layout and only the body should animate.
 - Dashboard Home lives in `Screens/pages/dashboard/home.tsx`.
 - Community, Chat, and Profile can remain pending placeholders until their designs are ready.
+
+## Shared Modal Patterns
+
+- Share and report actions must use the shared reusable bottom sheets in Screens/components/ui/app-share-sheet.tsx and Screens/components/ui/app-report-sheet.tsx.
+- Do not build one-off share/report modals inside individual screens unless explicitly requested.
+- When adding share/report triggers to new pages, wire them into these shared components first and keep the UI compact.
+
+## Alert Pattern
+
+- Do not use default Alert.alert in app screens.
+- Use the shared custom alert modal component in Screens/components/ui/app-alert-modal.tsx for confirmations, notices, errors, and success messages.
+- Keep alert UI compact and visually consistent with the rest of the design system.

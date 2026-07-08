@@ -41,9 +41,9 @@ function EventTabButton({
   );
 }
 
-function EventCard({ item, onPress }: { item: EventItem; onPress?: () => void }) {
+function EventCard({ item }: { item: EventItem }) {
   return (
-    <Pressable onPress={onPress} disabled={!onPress} style={styles.card}>
+    <View style={styles.card}>
       <View style={styles.imageWrap}>
         <ImageBackground source={{ uri: item.image }} style={styles.cardImage} imageStyle={styles.cardImageRadius}>
           <View style={styles.imageShade} />
@@ -91,7 +91,7 @@ function EventCard({ item, onPress }: { item: EventItem; onPress?: () => void })
           </Pressable>
         </View>
       </View>
-    </Pressable>
+    </View>
   );
 }
 
@@ -181,11 +181,7 @@ export default function MyEventsScreen({ navigation }: Props) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.list}>
           {visibleEvents.map((item) => (
-            <EventCard
-              key={item.id}
-              item={item}
-              onPress={item.status === 'Upcoming' ? () => navigation.navigate('EventDetails', { eventId: item.id }) : undefined}
-            />
+            <EventCard key={item.id} item={item} />
           ))}
         </View>
       </ScrollView>

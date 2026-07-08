@@ -4,8 +4,11 @@ import ForgotPasswordScreen from '../pages/auth/forgot-password';
 import LoginScreen from '../pages/auth/login';
 import RegistrationScreen from '../pages/auth/registration';
 import VerifyEmailScreen from '../pages/auth/verify-email';
+import CheckoutScreen from '../pages/dashboard/checkout';
 import EventDetailsScreen from '../pages/dashboard/event-details';
 import MyEventsScreen from '../pages/dashboard/my-events';
+import PaymentSuccessScreen from '../pages/dashboard/payment-success';
+import TicketSelectionScreen from '../pages/dashboard/ticket-selection';
 import OnboardingWelcomeScreen from '../pages/onboarding/welcome';
 import PersonalizationFormScreen from '../pages/personalization/form';
 import InterestsSelectionScreen from '../pages/personalization/interests-selection';
@@ -54,6 +57,14 @@ export default function RootStackNavigator() {
       <Stack.Screen name="CreateCommunity" component={CreateCommunityScreen} options={{ animation: 'fade_from_bottom' }} />
       <Stack.Screen name="MyEvents" component={MyEventsScreen} options={{ animation: 'fade_from_bottom' }} />
       <Stack.Screen name="EventDetails" component={EventDetailsScreen} options={{ animation: 'fade_from_bottom' }} />
+      <Stack.Screen
+        name="TicketSelection"
+        component={TicketSelectionScreen}
+        options={{ animation: 'fade_from_bottom', presentation: 'transparentModal', contentStyle: { backgroundColor: 'transparent' } }}
+      />
+      <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ animation: 'slide_from_right', contentStyle: { backgroundColor: '#f7fbf9' } }} />
+      <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} options={{ animation: 'fade_from_bottom', contentStyle: { backgroundColor: '#f7fbf9' } }} />
     </Stack.Navigator>
   );
 }
+
