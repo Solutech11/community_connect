@@ -12,6 +12,7 @@ import Animated, {
 import HomeScreen from '../pages/dashboard/home';
 import CommunityScreen from '../pages/tabs/community';
 import PendingScreen from '../pages/tabs/pending-screen';
+import ProfileScreen from '../pages/tabs/profile';
 import DashboardLayout from '../layouts/dashboard-layout';
 import { colors, fonts } from '../styles/theme';
 
@@ -163,7 +164,7 @@ export default function MainTabs() {
       <Tab.Screen name="HomeTab" component={DashboardHome} />
       <Tab.Screen name="Community" component={DashboardCommunity} />
       <Tab.Screen name="Chat" component={PendingChat} />
-      <Tab.Screen name="Profile" component={PendingProfile} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }

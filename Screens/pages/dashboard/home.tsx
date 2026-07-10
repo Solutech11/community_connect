@@ -41,6 +41,7 @@ const myEvents: EventCard[] = [
     time: '08:00 AM',
     category: 'Fitness',
     description: 'Start the day with guided sunrise yoga and wellness networking.',
+    eventId: 'sunset-yoga',
     image: require('../../../assets/dashboard-yoga-real.jpg'),
   },
   {
@@ -49,6 +50,7 @@ const myEvents: EventCard[] = [
     time: '06:30 PM',
     category: 'Tech',
     description: 'Meet builders, founders, and designers for an evening of demos.',
+    eventId: 'creative-tech',
     image: require('../../../assets/dashboard-tech-real.jpg'),
   },
 ];
@@ -120,10 +122,17 @@ function CategoryChip({
 }
 
 function MyEventCard({ event }: { event: EventCard }) {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={tapFeedback}
+      onPress={() => {
+        tapFeedback();
+        if (event.eventId) {
+          navigation.navigate('MyEventDetails', { eventId: event.eventId });
+        }
+      }}
       style={({ pressed }) => [styles.myEventCard, pressed && styles.pressed]}
     >
       <ImageBackground source={event.image} style={styles.myEventImage} imageStyle={styles.myEventImageRadius}>

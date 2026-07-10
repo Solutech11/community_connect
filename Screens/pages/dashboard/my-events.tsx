@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import TicketQrModal from '../../components/ui/ticket-qr-modal';
 import { events, type EventItem } from '../../data/events';
 import { lightTap as tapFeedback } from '../../hooks/haptics';
 import { colors, fonts } from '../../styles/theme';
@@ -42,7 +43,7 @@ function EventTabButton({
   );
 }
 
-function EventCard({ item, onViewTicket }: { item: EventItem; onViewTicket: () => void }) {
+function EventCard({ item, onShowQr, onViewTicket }: { item: EventItem; onShowQr: () => void; onViewTicket: () => void }) {
   return (
     <View style={styles.card}>
       <View style={styles.imageWrap}>
@@ -53,7 +54,14 @@ function EventCard({ item, onViewTicket }: { item: EventItem; onViewTicket: () =
           <Text style={styles.dateMonth}>{item.dateMonth}</Text>
           <Text style={styles.dateDay}>{item.dateDay}</Text>
         </View>
-        <Pressable onPress={tapFeedback} style={styles.qrButton}>
+        <Pressable
+          accessibilityLabel={`Show QR code for ${item.title}`}
+          onPress={() => {
+            tapFeedback();
+            onShowQr();
+          }}
+          style={styles.qrButton}
+        >
           <Ionicons name="qr-code-outline" size={22} color={colors.white} />
         </Pressable>
       </View>
@@ -104,6 +112,7 @@ function EventCard({ item, onViewTicket }: { item: EventItem; onViewTicket: () =
 
 export default function MyEventsScreen({ navigation }: Props) {
   const [activeTab, setActiveTab] = useState<EventTab>('Upcoming');
+  const [qrEvent, setQrEvent] = useState<EventItem | null>(null);
   const [tabLayouts, setTabLayouts] = useState<Record<EventTab, { x: number; width: number }>>({
     Upcoming: { x: 0, width: 0 },
     Past: { x: 0, width: 0 },
@@ -188,10 +197,21 @@ export default function MyEventsScreen({ navigation }: Props) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.list}>
           {visibleEvents.map((item) => (
-            <EventCard key={item.id} item={item} onViewTicket={() => navigation.navigate('MyEventDetails', { eventId: item.id })} />
+            <EventCard
+              key={item.id}
+              item={item}
+              onShowQr={() => setQrEvent(item)}
+              onViewTicket={() => navigation.navigate('MyEventDetails', { eventId: item.id })}
+            />
           ))}
         </View>
       </ScrollView>
+      <TicketQrModal
+        eventId={qrEvent?.id ?? null}
+        eventTitle={qrEvent?.title ?? ''}
+        visible={Boolean(qrEvent)}
+        onClose={() => setQrEvent(null)}
+      />
     </SafeAreaView>
   );
 }
