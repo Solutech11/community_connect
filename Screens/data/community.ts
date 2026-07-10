@@ -25,32 +25,53 @@ export type CommunityItem = {
   guidelines: CommunityGuideline[];
 };
 
+export type JoinedCommunity = {
+  id: string;
+  name: string;
+  image: string;
+  membersLabel: string;
+  online: boolean;
+  adminsOnly: boolean;
+};
+
 export const communityCategories: CommunityCategory[] = ['For You', 'Hiking', 'Tech', 'Books', 'Art'];
 
-export const myCommunities = [
+export const myCommunities: JoinedCommunity[] = [
   {
-    id: 'my-hikers',
-    name: 'Hikers Club',
+    id: 'urban-hikers',
+    name: 'Urban Hikers',
     image:
       'https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=600&q=80',
+    membersLabel: '142 Members',
+    online: true,
+    adminsOnly: false,
   },
   {
-    id: 'my-books',
+    id: 'sunday-readers',
     name: 'Book Lovers',
     image:
       'https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=600&q=80',
+    membersLabel: '86 Members',
+    online: true,
+    adminsOnly: true,
   },
   {
-    id: 'my-tech',
+    id: 'dev-connect',
     name: 'Tech Talk',
     image:
       'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=600&q=80',
+    membersLabel: '214 Members',
+    online: false,
+    adminsOnly: false,
   },
   {
-    id: 'my-art',
+    id: 'makers-gallery',
     name: 'Art Circle',
     image:
       'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?auto=format&fit=crop&w=600&q=80',
+    membersLabel: '64 Members',
+    online: true,
+    adminsOnly: true,
   },
 ];
 
@@ -177,4 +198,8 @@ export const discoverCommunities: CommunityItem[] = [
 
 export function getCommunityById(id: string) {
   return discoverCommunities.find((item) => item.id === id);
+}
+
+export function getJoinedCommunityById(id: string) {
+  return myCommunities.find((item) => item.id === id);
 }

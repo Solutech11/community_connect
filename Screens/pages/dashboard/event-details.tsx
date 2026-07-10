@@ -2,9 +2,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
-import { Alert, ImageBackground, Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ImageBackground, Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AppAlertModal from '../../components/ui/app-alert-modal';
 import AppReportSheet from '../../components/ui/app-report-sheet';
 import AppShareSheet from '../../components/ui/app-share-sheet';
 import { getEventById } from '../../data/events';
@@ -14,7 +15,12 @@ import type { RootStackParamList } from '../../types/navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'EventDetails'>;
 
-function DetailPill({ icon, label, value, wide = false }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; wide?: boolean; }) {
+type AlertState = {
+  title: string;
+  message: string;
+};
+
+function DetailPill({ icon, label, value, wide = false }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; wide?: boolean }) {
   return (
     <View style={[styles.detailCard, wide && styles.detailCardWide]}>
       <View style={styles.detailIconWrap}>
@@ -32,6 +38,7 @@ export default function EventDetailsScreen({ navigation, route }: Props) {
   const event = getEventById(route.params.eventId);
   const [shareVisible, setShareVisible] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
+  const [alertState, setAlertState] = useState<AlertState | null>(null);
 
   if (!event) {
     return (
@@ -48,6 +55,10 @@ export default function EventDetailsScreen({ navigation, route }: Props) {
 
   const eventLink = `https://communityconnect.app/events/${event.id}`;
   const shareMessage = `Check out ${event.title} on Community Connect: ${eventLink}`;
+
+  const showAlert = (title: string, message: string) => {
+    setAlertState({ title, message });
+  };
 
   const handleShareTo = async (channel: 'whatsapp' | 'instagram' | 'facebook' | 'twitter') => {
     tapFeedback();
@@ -78,7 +89,7 @@ export default function EventDetailsScreen({ navigation, route }: Props) {
 
       await Share.share({ message: shareMessage });
     } catch {
-      Alert.alert('Unable to share', 'Please try again in a moment.');
+      showAlert('Unable to share', 'Please try again in a moment.');
     }
   };
 
@@ -184,8 +195,8 @@ export default function EventDetailsScreen({ navigation, route }: Props) {
         visible={shareVisible}
         description={`Let your friends know about "${event.title}"`}
         onClose={() => setShareVisible(false)}
-        onCopyLink={() => Alert.alert('Copy Link', eventLink)}
-        onInvite={() => Alert.alert('Invite Friends', 'In-app invites can be connected here next.')}
+        onCopyLink={() => showAlert('Copy Link', eventLink)}
+        onInvite={() => showAlert('Invite Friends', 'In-app invites can be connected here next.')}
         onShareTo={handleShareTo}
       />
 
@@ -193,8 +204,15 @@ export default function EventDetailsScreen({ navigation, route }: Props) {
         visible={reportVisible}
         onClose={() => setReportVisible(false)}
         onSubmit={(reason, details) => {
-          Alert.alert('Report Submitted', details ? `${reason}\n\n${details}` : reason);
+          showAlert('Report Submitted', details ? `${reason}\n\n${details}` : reason);
         }}
+      />
+
+      <AppAlertModal
+        visible={Boolean(alertState)}
+        title={alertState?.title ?? ''}
+        message={alertState?.message ?? ''}
+        onClose={() => setAlertState(null)}
       />
     </>
   );

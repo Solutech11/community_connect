@@ -6,6 +6,7 @@ import {
   Image,
   ImageBackground,
   Pressable,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -299,6 +300,8 @@ export default function HomeScreen() {
   );
 }
 
+const android = Platform.OS === 'android';
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -340,6 +343,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 16,
+    elevation: android ? 3 : 0,
     width: 48,
   },
   notificationDot: {
@@ -367,6 +371,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.4,
     shadowRadius: 20,
+    elevation: android ? 4 : 0,
   },
   searchInput: {
     color: '#299963',
@@ -427,7 +432,9 @@ const styles = StyleSheet.create({
     paddingTop: 23,
   },
   myEventCard: {
+    backgroundColor: colors.white,
     borderRadius: 30,
+    elevation: android ? 3 : 0,
     height: 230,
     overflow: 'hidden',
     width: 344,
@@ -493,6 +500,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 13 },
     shadowOpacity: 0.32,
     shadowRadius: 24,
+    elevation: android ? 3 : 0,
   },
   upcomingImage: {
     borderRadius: 22,

@@ -7,6 +7,7 @@ import {
   Image,
   ImageBackground,
   LayoutChangeEvent,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -41,7 +42,7 @@ function EventTabButton({
   );
 }
 
-function EventCard({ item }: { item: EventItem }) {
+function EventCard({ item, onViewTicket }: { item: EventItem; onViewTicket: () => void }) {
   return (
     <View style={styles.card}>
       <View style={styles.imageWrap}>
@@ -86,7 +87,13 @@ function EventCard({ item }: { item: EventItem }) {
             ) : null}
           </View>
 
-          <Pressable onPress={tapFeedback} style={styles.ticketButton}>
+          <Pressable
+            onPress={() => {
+              tapFeedback();
+              onViewTicket();
+            }}
+            style={styles.ticketButton}
+          >
             <Text style={styles.ticketButtonText}>View Ticket</Text>
           </Pressable>
         </View>
@@ -181,13 +188,15 @@ export default function MyEventsScreen({ navigation }: Props) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.list}>
           {visibleEvents.map((item) => (
-            <EventCard key={item.id} item={item} />
+            <EventCard key={item.id} item={item} onViewTicket={() => navigation.navigate('MyEventDetails', { eventId: item.id })} />
           ))}
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+const android = Platform.OS === 'android';
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -220,6 +229,7 @@ const styles = StyleSheet.create({
   segmentWrap: {
     backgroundColor: colors.white,
     borderRadius: 24,
+    elevation: android ? 5 : 0,
     flexDirection: 'row',
     marginTop: 26,
     padding: 5,
@@ -264,6 +274,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.22,
     shadowRadius: 16,
+    elevation: android ? 3 : 0,
   },
   imageWrap: {
     position: 'relative',

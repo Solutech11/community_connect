@@ -17,8 +17,11 @@ export type RootStackParamList = {
   Preferences: undefined;
   Home: undefined;
   CommunityJoin: { communityId: string };
+  CommunityRoom: { communityId: string };
+  CommunityProfile: { communityId: string };
   CreateCommunity: undefined;
   MyEvents: undefined;
+  MyEventDetails: { eventId: string };
   EventDetails: { eventId: string };
   TicketSelection: { eventId: string };
   Checkout: {
@@ -35,4 +38,3 @@ export type RootStackParamList = {
     total: number;
   };
 };
-

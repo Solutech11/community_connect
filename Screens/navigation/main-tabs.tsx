@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useEffect, useRef } from 'react';
-import { Animated as RNAnimated, StyleSheet, Text } from 'react-native';
+import { Animated as RNAnimated, Platform, StyleSheet, Text } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -12,6 +12,7 @@ import Animated, {
 import HomeScreen from '../pages/dashboard/home';
 import CommunityScreen from '../pages/tabs/community';
 import PendingScreen from '../pages/tabs/pending-screen';
+import DashboardLayout from '../layouts/dashboard-layout';
 import { colors, fonts } from '../styles/theme';
 
 type MainTabParamList = {
@@ -74,12 +75,36 @@ function TabIcon({
   );
 }
 
+function DashboardHome() {
+  return (
+    <DashboardLayout>
+      <HomeScreen />
+    </DashboardLayout>
+  );
+}
+
+function DashboardCommunity() {
+  return (
+    <DashboardLayout>
+      <CommunityScreen />
+    </DashboardLayout>
+  );
+}
+
 function PendingChat() {
-  return <PendingScreen title="Chat" />;
+  return (
+    <DashboardLayout>
+      <PendingScreen title="Chat" />
+    </DashboardLayout>
+  );
 }
 
 function PendingProfile() {
-  return <PendingScreen title="Profile" />;
+  return (
+    <DashboardLayout>
+      <PendingScreen title="Profile" />
+    </DashboardLayout>
+  );
 }
 
 function AnimatedTabBarBackground() {
@@ -135,8 +160,8 @@ export default function MainTabs() {
         tabBarHideOnKeyboard: true,
       })}
     >
-      <Tab.Screen name="HomeTab" component={HomeScreen} />
-      <Tab.Screen name="Community" component={CommunityScreen} />
+      <Tab.Screen name="HomeTab" component={DashboardHome} />
+      <Tab.Screen name="Community" component={DashboardCommunity} />
       <Tab.Screen name="Chat" component={PendingChat} />
       <Tab.Screen name="Profile" component={PendingProfile} />
     </Tab.Navigator>
@@ -148,10 +173,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderTopColor: 'transparent',
     borderTopWidth: 0,
-    elevation: 0,
-    height: 92,
+    elevation: Platform.OS === 'android' ? 12 : 0,
+    height: Platform.OS === 'android' ? 76 : 92,
     left: 0,
-    paddingBottom: 12,
+    paddingBottom: Platform.OS === 'android' ? 6 : 12,
     paddingTop: 8,
     position: 'absolute',
     right: 0,
@@ -166,6 +191,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.18,
     shadowRadius: 18,
+    elevation: Platform.OS === 'android' ? 12 : 0,
   },
   tabItem: {
     gap: 4,

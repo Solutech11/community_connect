@@ -6,6 +6,7 @@ import {
   Image,
   ImageBackground,
   Pressable,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,6 +21,7 @@ import {
   myCommunities,
   type CommunityCategory,
   type CommunityItem,
+  type JoinedCommunity,
 } from '../../data/community';
 import { lightTap as tapFeedback } from '../../hooks/haptics';
 import { colors, fonts } from '../../styles/theme';
@@ -54,16 +56,21 @@ function FilterChip({
   );
 }
 
-function MyCommunityBubble({ name, image }: { name: string; image: string }) {
+function MyCommunityBubble({ item }: { item: JoinedCommunity }) {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={tapFeedback}
+      onPress={() => navigation.navigate('CommunityRoom', { communityId: item.id })}
       style={({ pressed }) => [styles.myCommunityItem, pressed && styles.pressed]}
     >
-      <Image source={{ uri: image }} style={styles.myCommunityImage} />
+      <View>
+        <Image source={{ uri: item.image }} style={styles.myCommunityImage} />
+        {item.online ? <View style={styles.onlineDot} /> : null}
+      </View>
       <Text style={styles.myCommunityName} numberOfLines={1}>
-        {name}
+        {item.name}
       </Text>
     </Pressable>
   );
@@ -182,7 +189,7 @@ export default function CommunityScreen() {
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.myCommunitiesRow}>
           {myCommunities.map((item) => (
-            <MyCommunityBubble key={item.id} name={item.name} image={item.image} />
+            <MyCommunityBubble key={item.id} item={item} />
           ))}
         </ScrollView>
 
@@ -213,6 +220,8 @@ export default function CommunityScreen() {
     </SafeAreaView>
   );
 }
+
+const android = Platform.OS === 'android';
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -245,6 +254,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 16,
+    elevation: android ? 3 : 0,
     width: 48,
   },
   notificationDot: {
@@ -275,6 +285,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.25,
     shadowRadius: 18,
+    elevation: android ? 3 : 0,
   },
   createIconWrap: {
     alignItems: 'center',
@@ -303,6 +314,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.26,
     shadowRadius: 18,
+    elevation: android ? 4 : 0,
   },
   searchInput: {
     color: '#348b5a',
@@ -328,12 +340,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   myCommunitiesRow: {
-    gap: 20,
+    gap: 18,
     paddingTop: 18,
   },
   myCommunityItem: {
     alignItems: 'center',
-    width: 74,
+    width: 82,
   },
   myCommunityImage: {
     borderColor: colors.lime,
@@ -341,6 +353,17 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     height: 70,
     width: 70,
+  },
+  onlineDot: {
+    backgroundColor: colors.lime,
+    borderColor: colors.white,
+    borderRadius: 8,
+    borderWidth: 2,
+    bottom: 2,
+    height: 16,
+    position: 'absolute',
+    right: 2,
+    width: 16,
   },
   myCommunityName: {
     color: colors.ink,
@@ -390,6 +413,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.35,
     shadowRadius: 20,
+    elevation: android ? 3 : 0,
   },
   cardImage: {
     height: 162,
