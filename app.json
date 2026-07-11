@@ -25,6 +25,15 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Community Connect to use your camera to scan event tickets.",
+          "recordAudioAndroid": false
+        }
+      ]
+    ]
   }
 }

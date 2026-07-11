@@ -84,6 +84,8 @@ When adding font support, use Expo-compatible font loading with `expo-font` and 
 - Use `rg` for searching.
 - Avoid unrelated refactors while implementing a screen.
 - Keep app code ASCII unless existing content or product copy clearly requires otherwise.
+- Codes should be organized, do not put all code in one line.
+- Let code be readable and understandable, add comments if need be.
 
 ## Screen Implementation Notes
 

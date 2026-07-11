@@ -164,7 +164,7 @@ export default function MainTabs() {
       <Tab.Screen name="HomeTab" component={DashboardHome} />
       <Tab.Screen name="Community" component={DashboardCommunity} />
       <Tab.Screen name="Chat" component={PendingChat} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Profile" component={() => <DashboardLayout><ProfileScreen /></DashboardLayout>} />
     </Tab.Navigator>
   );
 }

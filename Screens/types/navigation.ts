@@ -1,3 +1,6 @@
+import type { RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+
 export type CheckoutTicketSelection = {
   id: string;
   title: string;
@@ -21,6 +24,18 @@ export type RootStackParamList = {
   CommunityProfile: { communityId: string };
   CreateCommunity: undefined;
   MyEvents: undefined;
+  MyCreatedEvents: undefined;
+  ManageCreatedEvent: undefined;
+  TicketScanner: undefined;
+  UpdateProfile: undefined;
+  Settings: undefined;
+  ChangePassword: undefined;
+  DeleteAccount: undefined;
+  PrivacyPolicy: undefined;
+  TermsConditions: undefined;
+  Wallet: undefined;
+  Transactions: undefined;
+  WalletTopUp: undefined;
   MyEventDetails: { eventId: string };
   EventDetails: { eventId: string };
   TicketSelection: { eventId: string };
@@ -38,3 +53,7 @@ export type RootStackParamList = {
     total: number;
   };
 };
+export type RootStackNavigationProp =
+  NativeStackNavigationProp<RootStackParamList>;
+export type RootStackRouteProp<RouteName extends keyof RootStackParamList> =
+  RouteProp<RootStackParamList, RouteName>;
