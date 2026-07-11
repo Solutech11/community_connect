@@ -1,7 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useMemo, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useMemo, useState } from "react";
 import {
   Image,
   ImageBackground,
@@ -12,8 +12,8 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   communityCategories,
@@ -22,10 +22,10 @@ import {
   type CommunityCategory,
   type CommunityItem,
   type JoinedCommunity,
-} from '../../data/community';
-import { lightTap as tapFeedback } from '../../hooks/haptics';
-import { colors, fonts } from '../../styles/theme';
-import type { RootStackParamList } from '../../types/navigation';
+} from "../../data/community";
+import { lightTap as tapFeedback } from "../../hooks/haptics";
+import { colors, fonts } from "../../styles/theme";
+import type { RootStackParamList } from "../../types/navigation";
 
 function FilterChip({
   label,
@@ -49,21 +49,32 @@ function FilterChip({
         pressed && styles.pressed,
       ]}
     >
-      <Text style={[styles.filterChipText, selected ? styles.filterChipTextActive : styles.filterChipTextIdle]}>
-        {label === 'For You' ? label : `#${label}`}
+      <Text
+        style={[
+          styles.filterChipText,
+          selected ? styles.filterChipTextActive : styles.filterChipTextIdle,
+        ]}
+      >
+        {label === "For You" ? label : `#${label}`}
       </Text>
     </Pressable>
   );
 }
 
 function MyCommunityBubble({ item }: { item: JoinedCommunity }) {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={() => navigation.navigate('CommunityRoom', { communityId: item.id })}
-      style={({ pressed }) => [styles.myCommunityItem, pressed && styles.pressed]}
+      onPress={() =>
+        navigation.navigate("CommunityRoom", { communityId: item.id })
+      }
+      style={({ pressed }) => [
+        styles.myCommunityItem,
+        pressed && styles.pressed,
+      ]}
     >
       <View>
         <Image source={{ uri: item.image }} style={styles.myCommunityImage} />
@@ -77,22 +88,29 @@ function MyCommunityBubble({ item }: { item: JoinedCommunity }) {
 }
 
 function DiscoverCard({ item }: { item: CommunityItem }) {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const buttonLabel =
-    item.accessType === 'paid'
+    item.accessType === "paid"
       ? `Pay ${item.accessFee} to Join`
-      : item.accessType === 'access_key'
-        ? 'Join with Access Key'
-        : 'Join Group';
+      : item.accessType === "access_key"
+        ? "Join with Access Key"
+        : "Join Group";
 
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={() => navigation.navigate('CommunityJoin', { communityId: item.id })}
+      onPress={() =>
+        navigation.navigate("CommunityJoin", { communityId: item.id })
+      }
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
-      <ImageBackground source={{ uri: item.image }} style={styles.cardImage} imageStyle={styles.cardImageRadius}>
+      <ImageBackground
+        source={{ uri: item.image }}
+        style={styles.cardImage}
+        imageStyle={styles.cardImageRadius}
+      >
         <View style={styles.cardShade} />
         <Text style={styles.cardTag}>{item.handle}</Text>
       </ImageBackground>
@@ -109,8 +127,13 @@ function DiscoverCard({ item }: { item: CommunityItem }) {
         </Text>
         <Pressable
           accessibilityRole="button"
-          onPress={() => navigation.navigate('CommunityJoin', { communityId: item.id })}
-          style={({ pressed }) => [styles.joinButton, pressed && styles.pressed]}
+          onPress={() =>
+            navigation.navigate("CommunityJoin", { communityId: item.id })
+          }
+          style={({ pressed }) => [
+            styles.joinButton,
+            pressed && styles.pressed,
+          ]}
         >
           <Text style={styles.joinButtonText}>{buttonLabel}</Text>
         </Pressable>
@@ -120,42 +143,69 @@ function DiscoverCard({ item }: { item: CommunityItem }) {
 }
 
 export default function CommunityScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [query, setQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<CommunityCategory>('For You');
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [query, setQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] =
+    useState<CommunityCategory>("For You");
 
   const normalizedQuery = query.trim().toLowerCase();
 
   const filteredCommunities = useMemo(() => {
     return discoverCommunities.filter((item) => {
-      const matchesCategory = selectedCategory === 'For You' || item.category === selectedCategory;
-      const searchable = [item.name, item.description, item.handle, item.category].join(' ').toLowerCase();
-      const matchesQuery = normalizedQuery.length === 0 || searchable.includes(normalizedQuery);
+      const matchesCategory =
+        selectedCategory === "For You" || item.category === selectedCategory;
+      const searchable = [
+        item.name,
+        item.description,
+        item.handle,
+        item.category,
+      ]
+        .join(" ")
+        .toLowerCase();
+      const matchesQuery =
+        normalizedQuery.length === 0 || searchable.includes(normalizedQuery);
       return matchesCategory && matchesQuery;
     });
   }, [normalizedQuery, selectedCategory]);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <View style={styles.headerShell}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Communities</Text>
           <Pressable
             accessibilityLabel="Community notifications"
-            onPress={tapFeedback}
-            style={({ pressed }) => [styles.notificationButton, pressed && styles.pressed]}
+            onPress={() => {
+              tapFeedback();
+              navigation.navigate("Notifications");
+            }}
+            style={({ pressed }) => [
+              styles.notificationButton,
+              pressed && styles.pressed,
+            ]}
           >
-            <Ionicons name="notifications-outline" size={22} color={colors.ink} />
+            <Ionicons
+              name="notifications-outline"
+              size={22}
+              color={colors.ink}
+            />
             <View style={styles.notificationDot} />
           </Pressable>
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+      >
         <Pressable
           accessibilityRole="button"
-          onPress={() => navigation.navigate('CreateCommunity')}
-          style={({ pressed }) => [styles.createButton, pressed && styles.pressed]}
+          onPress={() => navigation.navigate("CreateCommunity")}
+          style={({ pressed }) => [
+            styles.createButton,
+            pressed && styles.pressed,
+          ]}
         >
           <View style={styles.createIconWrap}>
             <Ionicons name="add" size={20} color={colors.white} />
@@ -174,7 +224,11 @@ export default function CommunityScreen() {
             value={query}
           />
           {query.length > 0 ? (
-            <Pressable accessibilityLabel="Clear search" hitSlop={10} onPress={() => setQuery('')}>
+            <Pressable
+              accessibilityLabel="Clear search"
+              hitSlop={10}
+              onPress={() => setQuery("")}
+            >
               <Ionicons name="close-circle" size={20} color="#6a9f84" />
             </Pressable>
           ) : null}
@@ -187,13 +241,21 @@ export default function CommunityScreen() {
           </Pressable>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.myCommunitiesRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.myCommunitiesRow}
+        >
           {myCommunities.map((item) => (
             <MyCommunityBubble key={item.id} item={item} />
           ))}
         </ScrollView>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+        >
           {communityCategories.map((item) => (
             <FilterChip
               key={item}
@@ -208,11 +270,15 @@ export default function CommunityScreen() {
 
         <View style={styles.cardList}>
           {filteredCommunities.length > 0 ? (
-            filteredCommunities.map((item) => <DiscoverCard key={item.id} item={item} />)
+            filteredCommunities.map((item) => (
+              <DiscoverCard key={item.id} item={item} />
+            ))
           ) : (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateTitle}>No communities found</Text>
-              <Text style={styles.emptyStateBody}>Try another search term or switch to a different category.</Text>
+              <Text style={styles.emptyStateBody}>
+                Try another search term or switch to a different category.
+              </Text>
             </View>
           )}
         </View>
@@ -221,7 +287,7 @@ export default function CommunityScreen() {
   );
 }
 
-const android = Platform.OS === 'android';
+const android = Platform.OS === "android";
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -234,9 +300,9 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingHorizontal: 24,
   },
   headerTitle: {
@@ -245,12 +311,12 @@ const styles = StyleSheet.create({
     fontSize: 26,
   },
   notificationButton: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: colors.white,
     borderRadius: 24,
     height: 48,
-    justifyContent: 'center',
-    shadowColor: '#d7e5dd',
+    justifyContent: "center",
+    shadowColor: "#d7e5dd",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 16,
@@ -263,7 +329,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 2,
     height: 12,
-    position: 'absolute',
+    position: "absolute",
     right: 12,
     top: 10,
     width: 12,
@@ -274,25 +340,25 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   createButton: {
-    alignItems: 'center',
-    alignSelf: 'stretch',
+    alignItems: "center",
+    alignSelf: "stretch",
     backgroundColor: colors.lime,
     borderRadius: 30,
-    flexDirection: 'row',
+    flexDirection: "row",
     height: 60,
-    justifyContent: 'center',
-    shadowColor: '#83f3ad',
+    justifyContent: "center",
+    shadowColor: "#83f3ad",
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.25,
     shadowRadius: 18,
     elevation: android ? 3 : 0,
   },
   createIconWrap: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: colors.ink,
     borderRadius: 14,
     height: 28,
-    justifyContent: 'center',
+    justifyContent: "center",
     marginRight: 12,
     width: 28,
   },
@@ -302,31 +368,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   searchBar: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: colors.white,
     borderRadius: 28,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
     height: 58,
     marginTop: 16,
     paddingHorizontal: 18,
-    shadowColor: '#e4ece7',
+    shadowColor: "#e4ece7",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.26,
     shadowRadius: 18,
     elevation: android ? 4 : 0,
   },
   searchInput: {
-    color: '#348b5a',
+    color: "#348b5a",
     flex: 1,
     fontFamily: fonts.medium,
     fontSize: 16,
     paddingVertical: 0,
   },
   sectionHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 30,
   },
   sectionTitle: {
@@ -344,7 +410,7 @@ const styles = StyleSheet.create({
     paddingTop: 18,
   },
   myCommunityItem: {
-    alignItems: 'center',
+    alignItems: "center",
     width: 82,
   },
   myCommunityImage: {
@@ -361,7 +427,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     bottom: 2,
     height: 16,
-    position: 'absolute',
+    position: "absolute",
     right: 2,
     width: 16,
   },
@@ -370,7 +436,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     fontSize: 12,
     marginTop: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   filterRow: {
     gap: 12,
@@ -384,12 +450,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   filterChipActive: {
-    backgroundColor: '#11182f',
-    borderColor: '#11182f',
+    backgroundColor: "#11182f",
+    borderColor: "#11182f",
   },
   filterChipIdle: {
     backgroundColor: colors.white,
-    borderColor: '#e2ece6',
+    borderColor: "#e2ece6",
   },
   filterChipText: {
     fontFamily: fonts.bold,
@@ -399,7 +465,7 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   filterChipTextIdle: {
-    color: '#4da66e',
+    color: "#4da66e",
   },
   cardList: {
     gap: 22,
@@ -408,8 +474,8 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
     borderRadius: 30,
-    overflow: 'hidden',
-    shadowColor: '#dce9e1',
+    overflow: "hidden",
+    shadowColor: "#dce9e1",
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.35,
     shadowRadius: 20,
@@ -417,7 +483,7 @@ const styles = StyleSheet.create({
   },
   cardImage: {
     height: 162,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
     paddingBottom: 18,
     paddingHorizontal: 16,
   },
@@ -427,7 +493,7 @@ const styles = StyleSheet.create({
   },
   cardShade: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(7, 19, 13, 0.18)',
+    backgroundColor: "rgba(7, 19, 13, 0.18)",
   },
   cardTag: {
     color: colors.lime,
@@ -441,9 +507,9 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   cardTitleRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   cardTitle: {
     color: colors.ink,
@@ -453,32 +519,32 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   memberPill: {
-    alignItems: 'center',
-    backgroundColor: '#f1f6f3',
+    alignItems: "center",
+    backgroundColor: "#f1f6f3",
     borderRadius: 14,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 5,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   memberPillText: {
-    color: '#4da66e',
+    color: "#4da66e",
     fontFamily: fonts.bold,
     fontSize: 13,
   },
   cardDescription: {
-    color: '#4a9e69',
+    color: "#4a9e69",
     fontFamily: fonts.medium,
     fontSize: 14,
     lineHeight: 23,
     marginTop: 12,
   },
   joinButton: {
-    alignItems: 'center',
-    backgroundColor: '#121b33',
+    alignItems: "center",
+    backgroundColor: "#121b33",
     borderRadius: 24,
     height: 50,
-    justifyContent: 'center',
+    justifyContent: "center",
     marginTop: 18,
     paddingHorizontal: 14,
   },
@@ -488,7 +554,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   emptyState: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: colors.white,
     borderColor: colors.line,
     borderRadius: 28,
@@ -506,7 +572,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     fontSize: 14,
     marginTop: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   pressed: {
     opacity: 0.8,

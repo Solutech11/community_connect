@@ -11,6 +11,7 @@ import MyEventsScreen from "../pages/dashboard/my-events";
 import MyCreatedEventsScreen from "../pages/tabs/my-created-events";
 import ManageCreatedEventScreen from "../pages/tabs/manage-created-event";
 import TicketScannerScreen from "../pages/tabs/ticket-scanner";
+import NotificationsScreen from "../pages/tabs/notifications";
 import SettingsScreen from "../pages/tabs/settings";
 import ChangePasswordScreen from "../pages/tabs/change-password";
 import DeleteAccountScreen from "../pages/tabs/delete-account";
@@ -47,6 +48,7 @@ const DashboardManageCreatedEvent = withDashboardLayout(
   ManageCreatedEventScreen,
 );
 const DashboardTicketScanner = withDashboardLayout(TicketScannerScreen);
+const DashboardNotifications = withDashboardLayout(NotificationsScreen);
 const DashboardSettings = withDashboardLayout(SettingsScreen);
 const DashboardChangePassword = withDashboardLayout(ChangePasswordScreen);
 const DashboardDeleteAccount = withDashboardLayout(DeleteAccountScreen);
@@ -153,6 +155,11 @@ export default function RootStackNavigator() {
       <Stack.Screen
         name="TicketScanner"
         component={DashboardTicketScanner}
+        options={{ animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="Notifications"
+        component={DashboardNotifications}
         options={{ animation: "slide_from_right" }}
       />
       <Stack.Screen

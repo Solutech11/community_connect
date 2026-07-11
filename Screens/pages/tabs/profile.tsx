@@ -124,7 +124,11 @@ export default function ProfileScreen() {
                 label: "Update Profile",
                 onPress: () => navigation.navigate("UpdateProfile"),
               },
-              { icon: "notifications-outline", label: "Notification" },
+              {
+                icon: "notifications-outline",
+                label: "Notification",
+                onPress: () => navigation.navigate("Notifications"),
+              },
               { icon: "people-outline", label: "Friends" },
             ]}
           />
