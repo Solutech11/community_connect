@@ -12,6 +12,7 @@ import MyCreatedEventsScreen from "../pages/tabs/my-created-events";
 import ManageCreatedEventScreen from "../pages/tabs/manage-created-event";
 import TicketScannerScreen from "../pages/tabs/ticket-scanner";
 import NotificationsScreen from "../pages/tabs/notifications";
+import FriendsScreen from "../pages/tabs/friends";
 import SettingsScreen from "../pages/tabs/settings";
 import ChangePasswordScreen from "../pages/tabs/change-password";
 import DeleteAccountScreen from "../pages/tabs/delete-account";
@@ -49,6 +50,7 @@ const DashboardManageCreatedEvent = withDashboardLayout(
 );
 const DashboardTicketScanner = withDashboardLayout(TicketScannerScreen);
 const DashboardNotifications = withDashboardLayout(NotificationsScreen);
+const DashboardFriends = withDashboardLayout(FriendsScreen);
 const DashboardSettings = withDashboardLayout(SettingsScreen);
 const DashboardChangePassword = withDashboardLayout(ChangePasswordScreen);
 const DashboardDeleteAccount = withDashboardLayout(DeleteAccountScreen);
@@ -160,6 +162,11 @@ export default function RootStackNavigator() {
       <Stack.Screen
         name="Notifications"
         component={DashboardNotifications}
+        options={{ animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="Friends"
+        component={DashboardFriends}
         options={{ animation: "slide_from_right" }}
       />
       <Stack.Screen

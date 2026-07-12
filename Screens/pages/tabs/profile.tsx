@@ -129,7 +129,11 @@ export default function ProfileScreen() {
                 label: "Notification",
                 onPress: () => navigation.navigate("Notifications"),
               },
-              { icon: "people-outline", label: "Friends" },
+              {
+                icon: "people-outline",
+                label: "Friends",
+                onPress: () => navigation.navigate("Friends"),
+              },
             ]}
           />
           <Section

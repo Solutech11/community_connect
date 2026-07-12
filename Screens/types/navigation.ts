@@ -28,6 +28,7 @@ export type RootStackParamList = {
   ManageCreatedEvent: undefined;
   TicketScanner: undefined;
   Notifications: undefined;
+  Friends: undefined;
   UpdateProfile: undefined;
   Settings: undefined;
   ChangePassword: undefined;
