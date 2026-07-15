@@ -1,4 +1,4 @@
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
+﻿import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { withDashboardLayout } from "../layouts/dashboard-layout";
 import ForgotPasswordScreen from "../pages/auth/forgot-password";
@@ -10,9 +10,16 @@ import EventDetailsScreen from "../pages/dashboard/event-details";
 import MyEventsScreen from "../pages/dashboard/my-events";
 import MyCreatedEventsScreen from "../pages/tabs/my-created-events";
 import ManageCreatedEventScreen from "../pages/tabs/manage-created-event";
+import CreateEventIntroductionScreen from "../pages/tabs/create-event-introduction";
+import CreateEventDetailsScreen from "../pages/tabs/create-event-details";
+import CreateEventDateTimeScreen from "../pages/tabs/create-event-date-time";
+import CreateEventTicketsScreen from "../pages/tabs/create-event-tickets";
+import CreateEventReviewScreen from "../pages/tabs/create-event-review";
 import TicketScannerScreen from "../pages/tabs/ticket-scanner";
 import NotificationsScreen from "../pages/tabs/notifications";
 import FriendsScreen from "../pages/tabs/friends";
+import ChatThreadScreen from "../pages/tabs/chat-thread";
+import AIChatScreen from "../pages/tabs/ai-chat";
 import SettingsScreen from "../pages/tabs/settings";
 import ChangePasswordScreen from "../pages/tabs/change-password";
 import DeleteAccountScreen from "../pages/tabs/delete-account";
@@ -22,6 +29,9 @@ import UpdateProfileScreen from "../pages/tabs/update-profile";
 import WalletScreen from "../pages/tabs/wallet";
 import TransactionsScreen from "../pages/tabs/transactions";
 import WalletTopUpScreen from "../pages/tabs/wallet-top-up";
+import WalletWithdrawScreen from "../pages/tabs/wallet-withdraw";
+import WalletTransferScreen from "../pages/tabs/wallet-transfer";
+import WalletDisputeScreen from "../pages/tabs/wallet-dispute";
 import MyEventDetailsScreen from "../pages/dashboard/my-event-details";
 import PaymentSuccessScreen from "../pages/dashboard/payment-success";
 import TicketSelectionScreen from "../pages/dashboard/ticket-selection";
@@ -48,9 +58,24 @@ const DashboardMyCreatedEvents = withDashboardLayout(MyCreatedEventsScreen);
 const DashboardManageCreatedEvent = withDashboardLayout(
   ManageCreatedEventScreen,
 );
+const DashboardCreateEventIntroduction = withDashboardLayout(
+  CreateEventIntroductionScreen,
+);
+const DashboardCreateEventDetails = withDashboardLayout(
+  CreateEventDetailsScreen,
+);
+const DashboardCreateEventDateTime = withDashboardLayout(
+  CreateEventDateTimeScreen,
+);
+const DashboardCreateEventTickets = withDashboardLayout(
+  CreateEventTicketsScreen,
+);
+const DashboardCreateEventReview = withDashboardLayout(CreateEventReviewScreen);
 const DashboardTicketScanner = withDashboardLayout(TicketScannerScreen);
 const DashboardNotifications = withDashboardLayout(NotificationsScreen);
 const DashboardFriends = withDashboardLayout(FriendsScreen);
+const DashboardChatThread = withDashboardLayout(ChatThreadScreen);
+const DashboardAIChat = withDashboardLayout(AIChatScreen);
 const DashboardSettings = withDashboardLayout(SettingsScreen);
 const DashboardChangePassword = withDashboardLayout(ChangePasswordScreen);
 const DashboardDeleteAccount = withDashboardLayout(DeleteAccountScreen);
@@ -60,6 +85,9 @@ const DashboardUpdateProfile = withDashboardLayout(UpdateProfileScreen);
 const DashboardWallet = withDashboardLayout(WalletScreen);
 const DashboardTransactions = withDashboardLayout(TransactionsScreen);
 const DashboardWalletTopUp = withDashboardLayout(WalletTopUpScreen);
+const DashboardWalletWithdraw = withDashboardLayout(WalletWithdrawScreen);
+const DashboardWalletTransfer = withDashboardLayout(WalletTransferScreen);
+const DashboardWalletDispute = withDashboardLayout(WalletDisputeScreen);
 const DashboardMyEventDetails = withDashboardLayout(MyEventDetailsScreen);
 const DashboardEventDetails = withDashboardLayout(EventDetailsScreen);
 const DashboardTicketSelection = withDashboardLayout(TicketSelectionScreen);
@@ -155,6 +183,31 @@ export default function RootStackNavigator() {
         options={{ animation: "slide_from_right" }}
       />
       <Stack.Screen
+        name="CreateEventIntroduction"
+        component={DashboardCreateEventIntroduction}
+        options={{ animation: "slide_from_bottom" }}
+      />
+      <Stack.Screen
+        name="CreateEventDetails"
+        component={DashboardCreateEventDetails}
+        options={{ animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="CreateEventDateTime"
+        component={DashboardCreateEventDateTime}
+        options={{ animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="CreateEventTickets"
+        component={DashboardCreateEventTickets}
+        options={{ animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="CreateEventReview"
+        component={DashboardCreateEventReview}
+        options={{ animation: "slide_from_right" }}
+      />
+      <Stack.Screen
         name="TicketScanner"
         component={DashboardTicketScanner}
         options={{ animation: "slide_from_right" }}
@@ -168,6 +221,16 @@ export default function RootStackNavigator() {
         name="Friends"
         component={DashboardFriends}
         options={{ animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="ChatThread"
+        component={DashboardChatThread}
+        options={{ animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="AIChat"
+        component={DashboardAIChat}
+        options={{ animation: "slide_from_bottom" }}
       />
       <Stack.Screen
         name="UpdateProfile"
@@ -218,6 +281,21 @@ export default function RootStackNavigator() {
       <Stack.Screen
         name="WalletTopUp"
         component={DashboardWalletTopUp}
+        options={{ animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="WalletWithdraw"
+        component={DashboardWalletWithdraw}
+        options={{ animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="WalletTransfer"
+        component={DashboardWalletTransfer}
+        options={{ animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="WalletDispute"
+        component={DashboardWalletDispute}
         options={{ animation: "slide_from_right" }}
       />
       <Stack.Screen

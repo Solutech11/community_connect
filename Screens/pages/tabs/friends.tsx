@@ -280,7 +280,16 @@ export default function FriendsScreen({ navigation }: Props) {
                 {activeTab === "My Friends" ? (
                   <Pressable
                     accessibilityLabel={`Message ${person.name}`}
-                    onPress={() => setNotice(`Message ${person.name}`)}
+                    onPress={() =>
+                      navigation.navigate("ChatThread", {
+                        conversationId: person.id,
+                        image:
+                          person.image ??
+                          "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=220&q=85",
+                        name: person.name,
+                        online: true,
+                      })
+                    }
                     style={styles.messageButton}
                   >
                     <Ionicons color="#08b657" name="chatbox" size={22} />
@@ -404,7 +413,11 @@ export default function FriendsScreen({ navigation }: Props) {
       </SafeAreaView>
 
       <AppAlertModal
-        message="This conversation will open in CommunityConnect Chat."
+        message={
+          notice?.includes("now your friend")
+            ? "Connection accepted. You can now start a conversation from Friends or Chat."
+            : "The friend request has been updated."
+        }
         onClose={() => setNotice(null)}
         title={notice ?? ""}
         visible={Boolean(notice)}

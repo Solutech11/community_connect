@@ -1,9 +1,8 @@
-import { Ionicons } from "@expo/vector-icons";
+﻿import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import AppAlertModal from "../../components/ui/app-alert-modal";
 import {
   TransactionDetailsSheet,
   WalletAccountDetailsSheet,
@@ -25,7 +24,6 @@ const tx = [
   ["cafe-outline", "Community Cafe", "Oct 12, 8:45 AM", "-$12.50"],
 ] as const;
 export default function WalletScreen({ navigation }: Props) {
-  const [n, setN] = useState<string | null>(null);
   const [account, setAccount] = useState(false);
   const [selected, setSelected] = useState<TransactionDetail | null>(null);
   return (
@@ -37,10 +35,28 @@ export default function WalletScreen({ navigation }: Props) {
             <Text style={s.label}>Total Balance</Text>
             <Text style={s.balance}>$2,840.50</Text>
             <View style={s.footer}>
-              <Text style={s.mask}>▣ **** 4920</Text>
+              <Text style={s.mask}>**** 4920</Text>
               <Text style={s.active}>Active</Text>
             </View>
           </View>
+          <Pressable
+            onPress={() => navigation.navigate("AIChat")}
+            style={s.aiInsight}
+          >
+            <View style={s.aiInsightIcon}>
+              <Ionicons name="sparkles" size={20} color={colors.ink} />
+            </View>
+            <View style={s.aiInsightCopy}>
+              <Text style={s.aiInsightLabel}>AI WALLET INSIGHT</Text>
+              <Text style={s.aiInsightTitle}>
+                Spending is 18% lower than last month
+              </Text>
+              <Text style={s.aiInsightText}>
+                Ask AI for a breakdown or a personalized event budget.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={21} color="#08b657" />
+          </Pressable>
           <View style={s.actions}>
             {actions.map(([i, l]) => (
               <Pressable
@@ -48,9 +64,11 @@ export default function WalletScreen({ navigation }: Props) {
                 onPress={() =>
                   l === "Top Up"
                     ? navigation.navigate("WalletTopUp")
-                    : l === "Details"
-                      ? setAccount(true)
-                      : setN(l)
+                    : l === "Withdraw"
+                      ? navigation.navigate("WalletWithdraw")
+                      : l === "Transfer"
+                        ? navigation.navigate("WalletTransfer")
+                        : setAccount(true)
                 }
                 style={s.action}
               >
@@ -105,12 +123,10 @@ export default function WalletScreen({ navigation }: Props) {
         visible={!!selected}
         transaction={selected}
         onClose={() => setSelected(null)}
-      />
-      <AppAlertModal
-        visible={!!n}
-        title={n ?? ""}
-        message={(n ?? "Feature") + " will be available soon."}
-        onClose={() => setN(null)}
+        onDispute={(transaction) => {
+          setSelected(null);
+          navigation.navigate("WalletDispute", { transaction });
+        }}
       />
     </>
   );
@@ -139,6 +155,42 @@ const s = StyleSheet.create({
   },
   mask: { color: "#d3ddd8", fontFamily: fonts.bold },
   active: { color: "#0ed666", fontFamily: fonts.bold },
+  aiInsight: {
+    alignItems: "center",
+    backgroundColor: "#e7f8ef",
+    borderRadius: 25,
+    flexDirection: "row",
+    gap: 11,
+    marginTop: 20,
+    padding: 15,
+  },
+  aiInsightIcon: {
+    alignItems: "center",
+    backgroundColor: colors.lime,
+    borderRadius: 20,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  aiInsightCopy: { flex: 1 },
+  aiInsightLabel: {
+    color: "#078f43",
+    fontFamily: fonts.extraBold,
+    fontSize: 9,
+    letterSpacing: 0.6,
+  },
+  aiInsightTitle: {
+    color: colors.ink,
+    fontFamily: fonts.bold,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  aiInsightText: {
+    color: "#3b785a",
+    fontFamily: fonts.medium,
+    fontSize: 10,
+    marginTop: 3,
+  },
   actions: {
     flexDirection: "row",
     justifyContent: "space-between",

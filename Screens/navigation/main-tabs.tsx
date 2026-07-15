@@ -1,20 +1,25 @@
-import { Ionicons } from '@expo/vector-icons';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { useEffect, useRef } from 'react';
-import { Animated as RNAnimated, Platform, StyleSheet, Text } from 'react-native';
+﻿import { Ionicons } from "@expo/vector-icons";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { useEffect, useRef } from "react";
+import {
+  Animated as RNAnimated,
+  Platform,
+  StyleSheet,
+  Text,
+} from "react-native";
 import Animated, {
   interpolate,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-} from 'react-native-reanimated';
+} from "react-native-reanimated";
 
-import HomeScreen from '../pages/dashboard/home';
-import CommunityScreen from '../pages/tabs/community';
-import PendingScreen from '../pages/tabs/pending-screen';
-import ProfileScreen from '../pages/tabs/profile';
-import DashboardLayout from '../layouts/dashboard-layout';
-import { colors, fonts } from '../styles/theme';
+import HomeScreen from "../pages/dashboard/home";
+import CommunityScreen from "../pages/tabs/community";
+import ChatScreen from "../pages/tabs/chat";
+import ProfileScreen from "../pages/tabs/profile";
+import DashboardLayout from "../layouts/dashboard-layout";
+import { colors, fonts } from "../styles/theme";
 
 type MainTabParamList = {
   HomeTab: undefined;
@@ -26,11 +31,14 @@ type MainTabParamList = {
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const tabMeta = {
-  HomeTab: { label: 'Home', icon: 'home' },
-  Community: { label: 'Community', icon: 'people' },
-  Chat: { label: 'Chat', icon: 'chatbox' },
-  Profile: { label: 'Profile', icon: 'person' },
-} satisfies Record<keyof MainTabParamList, { label: string; icon: keyof typeof Ionicons.glyphMap }>;
+  HomeTab: { label: "Home", icon: "home" },
+  Community: { label: "Community", icon: "people" },
+  Chat: { label: "Chat", icon: "chatbox" },
+  Profile: { label: "Profile", icon: "person" },
+} satisfies Record<
+  keyof MainTabParamList,
+  { label: string; icon: keyof typeof Ionicons.glyphMap }
+>;
 
 function TabIcon({
   focused,
@@ -92,18 +100,10 @@ function DashboardCommunity() {
   );
 }
 
-function PendingChat() {
+function DashboardChat() {
   return (
     <DashboardLayout>
-      <PendingScreen title="Chat" />
-    </DashboardLayout>
-  );
-}
-
-function PendingProfile() {
-  return (
-    <DashboardLayout>
-      <PendingScreen title="Profile" />
+      <ChatScreen />
     </DashboardLayout>
   );
 }
@@ -148,13 +148,21 @@ export default function MainTabs() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.lime,
-        tabBarInactiveTintColor: '#4a9768',
+        tabBarInactiveTintColor: "#4a9768",
         tabBarLabel: ({ focused, color }) => (
-          <Text style={[styles.tabLabel, focused && styles.tabLabelActive, { color }]}>
+          <Text
+            style={[
+              styles.tabLabel,
+              focused && styles.tabLabelActive,
+              { color },
+            ]}
+          >
             {tabMeta[route.name].label}
           </Text>
         ),
-        tabBarIcon: ({ focused }) => <TabIcon focused={focused} routeName={route.name} />,
+        tabBarIcon: ({ focused }) => (
+          <TabIcon focused={focused} routeName={route.name} />
+        ),
         tabBarStyle: styles.tabBar,
         tabBarBackground: () => <AnimatedTabBarBackground />,
         tabBarItemStyle: styles.tabItem,
@@ -163,23 +171,30 @@ export default function MainTabs() {
     >
       <Tab.Screen name="HomeTab" component={DashboardHome} />
       <Tab.Screen name="Community" component={DashboardCommunity} />
-      <Tab.Screen name="Chat" component={PendingChat} />
-      <Tab.Screen name="Profile" component={() => <DashboardLayout><ProfileScreen /></DashboardLayout>} />
+      <Tab.Screen name="Chat" component={DashboardChat} />
+      <Tab.Screen
+        name="Profile"
+        component={() => (
+          <DashboardLayout>
+            <ProfileScreen />
+          </DashboardLayout>
+        )}
+      />
     </Tab.Navigator>
   );
 }
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: 'transparent',
-    borderTopColor: 'transparent',
+    backgroundColor: "transparent",
+    borderTopColor: "transparent",
     borderTopWidth: 0,
-    elevation: Platform.OS === 'android' ? 12 : 0,
-    height: Platform.OS === 'android' ? 76 : 92,
+    elevation: Platform.OS === "android" ? 12 : 0,
+    height: Platform.OS === "android" ? 76 : 92,
     left: 0,
-    paddingBottom: Platform.OS === 'android' ? 6 : 12,
+    paddingBottom: Platform.OS === "android" ? 6 : 12,
     paddingTop: 8,
-    position: 'absolute',
+    position: "absolute",
     right: 0,
     bottom: 0,
   },
@@ -188,11 +203,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    shadowColor: '#86b998',
+    shadowColor: "#86b998",
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.18,
     shadowRadius: 18,
-    elevation: Platform.OS === 'android' ? 12 : 0,
+    elevation: Platform.OS === "android" ? 12 : 0,
   },
   tabItem: {
     gap: 4,
@@ -206,12 +221,12 @@ const styles = StyleSheet.create({
     fontFamily: fonts.extraBold,
   },
   activeIconWrap: {
-    alignItems: 'center',
-    backgroundColor: '#e8fff0',
+    alignItems: "center",
+    backgroundColor: "#e8fff0",
     borderRadius: 22,
     height: 46,
-    justifyContent: 'center',
-    shadowColor: '#6bdd92',
+    justifyContent: "center",
+    shadowColor: "#6bdd92",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 16,

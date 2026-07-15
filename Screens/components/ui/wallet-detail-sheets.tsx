@@ -84,10 +84,12 @@ export function TransactionDetailsSheet({
   visible,
   onClose,
   transaction,
+  onDispute,
 }: {
   visible: boolean;
   onClose: () => void;
   transaction: TransactionDetail | null;
+  onDispute?: (transaction: TransactionDetail) => void;
 }) {
   if (!transaction) return null;
   const credit = transaction.amount.startsWith("+");
@@ -123,6 +125,12 @@ export function TransactionDetailsSheet({
           This transaction was completed successfully.
         </Text>
       </View>
+      {!credit && onDispute ? (
+        <Pressable onPress={() => onDispute(transaction)} style={s.dispute}>
+          <Ionicons name="flag-outline" size={19} color="#b54747" />
+          <Text style={s.disputeText}>Report a problem</Text>
+        </Pressable>
+      ) : null}
     </Shell>
   );
 }
@@ -240,6 +248,22 @@ const s = StyleSheet.create({
     flex: 1,
     fontFamily: fonts.medium,
     fontSize: 11,
+  },
+  dispute: {
+    alignItems: "center",
+    borderColor: "#efcaca",
+    borderRadius: 24,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "center",
+    marginTop: 13,
+    minHeight: 48,
+  },
+  disputeText: {
+    color: "#b54747",
+    fontFamily: fonts.bold,
+    fontSize: 13,
   },
   close: {
     alignItems: "center",

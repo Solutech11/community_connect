@@ -1,7 +1,8 @@
-import type { ComponentType, ReactNode } from 'react';
-import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
+﻿import type { ComponentType, ReactNode } from "react";
+import { Platform, StyleSheet, View, useWindowDimensions } from "react-native";
 
-import { colors } from '../styles/theme';
+import { colors } from "../styles/theme";
+import AiAssistantLauncher from "../components/ui/ai-assistant-launcher";
 
 type DashboardLayoutProps = {
   children: ReactNode;
@@ -18,8 +19,13 @@ const MAX_ANDROID_SCALE = 0.92;
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { height, width } = useWindowDimensions();
 
-  if (Platform.OS !== 'android') {
-    return <>{children}</>;
+  if (Platform.OS !== "android") {
+    return (
+      <View style={styles.appFrame}>
+        {children}
+        <AiAssistantLauncher />
+      </View>
+    );
   }
 
   const scale = Math.max(
@@ -40,12 +46,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         ]}
       >
         {children}
+        <AiAssistantLauncher />
       </View>
     </View>
   );
 }
 
-export function withDashboardLayout<Props extends object>(Screen: ComponentType<Props>) {
+export function withDashboardLayout<Props extends object>(
+  Screen: ComponentType<Props>,
+) {
   function DashboardScreen(props: Props) {
     return (
       <DashboardLayout>
@@ -54,21 +63,22 @@ export function withDashboardLayout<Props extends object>(Screen: ComponentType<
     );
   }
 
-  DashboardScreen.displayName = `withDashboardLayout(${Screen.displayName ?? Screen.name ?? 'Screen'})`;
+  DashboardScreen.displayName = `withDashboardLayout(${Screen.displayName ?? Screen.name ?? "Screen"})`;
   return DashboardScreen;
 }
 
 const styles = StyleSheet.create({
+  appFrame: { backgroundColor: colors.paper, flex: 1 },
   viewport: {
     backgroundColor: colors.paper,
     flex: 1,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   canvas: {
     backgroundColor: colors.paper,
     left: 0,
-    position: 'absolute',
+    position: "absolute",
     top: 0,
-    transformOrigin: 'top left',
+    transformOrigin: "top left",
   },
 });

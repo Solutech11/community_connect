@@ -1,7 +1,9 @@
-import { Ionicons } from "@expo/vector-icons";
+﻿import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useState } from "react";
 import {
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -21,58 +23,65 @@ export default function TopUp({ navigation }: P) {
   const [pay, setPay] = useState(false);
   return (
     <>
-      <SafeAreaView edges={[]} style={s.safe}>
-        <ProfilePageHeader title="Top-up Wallet" onBack={navigation.goBack} />
-        <ScrollView contentContainerStyle={s.content}>
-          <Text style={s.label}>Enter Amount</Text>
-          <View style={s.box}>
-            <Text style={s.dollar}>$</Text>
-            <TextInput
-              value={a}
-              onChangeText={setA}
-              keyboardType="decimal-pad"
-              style={s.input}
-            />
-          </View>
-          <View style={s.quick}>
-            {["10", "20", "50", "100"].map((x) => (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={s.safe}
+      >
+        <SafeAreaView edges={[]} style={s.safe}>
+          <ProfilePageHeader title="Top-up Wallet" onBack={navigation.goBack} />
+          <ScrollView contentContainerStyle={s.content}>
+            <Text style={s.label}>Enter Amount</Text>
+            <View style={s.box}>
+              <Text style={s.dollar}>$</Text>
+              <TextInput
+                value={a}
+                onChangeText={setA}
+                keyboardType="decimal-pad"
+                style={s.input}
+              />
+            </View>
+            <View style={s.quick}>
+              {["10", "20", "50", "100"].map((x) => (
+                <Pressable
+                  key={x}
+                  onPress={() => setA(x + ".00")}
+                  style={[s.pill, a === x + ".00" && s.selected]}
+                >
+                  <Text style={[s.bold, a === x + ".00" && s.white]}>
+                    $ {x}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={[s.label, s.methods]}>Select Payment Method</Text>
+            {["Paystack", "Korapay"].map((x) => (
               <Pressable
                 key={x}
-                onPress={() => setA(x + ".00")}
-                style={[s.pill, a === x + ".00" && s.selected]}
+                onPress={() => setM(x)}
+                style={[s.method, m === x && s.methodOn]}
               >
-                <Text style={[s.bold, a === x + ".00" && s.white]}>$ {x}</Text>
+                <View style={s.icon}>
+                  <Ionicons
+                    name={x === "Paystack" ? "business" : "card-outline"}
+                    size={24}
+                    color="#08b657"
+                  />
+                </View>
+                <Text style={s.methodName}>{x}</Text>
+                <View style={[s.radio, m === x && s.radioOn]}>
+                  {m === x && (
+                    <Ionicons name="checkmark" size={17} color="#fff" />
+                  )}
+                </View>
               </Pressable>
             ))}
-          </View>
-          <Text style={[s.label, s.methods]}>Select Payment Method</Text>
-          {["Paystack", "Korapay"].map((x) => (
-            <Pressable
-              key={x}
-              onPress={() => setM(x)}
-              style={[s.method, m === x && s.methodOn]}
-            >
-              <View style={s.icon}>
-                <Ionicons
-                  name={x === "Paystack" ? "business" : "card-outline"}
-                  size={24}
-                  color="#08b657"
-                />
-              </View>
-              <Text style={s.methodName}>{x}</Text>
-              <View style={[s.radio, m === x && s.radioOn]}>
-                {m === x && (
-                  <Ionicons name="checkmark" size={17} color="#fff" />
-                )}
-              </View>
+            <Pressable onPress={() => setPay(true)} style={s.proceed}>
+              <Text style={s.proceedText}>Proceed to Pay</Text>
+              <Ionicons name="arrow-forward" size={21} color="#fff" />
             </Pressable>
-          ))}
-          <Pressable onPress={() => setPay(true)} style={s.proceed}>
-            <Text style={s.proceedText}>Proceed to Pay</Text>
-            <Ionicons name="arrow-forward" size={21} color="#fff" />
-          </Pressable>
-        </ScrollView>
-      </SafeAreaView>
+          </ScrollView>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
       <AppAlertModal
         visible={pay}
         title="Confirm Top-up"

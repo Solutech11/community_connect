@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+﻿import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -28,14 +28,14 @@ const events = [
   {
     tab: "Active" as Tab,
     title: "Urban Garden Workshop",
-    meta: "Sat, Oct 24 • 10:00 AM",
+    meta: "Sat, Oct 24 â€¢ 10:00 AM",
     image: images.garden,
     foot: "24+",
   },
   {
     tab: "Active" as Tab,
     title: "Morning Run Club",
-    meta: "Daily • 06:30 AM",
+    meta: "Daily â€¢ 06:30 AM",
     image: images.run,
     foot: "High Engagement",
   },
@@ -54,7 +54,7 @@ const events = [
   {
     tab: "Past" as Tab,
     title: "Community Leadership Meetup",
-    meta: "Ended Sep 18 • 48 attended",
+    meta: "Ended Sep 18 â€¢ 48 attended",
     image: images.garden,
     foot: "Completed",
   },
@@ -160,11 +160,9 @@ export default function MyCreatedEventsScreen({ navigation }: Props) {
                     onPress={() =>
                       x.tab === "Active"
                         ? navigation.navigate("ManageCreatedEvent")
-                        : setNotice(
-                            (x.tab === "Draft"
-                              ? "Continue editing "
-                              : "View ") + x.title,
-                          )
+                        : x.tab === "Draft"
+                          ? navigation.navigate("CreateEventDetails")
+                          : setNotice("View " + x.title)
                     }
                     style={s.manage}
                   >
@@ -207,7 +205,7 @@ export default function MyCreatedEventsScreen({ navigation }: Props) {
         </ScrollView>
         <Pressable
           accessibilityLabel="Create a new event"
-          onPress={() => setNotice("Create Event")}
+          onPress={() => navigation.navigate("CreateEventIntroduction")}
           style={s.fab}
         >
           <Ionicons name="add" size={36} color={colors.ink} />

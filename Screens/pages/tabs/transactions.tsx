@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+﻿import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useState } from "react";
 import {
@@ -96,6 +96,10 @@ export default function Transactions({ navigation }: P) {
         visible={!!selected}
         transaction={selected}
         onClose={() => setSelected(null)}
+        onDispute={(transaction) => {
+          setSelected(null);
+          navigation.navigate("WalletDispute", { transaction });
+        }}
       />
     </>
   );

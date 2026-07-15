@@ -1,4 +1,4 @@
-import type { RouteProp } from "@react-navigation/native";
+﻿import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 export type CheckoutTicketSelection = {
@@ -8,6 +8,31 @@ export type CheckoutTicketSelection = {
   unitPrice: number;
 };
 
+export type CreateEventTicket = {
+  id: string;
+  title: string;
+  price: string;
+  capacity: string;
+};
+
+export type CreateEventDraft = {
+  title: string;
+  coverImage: string;
+  description: string;
+  country: string;
+  state: string;
+  lga: string;
+  phone: string;
+  capacity: string;
+  activityType: string;
+  audience: string;
+  setting: "Indoor" | "Outdoor";
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
+  tickets: CreateEventTicket[];
+};
 export type RootStackParamList = {
   OnboardingWelcome: undefined;
   Login: undefined;
@@ -26,9 +51,21 @@ export type RootStackParamList = {
   MyEvents: undefined;
   MyCreatedEvents: undefined;
   ManageCreatedEvent: undefined;
+  CreateEventIntroduction: undefined;
+  CreateEventDetails: { draft?: Partial<CreateEventDraft> } | undefined;
+  CreateEventDateTime: { draft: CreateEventDraft };
+  CreateEventTickets: { draft: CreateEventDraft };
+  CreateEventReview: { draft: CreateEventDraft };
   TicketScanner: undefined;
   Notifications: undefined;
   Friends: undefined;
+  ChatThread: {
+    conversationId: string;
+    name: string;
+    image: string;
+    online: boolean;
+  };
+  AIChat: undefined;
   UpdateProfile: undefined;
   Settings: undefined;
   ChangePassword: undefined;
@@ -38,6 +75,15 @@ export type RootStackParamList = {
   Wallet: undefined;
   Transactions: undefined;
   WalletTopUp: undefined;
+  WalletWithdraw: undefined;
+  WalletTransfer: undefined;
+  WalletDispute: {
+    transaction: {
+      title: string;
+      date: string;
+      amount: string;
+    };
+  };
   MyEventDetails: { eventId: string };
   EventDetails: { eventId: string };
   TicketSelection: { eventId: string };

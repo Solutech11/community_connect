@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+﻿import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMemo, useState } from "react";
@@ -345,6 +345,28 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
+        <Pressable
+          onPress={() => navigation.navigate("AIChat")}
+          style={({ pressed }) => [
+            styles.aiRecommendation,
+            pressed && styles.pressed,
+          ]}
+        >
+          <View style={styles.aiRecommendationIcon}>
+            <Ionicons color={colors.ink} name="sparkles" size={21} />
+          </View>
+          <View style={styles.aiRecommendationBody}>
+            <Text style={styles.aiRecommendationLabel}>AI FOR YOU</Text>
+            <Text style={styles.aiRecommendationTitle}>
+              Your weekend looks perfect for community events
+            </Text>
+            <Text style={styles.aiRecommendationCopy}>
+              I found 3 matches based on your interests.
+            </Text>
+          </View>
+          <Ionicons color="#08ad54" name="chevron-forward" size={21} />
+        </Pressable>
+
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>My Events</Text>
           <Pressable
@@ -503,6 +525,46 @@ const styles = StyleSheet.create({
   categoryTextActive: {
     color: colors.ink,
     fontFamily: fonts.extraBold,
+  },
+  aiRecommendation: {
+    alignItems: "center",
+    backgroundColor: "#0b3527",
+    borderRadius: 27,
+    flexDirection: "row",
+    gap: 12,
+    marginHorizontal: 29,
+    marginTop: 24,
+    padding: 16,
+  },
+  aiRecommendationIcon: {
+    alignItems: "center",
+    backgroundColor: colors.lime,
+    borderRadius: 22,
+    height: 44,
+    justifyContent: "center",
+    width: 44,
+  },
+  aiRecommendationBody: {
+    flex: 1,
+  },
+  aiRecommendationLabel: {
+    color: colors.lime,
+    fontFamily: fonts.extraBold,
+    fontSize: 9,
+    letterSpacing: 0.8,
+  },
+  aiRecommendationTitle: {
+    color: colors.white,
+    fontFamily: fonts.bold,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 3,
+  },
+  aiRecommendationCopy: {
+    color: "#a9d5bc",
+    fontFamily: fonts.medium,
+    fontSize: 10,
+    marginTop: 3,
   },
   sectionHeader: {
     alignItems: "center",
