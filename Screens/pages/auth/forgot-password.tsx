@@ -37,7 +37,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
           value={email}
           onChangeText={setEmail}
         />
-        <PrimaryButton label="Send Reset Link" onPress={() => navigation.navigate('VerifyEmail')} />
+        <PrimaryButton label="Send Reset Link" onPress={() => navigation.navigate('VerifyEmail', { email: email.trim().toLowerCase(), purpose: 'reset-password' })} />
         <LinkText label="Remember password? Sign In" onPress={() => navigation.navigate('Login')} />
       </View>
     </ScreenShell>

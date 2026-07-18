@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Image,
   ImageBackground,
@@ -17,11 +17,14 @@ import TicketPurchaseDetailsSheet, {
   type PurchasedTicket,
 } from "../../components/ui/ticket-purchase-details-sheet";
 import ProfilePageHeader from "../../components/ui/profile-page-header";
+import { ApiError } from "../../services/api/client";
+import { eventsApi } from "../../services/api/events.api";
+import type { GetEventsIdResponse } from "../../types/api.generated";
 import { colors, fonts } from "../../styles/theme";
 import type { RootStackParamList } from "../../types/navigation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ManageCreatedEvent">;
-const guests = [
+const fallbackGuests: PurchasedTicket[] = [
   {
     name: "Elena Rodriguez",
     ticket: "VIP Access",
@@ -51,12 +54,41 @@ const guests = [
       "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=85",
   },
 ];
-export default function ManageCreatedEventScreen({ navigation }: Props) {
+export default function ManageCreatedEventScreen({ navigation, route }: Props) {
+  const eventId = route.params?.eventId;
+  const [event, setEvent] = useState<GetEventsIdResponse["data"]["event"] | null>(null);
+  const [guests, setGuests] = useState<PurchasedTicket[]>([]);
+  const [totalGuests, setTotalGuests] = useState(0);
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState("");
   const [pendingOnly, setPendingOnly] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [selected, setSelected] = useState<PurchasedTicket | null>(null);
+  useEffect(() => {
+    if (!eventId) {
+      setNotice("No event was selected.");
+      return;
+    }
+    const controller = new AbortController();
+    Promise.all([eventsApi.get(eventId, controller.signal), eventsApi.attendees(eventId, controller.signal)])
+      .then(([eventResponse, attendeeResponse]) => {
+        setEvent(eventResponse.data.event);
+        setTotalGuests(attendeeResponse.data.attendees.reduce((sum, order) => sum + order.quantity, 0));
+        setGuests(attendeeResponse.data.attendees.map((order, index) => ({
+          name: order.buyerId.firstName + " " + order.buyerId.lastName,
+          ticket: order.ticketTypeId.title,
+          status: "Pending",
+          avatar: index % 2
+            ? "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=160&q=85"
+            : "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&q=85",
+        })));
+      })
+      .catch((error: unknown) => {
+        if (error instanceof ApiError && error.code === "REQUEST_CANCELLED") return;
+        setNotice(error instanceof ApiError ? error.message : "Unable to load event management data.");
+      });
+    return () => controller.abort();
+  }, [eventId]);
   const shown = useMemo(
     () =>
       guests.filter(
@@ -86,20 +118,19 @@ export default function ManageCreatedEventScreen({ navigation }: Props) {
             <View style={s.live}>
               <Text style={s.liveText}>LIVE NOW</Text>
             </View>
-            <Text style={s.heroTitle}>Urban Echo: Neon Garden Festival</Text>
+            <Text style={s.heroTitle}>{event?.title ?? "Loading event..."}</Text>
           </ImageBackground>
           <View style={s.location}>
             <Ionicons name="location-outline" size={21} color="#29965a" />
             <Text style={s.locationText}>
-              Skyline Botanical Gardens, Downtown
+              {event ? event.venueName + ", " + event.address : "Loading location..."}
             </Text>
           </View>
           <Text numberOfLines={2} style={s.description}>
-            Experience the fusion of nature and technology in this immersive
-            electronic music and light installation.
+            {event?.description ?? "Loading event details..."}
           </Text>
           <Pressable
-            onPress={() => navigation.navigate("TicketScanner")}
+            onPress={() => eventId && navigation.navigate("TicketScanner", { eventId })}
             style={s.scanner}
           >
             <View>
@@ -113,15 +144,15 @@ export default function ManageCreatedEventScreen({ navigation }: Props) {
           <View style={s.stats}>
             <View style={s.stat}>
               <Text style={s.statLabel}>Total Guests</Text>
-              <Text style={s.statValue}>1,240</Text>
+              <Text style={s.statValue}>{totalGuests}</Text>
             </View>
             <View style={s.stat}>
               <Text style={s.statLabel}>Checked In</Text>
-              <Text style={[s.statValue, s.green]}>856</Text>
+              <Text style={[s.statValue, s.green]}>0</Text>
             </View>
             <View style={s.stat}>
               <Text style={s.statLabel}>Sold</Text>
-              <Text style={s.statValue}>92%</Text>
+              <Text style={s.statValue}>{event?.maxCapacity ? Math.round((totalGuests / event.maxCapacity) * 100) + "%" : "0%"}</Text>
             </View>
           </View>
           <View style={s.ticketHeading}>

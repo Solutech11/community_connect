@@ -8,16 +8,23 @@ import {
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AppAlertModal from "../../components/ui/app-alert-modal";
 import ProfilePageHeader from "../../components/ui/profile-page-header";
+import { ApiError } from "../../services/api/client";
+import { eventsApi } from "../../services/api/events.api";
 import ScannedTicketDetailsSheet from "../../components/ui/scanned-ticket-details-sheet";
 import { colors, fonts } from "../../styles/theme";
 import type { RootStackParamList } from "../../types/navigation";
 type Props = NativeStackScreenProps<RootStackParamList, "TicketScanner">;
-export default function TicketScannerScreen({ navigation }: Props) {
+export default function TicketScannerScreen({ navigation, route }: Props) {
+  const eventId = route.params?.eventId;
   const [permission, requestPermission] = useCameraPermissions();
   const [result, setResult] = useState<BarcodeScanningResult | null>(null);
   const [checked, setChecked] = useState(false);
   const [detailsVisible, setDetailsVisible] = useState(false);
+  const [ticketLabel, setTicketLabel] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleBarcodeScanned = (scanResult: BarcodeScanningResult) => {
     setChecked(false);
@@ -29,9 +36,28 @@ export default function TicketScannerScreen({ navigation }: Props) {
     setDetailsVisible(false);
     setResult(null);
     setChecked(false);
+    setTicketLabel("");
+  };
+
+  const checkIn = async () => {
+    if (!eventId || !result || submitting) {
+      if (!eventId) setErrorMessage("Open the scanner from a specific managed event.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const response = await eventsApi.checkIn(eventId, result.data);
+      setTicketLabel(response.data.order.orderNumber + " - " + response.data.order.ticketTypeId.title);
+      setChecked(true);
+    } catch (error) {
+      setErrorMessage(error instanceof ApiError ? error.message : "Unable to check in this ticket.");
+    } finally {
+      setSubmitting(false);
+    }
   };
   if (!permission) return <View style={s.safe} />;
   return (
+    <>
     <SafeAreaView edges={[]} style={s.safe}>
       <ProfilePageHeader title="Scan Ticket" onBack={navigation.goBack} />
       {!permission.granted ? (
@@ -81,20 +107,19 @@ export default function TicketScannerScreen({ navigation }: Props) {
                 <Text style={s.resultTitle}>
                   {checked ? "Check-in complete" : "Valid ticket found"}
                 </Text>
-                <Text style={s.resultName}>Elena Rodriguez • VIP Access</Text>
+                <Text style={s.resultName}>{ticketLabel || "QR token ready for validation"}</Text>
                 <Text numberOfLines={1} style={s.code}>
                   {result.data}
                 </Text>
               </View>
               {!checked ? (
-                <Pressable onPress={() => setChecked(true)} style={s.checkin}>
-                  <Text style={s.checkinText}>Check In</Text>
+                <Pressable disabled={submitting} onPress={checkIn} style={s.checkin}>
+                  <Text style={s.checkinText}>{submitting ? "Checking..." : "Check In"}</Text>
                 </Pressable>
               ) : (
                 <Pressable
                   onPress={() => {
-                    setResult(null);
-                    setChecked(false);
+                    handleScanNext();
                   }}
                   style={s.again}
                 >
@@ -117,6 +142,8 @@ export default function TicketScannerScreen({ navigation }: Props) {
         </View>
       )}
     </SafeAreaView>
+    <AppAlertModal visible={Boolean(errorMessage)} title="Check-in failed" message={errorMessage ?? ""} onClose={() => { setErrorMessage(null); handleScanNext(); }} />
+    </>
   );
 }
 const s = StyleSheet.create({

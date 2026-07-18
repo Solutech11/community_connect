@@ -29,6 +29,8 @@ import {
   LOCAL_AREAS_BY_REGION,
   REGIONS_BY_COUNTRY,
 } from "../../data/event-locations";
+import { aiApi } from "../../services/api/ai.api";
+import { ApiError } from "../../services/api/client";
 import { colors, fonts } from "../../styles/theme";
 import type {
   CreateEventDraft,
@@ -49,6 +51,8 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
   const [country, setCountry] = useState(seed?.country ?? "Nigeria");
   const [state, setState] = useState(seed?.state ?? "Lagos");
   const [lga, setLga] = useState(seed?.lga ?? "Ikeja");
+  const [venueName, setVenueName] = useState(seed?.venueName ?? "");
+  const [address, setAddress] = useState(seed?.address ?? "");
   const [phone, setPhone] = useState(seed?.phone ?? "");
   const [capacity, setCapacity] = useState(seed?.capacity ?? "");
   const [activityType, setActivityType] = useState(
@@ -60,6 +64,7 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
   );
   const [dropdown, setDropdown] = useState<DropdownName | null>(null);
   const [alert, setAlert] = useState("");
+  const [improving, setImproving] = useState(false);
 
   const pickCover = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -128,23 +133,26 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
     }
   };
 
-  const improveDescriptionWithAi = () => {
-    if (!title.trim()) {
-      setAlert(
-        "Add an event title first so Community AI can write a relevant description.",
-      );
+  const improveDescriptionWithAi = async () => {
+    if (!title.trim() || improving) {
+      if (!title.trim()) setAlert("Add an event title first so Community AI can write relevant copy.");
       return;
     }
-
-    setDescription(
-      "Join us for " +
-        title.trim() +
-        ", a welcoming " +
-        activityType.toLowerCase() +
-        " designed for " +
-        audience.toLowerCase() +
-        ". Connect with the community, enjoy a thoughtfully planned experience, and leave with useful memories and new connections.",
-    );
+    setImproving(true);
+    try {
+      const response = await aiApi.eventCopy({
+        title: title.trim(),
+        activityType,
+        targetAudience: audience || undefined,
+        setting: setting.toLowerCase(),
+        details: description.trim() || undefined,
+      });
+      setDescription(response.data.message);
+    } catch (error) {
+      setAlert(error instanceof ApiError ? error.message : "Community AI could not improve the event copy.");
+    } finally {
+      setImproving(false);
+    }
   };
 
   const goNext = () => {
@@ -153,10 +161,14 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
       !description.trim() ||
       !phone.trim() ||
       !state.trim() ||
-      !lga.trim()
+      !lga.trim() ||
+      !venueName.trim() ||
+      !address.trim() ||
+      !Number.isInteger(Number(capacity)) ||
+      Number(capacity) <= 0
     ) {
       setAlert(
-        "Add the event details and select your state and local government area to continue.",
+        "Add the venue, full address, and a positive whole-number capacity before continuing.",
       );
       return;
     }
@@ -168,8 +180,10 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
       country,
       state,
       lga,
+      venueName: venueName.trim(),
+      address: address.trim(),
       phone: phone.trim(),
-      capacity: capacity.trim() || "Unlimited",
+      capacity: capacity.trim(),
       activityType,
       audience,
       setting,
@@ -229,12 +243,12 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
           textAlignVertical="top"
           value={description}
         />
-        <Pressable onPress={improveDescriptionWithAi} style={styles.aiWriter}>
+        <Pressable disabled={improving} onPress={() => void improveDescriptionWithAi()} style={styles.aiWriter}>
           <View style={styles.aiWriterIcon}>
             <Ionicons color={colors.ink} name="sparkles" size={18} />
           </View>
           <View style={styles.aiWriterCopy}>
-            <Text style={styles.aiWriterTitle}>Improve with Community AI</Text>
+            <Text style={styles.aiWriterTitle}>{improving ? "Community AI is writing..." : "Improve with Community AI"}</Text>
             <Text style={styles.aiWriterText}>
               Generate clear, inviting event copy from your title.
             </Text>
@@ -257,6 +271,21 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
           label={country === "Nigeria" ? "LGA" : "Local Area"}
           onPress={() => setDropdown("lga")}
           value={lga || "Select your local area"}
+        />
+
+        <EventField
+          icon="business-outline"
+          label="Venue Name"
+          onChangeText={setVenueName}
+          placeholder="e.g. Civic Centre"
+          value={venueName}
+        />
+        <EventField
+          icon="location-outline"
+          label="Full Address"
+          onChangeText={setAddress}
+          placeholder="Street, landmark, and area"
+          value={address}
         />
 
         <EventField

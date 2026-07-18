@@ -14,45 +14,60 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import ProfilePageHeader from "../../components/ui/profile-page-header";
+import { ApiError } from "../../services/api/client";
+import { eventsApi } from "../../services/api/events.api";
 import { colors, fonts } from "../../styles/theme";
 import type { RootStackParamList } from "../../types/navigation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "MyCreatedEvents">;
 type Tab = "Active" | "Draft" | "Past";
+type CreatedCard = {
+  id: string;
+  tab: Tab;
+  title: string;
+  meta: string;
+  image: string;
+  foot?: string;
+};
 const images = {
   garden:
     "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1200&q=85",
   run: "https://images.unsplash.com/photo-1552674605-db6ffd4facb5?auto=format&fit=crop&w=1200&q=85",
 };
-const events = [
+const initialEvents: CreatedCard[] = [
   {
-    tab: "Active" as Tab,
+    id: "mock-garden",
+    tab: "Active",
     title: "Urban Garden Workshop",
     meta: "Sat, Oct 24 â€¢ 10:00 AM",
     image: images.garden,
     foot: "24+",
   },
   {
-    tab: "Active" as Tab,
+    id: "mock-run",
+    tab: "Active",
     title: "Morning Run Club",
     meta: "Daily â€¢ 06:30 AM",
     image: images.run,
     foot: "High Engagement",
   },
   {
-    tab: "Draft" as Tab,
+    id: "mock-ai",
+    tab: "Draft",
     title: "Tech Talk: Future AI",
     meta: "Last Edited: 2 hours ago",
     image: images.garden,
   },
   {
-    tab: "Draft" as Tab,
+    id: "mock-community",
+    tab: "Draft",
     title: "Community Garden Planning",
     meta: "Last Edited: Oct 20, 2023",
     image: images.run,
   },
   {
-    tab: "Past" as Tab,
+    id: "mock-leadership",
+    tab: "Past",
     title: "Community Leadership Meetup",
     meta: "Ended Sep 18 â€¢ 48 attended",
     image: images.garden,
@@ -62,6 +77,8 @@ const events = [
 export default function MyCreatedEventsScreen({ navigation }: Props) {
   const [tab, setTab] = useState<Tab>("Active");
   const [q, setQ] = useState("");
+  const [createdEvents, setCreatedEvents] = useState<CreatedCard[]>([]);
+  const [loading, setLoading] = useState(true);
   const [tabsWidth, setTabsWidth] = useState(0);
   const tabProgress = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -74,12 +91,37 @@ export default function MyCreatedEventsScreen({ navigation }: Props) {
     }).start();
   }, [tab, tabProgress]);
   const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    eventsApi.createdByMe(controller.signal)
+      .then((response) => {
+        setCreatedEvents(response.data.events.map((event, index) => {
+          const startsAt = new Date(event.startsAt);
+          const ended = new Date(event.endsAt).getTime() < Date.now();
+          const eventTab: Tab = event.status === "draft" ? "Draft" : ended || event.status === "cancelled" ? "Past" : "Active";
+          return {
+            id: event._id,
+            tab: eventTab,
+            title: event.title,
+            meta: eventTab === "Draft" ? "Draft saved on " + new Date(event.createdAt).toLocaleDateString() : startsAt.toLocaleString(),
+            image: index % 2 ? images.run : images.garden,
+            foot: event.status,
+          };
+        }));
+      })
+      .catch((error: unknown) => {
+        if (error instanceof ApiError && error.code === "REQUEST_CANCELLED") return;
+        setNotice(error instanceof ApiError ? error.message : "Unable to load your created events.");
+      })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, []);
   const shown = useMemo(
     () =>
-      events.filter(
+      createdEvents.filter(
         (x) => x.tab === tab && x.title.toLowerCase().includes(q.toLowerCase()),
       ),
-    [tab, q],
+    [tab, q, createdEvents],
   );
   return (
     <>
@@ -132,7 +174,7 @@ export default function MyCreatedEventsScreen({ navigation }: Props) {
             ))}
           </View>
           {shown.map((x) => (
-            <View key={x.title} style={s.card}>
+            <View key={x.id} style={s.card}>
               <ImageBackground
                 source={{ uri: x.image }}
                 style={s.image}
@@ -159,7 +201,7 @@ export default function MyCreatedEventsScreen({ navigation }: Props) {
                   <Pressable
                     onPress={() =>
                       x.tab === "Active"
-                        ? navigation.navigate("ManageCreatedEvent")
+                        ? navigation.navigate("ManageCreatedEvent", { eventId: x.id })
                         : x.tab === "Draft"
                           ? navigation.navigate("CreateEventDetails")
                           : setNotice("View " + x.title)
@@ -187,19 +229,20 @@ export default function MyCreatedEventsScreen({ navigation }: Props) {
               </View>
             </View>
           ))}
-          {tab === "Active" && (
+          {tab === "Active" && createdEvents.some((item) => item.tab === "Draft") && (
             <Pressable onPress={() => setTab("Draft")} style={s.drafts}>
               <View style={s.draftIcon}>
                 <Ionicons name="create-outline" size={25} color="#08b657" />
               </View>
-              <Text style={s.draftsTitle}>You have 2 drafts</Text>
+              <Text style={s.draftsTitle}>You have {createdEvents.filter((item) => item.tab === "Draft").length} drafts</Text>
               <Text style={s.draftsSub}>
                 Continue planning your next big event.
               </Text>
               <Text style={s.viewDrafts}>View Drafts</Text>
             </Pressable>
           )}
-          {!shown.length && (
+          {loading ? <Text style={s.empty}>Loading your events...</Text> : null}
+          {!loading && !shown.length && (
             <Text style={s.empty}>No {tab.toLowerCase()} events found.</Text>
           )}
         </ScrollView>

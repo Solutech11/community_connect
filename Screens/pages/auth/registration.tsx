@@ -97,7 +97,7 @@ export default function RegistrationScreen({ navigation }: Props) {
         <PrimaryButton
           label="Create Account"
           disabled={!acceptedTerms}
-          onPress={() => navigation.navigate('VerifyEmail')}
+          onPress={() => navigation.navigate('VerifyEmail', { email: email.trim().toLowerCase(), purpose: 'verify-email' })}
         />
         {!acceptedTerms ? (
           <Text selectable style={{ color: colors.muted, fontSize: 12, textAlign: 'center' }}>

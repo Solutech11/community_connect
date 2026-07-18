@@ -1,49 +1,55 @@
 ﻿import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { withDashboardLayout } from "../layouts/dashboard-layout";
-import ForgotPasswordScreen from "../pages/auth/forgot-password";
-import LoginScreen from "../pages/auth/login";
-import RegistrationScreen from "../pages/auth/registration";
-import VerifyEmailScreen from "../pages/auth/verify-email";
-import CheckoutScreen from "../pages/dashboard/checkout";
-import EventDetailsScreen from "../pages/dashboard/event-details";
-import MyEventsScreen from "../pages/dashboard/my-events";
+import ForgotPasswordScreen from "../pages/auth/forgot-password-connected";
+import LoginScreen from "../pages/auth/login-connected";
+import RegistrationScreen from "../pages/auth/registration-connected";
+import VerifyEmailScreen from "../pages/auth/verify-email-connected";
+import CheckoutScreen from "../pages/dashboard/checkout-connected";
+import EventDetailsScreen from "../pages/dashboard/event-details-connected";
+import MyEventsScreen from "../pages/dashboard/my-events-connected";
 import MyCreatedEventsScreen from "../pages/tabs/my-created-events";
-import ManageCreatedEventScreen from "../pages/tabs/manage-created-event";
+import ManageCreatedEventScreen from "../pages/tabs/manage-created-event-connected";
+import EditTicketTypeScreen from "../pages/tabs/edit-ticket-type";
 import CreateEventIntroductionScreen from "../pages/tabs/create-event-introduction";
 import CreateEventDetailsScreen from "../pages/tabs/create-event-details";
 import CreateEventDateTimeScreen from "../pages/tabs/create-event-date-time";
 import CreateEventTicketsScreen from "../pages/tabs/create-event-tickets";
 import CreateEventReviewScreen from "../pages/tabs/create-event-review";
 import TicketScannerScreen from "../pages/tabs/ticket-scanner";
-import NotificationsScreen from "../pages/tabs/notifications";
-import FriendsScreen from "../pages/tabs/friends";
-import ChatThreadScreen from "../pages/tabs/chat-thread";
-import AIChatScreen from "../pages/tabs/ai-chat";
+import NotificationsScreen from "../pages/tabs/notifications-connected";
+import FriendsScreen from "../pages/tabs/friends-connected";
+import ChatThreadScreen from "../pages/tabs/chat-thread-connected";
+import AIChatScreen from "../pages/tabs/ai-chat-connected";
+import AISessionsScreen from "../pages/tabs/ai-sessions";
 import SettingsScreen from "../pages/tabs/settings";
 import ChangePasswordScreen from "../pages/tabs/change-password";
-import DeleteAccountScreen from "../pages/tabs/delete-account";
+import DeleteAccountScreen from "../pages/tabs/delete-account-connected";
 import PrivacyPolicyScreen from "../pages/tabs/privacy-policy";
 import TermsConditionsScreen from "../pages/tabs/terms-conditions";
-import UpdateProfileScreen from "../pages/tabs/update-profile";
-import WalletScreen from "../pages/tabs/wallet";
-import TransactionsScreen from "../pages/tabs/transactions";
-import WalletTopUpScreen from "../pages/tabs/wallet-top-up";
-import WalletWithdrawScreen from "../pages/tabs/wallet-withdraw";
-import WalletTransferScreen from "../pages/tabs/wallet-transfer";
-import WalletDisputeScreen from "../pages/tabs/wallet-dispute";
-import MyEventDetailsScreen from "../pages/dashboard/my-event-details";
-import PaymentSuccessScreen from "../pages/dashboard/payment-success";
-import TicketSelectionScreen from "../pages/dashboard/ticket-selection";
+import UpdateProfileScreen from "../pages/tabs/update-profile-connected";
+import WalletScreen from "../pages/tabs/wallet-connected";
+import TransactionsScreen from "../pages/tabs/transactions-connected";
+import WalletTopUpScreen from "../pages/tabs/wallet-top-up-connected";
+import WalletWithdrawScreen from "../pages/tabs/wallet-withdraw-connected";
+import WalletTransferScreen from "../pages/tabs/wallet-transfer-connected";
+import WalletDisputeScreen from "../pages/tabs/wallet-dispute-connected";
+import BankAccountsScreen from "../pages/tabs/bank-accounts";
+import TransactionDetailsScreen from "../pages/tabs/transaction-details";
+import DisputeManagementScreen from "../pages/tabs/dispute-management";
+import MyEventDetailsScreen from "../pages/dashboard/my-event-details-connected";
+import PaymentSuccessScreen from "../pages/dashboard/payment-success-connected";
+import TicketSelectionScreen from "../pages/dashboard/ticket-selection-connected";
 import OnboardingWelcomeScreen from "../pages/onboarding/welcome";
 import PersonalizationFormScreen from "../pages/personalization/form";
 import InterestsSelectionScreen from "../pages/personalization/interests-selection";
 import PreferencesScreen from "../pages/personalization/preferences";
 import PersonalizationTopicsScreen from "../pages/personalization/topics";
-import CommunityJoinScreen from "../pages/tabs/community-join";
-import CommunityProfileScreen from "../pages/tabs/community-profile";
-import CommunityRoomScreen from "../pages/tabs/community-room";
-import CreateCommunityScreen from "../pages/tabs/create-community";
+import CommunityJoinScreen from "../pages/tabs/community-join-connected";
+import CommunityProfileScreen from "../pages/tabs/community-profile-connected";
+import EditCommunityScreen from "../pages/tabs/edit-community";
+import CommunityRoomScreen from "../pages/tabs/community-room-connected";
+import CreateCommunityScreen from "../pages/tabs/create-community-connected";
 import type { RootStackParamList } from "../types/navigation";
 import MainTabs from "./main-tabs";
 
@@ -52,12 +58,14 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const DashboardCommunityJoin = withDashboardLayout(CommunityJoinScreen);
 const DashboardCommunityRoom = withDashboardLayout(CommunityRoomScreen);
 const DashboardCommunityProfile = withDashboardLayout(CommunityProfileScreen);
+const DashboardEditCommunity = withDashboardLayout(EditCommunityScreen);
 const DashboardCreateCommunity = withDashboardLayout(CreateCommunityScreen);
 const DashboardMyEvents = withDashboardLayout(MyEventsScreen);
 const DashboardMyCreatedEvents = withDashboardLayout(MyCreatedEventsScreen);
 const DashboardManageCreatedEvent = withDashboardLayout(
   ManageCreatedEventScreen,
 );
+const DashboardEditTicketType = withDashboardLayout(EditTicketTypeScreen);
 const DashboardCreateEventIntroduction = withDashboardLayout(
   CreateEventIntroductionScreen,
 );
@@ -76,6 +84,7 @@ const DashboardNotifications = withDashboardLayout(NotificationsScreen);
 const DashboardFriends = withDashboardLayout(FriendsScreen);
 const DashboardChatThread = withDashboardLayout(ChatThreadScreen);
 const DashboardAIChat = withDashboardLayout(AIChatScreen);
+const DashboardAISessions = withDashboardLayout(AISessionsScreen);
 const DashboardSettings = withDashboardLayout(SettingsScreen);
 const DashboardChangePassword = withDashboardLayout(ChangePasswordScreen);
 const DashboardDeleteAccount = withDashboardLayout(DeleteAccountScreen);
@@ -88,16 +97,19 @@ const DashboardWalletTopUp = withDashboardLayout(WalletTopUpScreen);
 const DashboardWalletWithdraw = withDashboardLayout(WalletWithdrawScreen);
 const DashboardWalletTransfer = withDashboardLayout(WalletTransferScreen);
 const DashboardWalletDispute = withDashboardLayout(WalletDisputeScreen);
+const DashboardBankAccounts = withDashboardLayout(BankAccountsScreen);
+const DashboardTransactionDetails = withDashboardLayout(TransactionDetailsScreen);
+const DashboardDisputeManagement = withDashboardLayout(DisputeManagementScreen);
 const DashboardMyEventDetails = withDashboardLayout(MyEventDetailsScreen);
 const DashboardEventDetails = withDashboardLayout(EventDetailsScreen);
 const DashboardTicketSelection = withDashboardLayout(TicketSelectionScreen);
 const DashboardCheckout = withDashboardLayout(CheckoutScreen);
 const DashboardPaymentSuccess = withDashboardLayout(PaymentSuccessScreen);
 
-export default function RootStackNavigator() {
+export default function RootStackNavigator({ authenticated }: { authenticated: boolean }) {
   return (
     <Stack.Navigator
-      initialRouteName="OnboardingWelcome"
+      initialRouteName={authenticated ? "Home" : "OnboardingWelcome"}
       screenOptions={{
         headerShown: false,
         animation: "slide_from_right",
@@ -336,6 +348,12 @@ export default function RootStackNavigator() {
           contentStyle: { backgroundColor: "#f7fbf9" },
         }}
       />
+      <Stack.Screen name="AISessions" component={DashboardAISessions} />
+      <Stack.Screen name="EditCommunity" component={DashboardEditCommunity} />
+      <Stack.Screen name="BankAccounts" component={DashboardBankAccounts} />
+      <Stack.Screen name="TransactionDetails" component={DashboardTransactionDetails} />
+      <Stack.Screen name="EditTicketType" component={DashboardEditTicketType} />
+      <Stack.Screen name="DisputeManagement" component={DashboardDisputeManagement} />
     </Stack.Navigator>
   );
 }

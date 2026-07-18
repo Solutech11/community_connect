@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import { lightTap as tapFeedback } from "../../hooks/haptics";
+import { useAuth } from "../../hooks/use-auth";
 import { colors, fonts } from "../../styles/theme";
 import type { RootStackNavigationProp } from "../../types/navigation";
 type AlertState = {
@@ -74,7 +75,9 @@ function Section({
 }
 export default function ProfileScreen() {
   const navigation = useNavigation<RootStackNavigationProp>();
+  const { user, signOut } = useAuth();
   const [alert, setAlert] = useState<AlertState>(null);
+  const [signingOut, setSigningOut] = useState(false);
   const showNotice = (label: string) =>
     setAlert({
       title: label,
@@ -91,19 +94,19 @@ export default function ProfileScreen() {
             <View style={styles.avatarWrap}>
               <Image
                 source={{
-                  uri: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=360&q=85",
+                  uri: user?.avatarUrl ?? "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=360&q=85",
                 }}
                 style={styles.avatar}
               />
               <Pressable
-                onPress={() => showNotice("Update Profile")}
+                onPress={() => navigation.navigate("UpdateProfile")}
                 style={styles.edit}
               >
                 <Ionicons name="pencil" size={17} color={colors.white} />
               </Pressable>
             </View>
-            <Text style={styles.name}>Alex Rivera</Text>
-            <Text style={styles.handle}>@arivera_connect</Text>
+            <Text style={styles.name}>{user ? `${user.firstName} ${user.lastName}` : "Community Member"}</Text>
+            <Text style={styles.handle}>{user?.email ?? ""}</Text>
             <View style={styles.stats}>
               <View style={styles.stat}>
                 <Text style={styles.statValue}>142</Text>
@@ -182,16 +185,19 @@ export default function ProfileScreen() {
             ]}
           />
           <Pressable
-            onPress={() =>
-              setAlert({
-                title: "Logout",
-                message: "You have been logged out of this demo account.",
-              })
-            }
+            disabled={signingOut}
+            onPress={async () => {
+              setSigningOut(true);
+              try {
+                await signOut();
+              } finally {
+                setSigningOut(false);
+              }
+            }}
             style={styles.logout}
           >
             <Ionicons name="log-out-outline" size={23} color="#df1111" />
-            <Text style={styles.logoutText}>Logout</Text>
+            <Text style={styles.logoutText}>{signingOut ? "Logging out..." : "Logout"}</Text>
           </Pressable>
         </ScrollView>
       </SafeAreaView>

@@ -22,6 +22,8 @@ export type CreateEventDraft = {
   country: string;
   state: string;
   lga: string;
+  venueName: string;
+  address: string;
   phone: string;
   capacity: string;
   activityType: string;
@@ -38,7 +40,7 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
-  VerifyEmail: undefined;
+  VerifyEmail: { email: string; purpose: "verify-email" | "reset-password" };
   PersonalizationTopics: undefined;
   InterestsSelection: undefined;
   PersonalizationForm: undefined;
@@ -47,16 +49,18 @@ export type RootStackParamList = {
   CommunityJoin: { communityId: string };
   CommunityRoom: { communityId: string };
   CommunityProfile: { communityId: string };
+  EditCommunity: { communityId: string };
   CreateCommunity: undefined;
   MyEvents: undefined;
   MyCreatedEvents: undefined;
-  ManageCreatedEvent: undefined;
+  ManageCreatedEvent: { eventId?: string } | undefined;
+  EditTicketType: { eventId: string; ticketTypeId: string };
   CreateEventIntroduction: undefined;
   CreateEventDetails: { draft?: Partial<CreateEventDraft> } | undefined;
   CreateEventDateTime: { draft: CreateEventDraft };
   CreateEventTickets: { draft: CreateEventDraft };
   CreateEventReview: { draft: CreateEventDraft };
-  TicketScanner: undefined;
+  TicketScanner: { eventId?: string } | undefined;
   Notifications: undefined;
   Friends: undefined;
   ChatThread: {
@@ -65,7 +69,8 @@ export type RootStackParamList = {
     image: string;
     online: boolean;
   };
-  AIChat: undefined;
+  AIChat: { sessionId?: string } | undefined;
+  AISessions: undefined;
   UpdateProfile: undefined;
   Settings: undefined;
   ChangePassword: undefined;
@@ -74,17 +79,21 @@ export type RootStackParamList = {
   TermsConditions: undefined;
   Wallet: undefined;
   Transactions: undefined;
+  TransactionDetails: { transactionId: string };
+  BankAccounts: undefined;
   WalletTopUp: undefined;
   WalletWithdraw: undefined;
   WalletTransfer: undefined;
   WalletDispute: {
     transaction: {
+      id?: string;
       title: string;
       date: string;
       amount: string;
     };
   };
-  MyEventDetails: { eventId: string };
+  DisputeManagement: undefined;
+  MyEventDetails: { orderNumber?: string; eventId: string };
   EventDetails: { eventId: string };
   TicketSelection: { eventId: string };
   Checkout: {

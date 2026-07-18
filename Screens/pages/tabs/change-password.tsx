@@ -14,6 +14,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppAlertModal from "../../components/ui/app-alert-modal";
+import { useAuth } from "../../hooks/use-auth";
+import { ApiError } from "../../services/api/client";
+import { usersApi } from "../../services/api/users.api";
 import ProfilePageHeader from "../../components/ui/profile-page-header";
 import { colors, fonts } from "../../styles/theme";
 import type { RootStackParamList } from "../../types/navigation";
@@ -85,6 +88,7 @@ function Requirement({ met, label }: { met: boolean; label: string }) {
   );
 }
 export default function ChangePasswordScreen({ navigation }: Props) {
+  const { signOut } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmedPassword, setConfirmedPassword] = useState("");
@@ -93,6 +97,7 @@ export default function ChangePasswordScreen({ navigation }: Props) {
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const requirements = useMemo(
     () => ({
       length: newPassword.length >= 8,
@@ -116,9 +121,17 @@ export default function ChangePasswordScreen({ navigation }: Props) {
           ? "Almost there"
           : "Strong";
   const strengthWidth: DimensionValue = `${Math.max(passedCount * 25, newPassword.length ? 12 : 0)}%`;
-  const handleUpdate = () => {
-    if (!canSubmit) return;
-    setSuccessVisible(true);
+  const handleUpdate = async () => {
+    if (!canSubmit || submitting) return;
+    setSubmitting(true);
+    try {
+      await usersApi.changePassword({ currentPassword, newPassword });
+      setSuccessVisible(true);
+    } catch (error) {
+      setNotice(error instanceof ApiError ? error.message : "Unable to change your password.");
+    } finally {
+      setSubmitting(false);
+    }
   };
   return (
     <>
@@ -230,7 +243,7 @@ export default function ChangePasswordScreen({ navigation }: Props) {
 
             <Pressable
               accessibilityRole="button"
-              disabled={!canSubmit}
+              disabled={!canSubmit || submitting}
               onPress={handleUpdate}
               style={({ pressed }) => [
                 styles.updateButton,
@@ -238,7 +251,7 @@ export default function ChangePasswordScreen({ navigation }: Props) {
                 pressed && canSubmit && styles.updateButtonPressed,
               ]}
             >
-              <Text style={styles.updateButtonText}>Update Password</Text>
+              <Text style={styles.updateButtonText}>{submitting ? "Updating..." : "Update Password"}</Text>
               <Ionicons name="chevron-forward" size={22} color={colors.ink} />
             </Pressable>
 
@@ -254,9 +267,10 @@ export default function ChangePasswordScreen({ navigation }: Props) {
         visible={successVisible}
         title="Password Updated"
         message="Your password has been updated successfully."
-        onClose={() => {
+        onClose={async () => {
           setSuccessVisible(false);
-          navigation.goBack();
+          await signOut();
+          navigation.navigate("Login");
         }}
       />
       <AppAlertModal

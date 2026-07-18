@@ -14,9 +14,9 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 
-import HomeScreen from "../pages/dashboard/home";
-import CommunityScreen from "../pages/tabs/community";
-import ChatScreen from "../pages/tabs/chat";
+import HomeScreen from "../pages/dashboard/home-connected";
+import CommunityScreen from "../pages/tabs/community-connected";
+import ChatScreen from "../pages/tabs/chat-connected";
 import ProfileScreen from "../pages/tabs/profile";
 import DashboardLayout from "../layouts/dashboard-layout";
 import { colors, fonts } from "../styles/theme";

@@ -8,10 +8,12 @@ type AppAlertModalProps = {
   title: string;
   message: string;
   confirmText?: string;
+  cancelText?: string;
+  onConfirm?: () => void;
   onClose: () => void;
 };
 
-export default function AppAlertModal({ visible, title, message, confirmText = 'Okay', onClose }: AppAlertModalProps) {
+export default function AppAlertModal({ visible, title, message, confirmText = 'Okay', cancelText = 'Cancel', onConfirm, onClose }: AppAlertModalProps) {
   return (
     <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -21,15 +23,23 @@ export default function AppAlertModal({ visible, title, message, confirmText = '
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
 
-          <Pressable
-            onPress={() => {
-              tapFeedback();
-              onClose();
-            }}
-            style={styles.button}
-          >
-            <Text style={styles.buttonText}>{confirmText}</Text>
-          </Pressable>
+          <View style={onConfirm ? styles.actions : undefined}>
+            {onConfirm ? (
+              <Pressable onPress={onClose} style={[styles.button, styles.cancelButton]}>
+                <Text style={styles.cancelButtonText}>{cancelText}</Text>
+              </Pressable>
+            ) : null}
+            <Pressable
+              onPress={() => {
+                tapFeedback();
+                if (onConfirm) onConfirm();
+                else onClose();
+              }}
+              style={[styles.button, onConfirm && styles.confirmButton]}
+            >
+              <Text style={styles.buttonText}>{confirmText}</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </Modal>
@@ -66,6 +76,10 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textAlign: 'center',
   },
+  actions: { flexDirection: 'row', gap: 10, marginTop: 22 },
+  cancelButton: { backgroundColor: '#edf3f0', flex: 1, marginTop: 0 },
+  confirmButton: { flex: 1, marginTop: 0 },
+  cancelButtonText: { color: colors.ink, fontFamily: fonts.bold, fontSize: 15 },
   button: {
     alignItems: 'center',
     backgroundColor: colors.lime,

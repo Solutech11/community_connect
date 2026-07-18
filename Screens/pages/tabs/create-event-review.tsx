@@ -13,6 +13,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
+import { ApiError } from "../../services/api/client";
+import { eventsApi } from "../../services/api/events.api";
+import { uploadsApi } from "../../services/api/uploads.api";
 import {
   CreateEventHeader,
   InfoCard,
@@ -28,13 +31,78 @@ const MAP_IMAGE =
 const HOST_IMAGE =
   "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=180&q=85";
 
+function combineDateAndTime(dateValue: string, timeValue: string) {
+  const date = new Date(dateValue);
+  const match = timeValue.match(/^(1[0-2]|[1-9]):([0-5][0-9]) (AM|PM)$/);
+  if (Number.isNaN(date.getTime()) || !match) throw new Error("Invalid event date or time.");
+  const hour = (Number(match[1]) % 12) + (match[3] === "PM" ? 12 : 0);
+  date.setHours(hour, Number(match[2]), 0, 0);
+  return date.toISOString();
+}
+
 export default function CreateEventReviewScreen({ navigation, route }: Props) {
   const { draft } = route.params;
-  const [published, setPublished] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [alert, setAlert] = useState<{ title: string; message: string; success?: boolean } | null>(null);
 
-  const closePublished = () => {
-    setPublished(false);
-    navigation.navigate("MyCreatedEvents");
+  const publish = async () => {
+    if (publishing) return;
+    setPublishing(true);
+    try {
+      let coverImageUrl = draft.coverImage;
+      if (!/^https:\/\//i.test(coverImageUrl)) {
+        const upload = await uploadsApi.image({
+          uri: coverImageUrl,
+          name: "event-cover-" + Date.now() + ".jpg",
+          type: "image/jpeg",
+        }, "events");
+        coverImageUrl = upload.data.url;
+      }
+
+      const created = await eventsApi.createDraft({
+        title: draft.title.trim(),
+        description: draft.description.trim(),
+        coverImageUrl,
+        activityType: draft.activityType,
+        targetAudience: draft.audience || undefined,
+        setting: draft.setting.toLowerCase(),
+        country: draft.country || "Nigeria",
+        state: draft.state,
+        lga: draft.lga,
+        venueName: draft.venueName,
+        address: draft.address,
+        startsAt: combineDateAndTime(draft.startDate, draft.startTime),
+        endsAt: combineDateAndTime(draft.endDate, draft.endTime),
+        timezone: "Africa/Lagos",
+        contactPhone: draft.phone || undefined,
+        maxCapacity: Number.parseInt(draft.capacity, 10),
+        tags: [draft.activityType, draft.audience, draft.setting].filter(Boolean),
+      });
+
+      for (const ticket of draft.tickets) {
+        const capacity = ticket.capacity === "Unlimited" ? undefined : Number.parseInt(ticket.capacity, 10);
+        await eventsApi.addTicketType(created.data.event._id, {
+          title: ticket.title,
+          priceKobo: Math.round(Number(ticket.price) * 100),
+          ...(capacity ? { capacity } : {}),
+        });
+      }
+      await eventsApi.publish(created.data.event._id);
+      setAlert({ title: "Event published!", message: "Your event is now live and ready for the community.", success: true });
+    } catch (error) {
+      setAlert({
+        title: "Unable to publish",
+        message: error instanceof ApiError ? error.message : error instanceof Error ? error.message : "Your event could not be published.",
+      });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const closeAlert = () => {
+    const succeeded = alert?.success;
+    setAlert(null);
+    if (succeeded) navigation.navigate("MyCreatedEvents");
   };
 
   return (
@@ -83,7 +151,7 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
             </View>
             <View style={styles.detailBody}>
               <Text style={styles.detailPrimary}>
-                {draft.lga}, {draft.state}
+                {draft.venueName}, {draft.lga}, {draft.state}
               </Text>
               <Text style={styles.detailSecondary}>{draft.country}</Text>
             </View>
@@ -136,8 +204,8 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
       </ScrollView>
 
       <SafeAreaView edges={["bottom"]} style={styles.footer}>
-        <Pressable onPress={() => setPublished(true)} style={styles.publish}>
-          <Text style={styles.publishText}>Publish Event</Text>
+        <Pressable disabled={publishing} onPress={publish} style={[styles.publish, publishing && { opacity: 0.6 }]}>
+          <Text style={styles.publishText}>{publishing ? "Publishing..." : "Publish Event"}</Text>
           <Ionicons color={colors.ink} name="rocket-outline" size={22} />
         </Pressable>
         <Pressable
@@ -149,11 +217,11 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
       </SafeAreaView>
 
       <AppAlertModal
-        confirmText="View My Created Events"
-        message="Your event is now live and ready for the community."
-        onClose={closePublished}
-        title="Event published!"
-        visible={published}
+        confirmText={alert?.success ? "View My Created Events" : "Okay"}
+        message={alert?.message ?? ""}
+        onClose={closeAlert}
+        title={alert?.title ?? ""}
+        visible={Boolean(alert)}
       />
     </View>
   );

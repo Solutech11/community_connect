@@ -33,6 +33,19 @@
           "cameraPermission": "Allow Community Connect to use your camera to scan event tickets.",
           "recordAudioAndroid": false
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "default",
+          "color": "#08b657"
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true
+        }
       ]
     ]
   }
