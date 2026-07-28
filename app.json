@@ -1,4 +1,4 @@
-{
+﻿{
   "expo": {
     "name": "community_connect",
     "slug": "community_connect",
@@ -44,7 +44,14 @@
       [
         "expo-secure-store",
         {
-          "configureAndroidBackup": true
+          "configureAndroidBackup": true,
+          "faceIDPermission": "Allow Community Connect to use Face ID for secure sign-in."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Community Connect to use your location to recommend nearby events."
         }
       ]
     ]

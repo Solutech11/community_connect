@@ -1,4 +1,4 @@
-import { Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 
 import AppIcon, { AppIconName } from './app-icon';
 import { colors, fonts } from '../../styles/theme';
@@ -14,6 +14,7 @@ type Props = {
   onChangeText: (value: string) => void;
   keyboardType?: 'default' | 'email-address' | 'number-pad' | 'phone-pad';
   fieldHeight?: number;
+  autoComplete?: 'off' | 'name' | 'family-name' | 'given-name' | 'username' | 'new-password'| 'password' | 'email' | 'name' | 'tel' | 'street-address' | 'postal-code' | 'cc-number' | 'cc-csc' | 'cc-exp' | 'cc-exp-month' | 'cc-exp-year';
 };
 
 export default function FormField({
@@ -27,6 +28,7 @@ export default function FormField({
   onChangeText,
   keyboardType = 'default',
   fieldHeight = 54,
+  autoComplete="off"
 }: Props) {
   return (
     <View style={{ gap: 8 }}>
@@ -55,6 +57,7 @@ export default function FormField({
           placeholder={placeholder}
           placeholderTextColor="#9aa8b7"
           secureTextEntry={secureTextEntry}
+          autoComplete={autoComplete}
           keyboardType={keyboardType}
           style={{
             flex: 1,
@@ -64,9 +67,15 @@ export default function FormField({
           }}
         />
         {rightIcon ? (
-          <Text onPress={onRightIconPress} style={{ padding: 4 }}>
+          <Pressable
+            accessibilityLabel={rightIcon === 'eye' ? 'Hide password' : 'Show password'}
+            accessibilityRole="button"
+            hitSlop={10}
+            onPress={onRightIconPress}
+            style={{ padding: 4 }}
+          >
             <AppIcon name={rightIcon} color={colors.softMuted} size={22} />
-          </Text>
+          </Pressable>
         ) : null}
       </View>
     </View>

@@ -1,7 +1,9 @@
+import { useEffect, useRef } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { lightTap as tapFeedback } from '../../hooks/haptics';
 import { colors, fonts } from '../../styles/theme';
+import { useNotifier, type NotifierTone } from './app-notifier';
 
 type AppAlertModalProps = {
   visible: boolean;
@@ -9,11 +11,68 @@ type AppAlertModalProps = {
   message: string;
   confirmText?: string;
   cancelText?: string;
+  tone?: NotifierTone;
   onConfirm?: () => void;
   onClose: () => void;
 };
 
-export default function AppAlertModal({ visible, title, message, confirmText = 'Okay', cancelText = 'Cancel', onConfirm, onClose }: AppAlertModalProps) {
+function inferTone(title: string, message: string): NotifierTone {
+  const copy = `${title} ${message}`.toLowerCase();
+
+  if (/unsuccessful|error|failed|unable|unavailable|invalid|denied|incorrect|expired/.test(copy)) {
+    return 'error';
+  }
+  if (/success|created|updated|completed|verified|sent|saved|removed|deleted/.test(copy)) {
+    return 'success';
+  }
+  if (/warning|pending|attention|not added/.test(copy)) {
+    return 'warning';
+  }
+  return 'info';
+}
+
+function AppAlertNotification({
+  visible,
+  title,
+  message,
+  tone,
+  onClose,
+}: AppAlertModalProps) {
+  const { notify } = useNotifier();
+  const shown = useRef(false);
+
+  useEffect(() => {
+    if (!visible) {
+      shown.current = false;
+      return;
+    }
+    if (shown.current) return;
+
+    shown.current = true;
+    notify({ title, message, tone: tone ?? inferTone(title, message) });
+    onClose();
+  }, [message, notify, onClose, title, tone, visible]);
+
+  return null;
+}
+
+export default function AppAlertModal(props: AppAlertModalProps) {
+  const {
+    visible,
+    title,
+    message,
+    confirmText = 'Okay',
+    cancelText = 'Cancel',
+    onConfirm,
+    onClose,
+  } = props;
+
+  // Non-blocking feedback belongs in the notifier. A modal is reserved for
+  // decisions that require an explicit confirm/cancel response.
+  if (!onConfirm) {
+    return <AppAlertNotification {...props} />;
+  }
+
   return (
     <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -23,19 +82,16 @@ export default function AppAlertModal({ visible, title, message, confirmText = '
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
 
-          <View style={onConfirm ? styles.actions : undefined}>
-            {onConfirm ? (
-              <Pressable onPress={onClose} style={[styles.button, styles.cancelButton]}>
-                <Text style={styles.cancelButtonText}>{cancelText}</Text>
-              </Pressable>
-            ) : null}
+          <View style={styles.actions}>
+            <Pressable onPress={onClose} style={[styles.button, styles.cancelButton]}>
+              <Text style={styles.cancelButtonText}>{cancelText}</Text>
+            </Pressable>
             <Pressable
               onPress={() => {
                 tapFeedback();
-                if (onConfirm) onConfirm();
-                else onClose();
+                onConfirm();
               }}
-              style={[styles.button, onConfirm && styles.confirmButton]}
+              style={[styles.button, styles.confirmButton]}
             >
               <Text style={styles.buttonText}>{confirmText}</Text>
             </Pressable>

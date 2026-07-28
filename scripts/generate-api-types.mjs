@@ -1,4 +1,4 @@
-import fs from 'node:fs';
+﻿import fs from 'node:fs';
 
 const input = JSON.parse(fs.readFileSync('.tmp-openapi.json', 'utf8').replace(/^\uFEFF/, ''));
 
@@ -14,7 +14,12 @@ function schemaType(schema, depth = 0) {
   if (schema.type === 'string') return 'string';
   if (schema.type === 'integer' || schema.type === 'number') return 'number';
   if (schema.type === 'boolean') return 'boolean';
-  if (schema.type === 'array') return `Array<${schemaType(schema.items, depth + 1)}>`;
+    if (schema.type === 'array') {
+    if (Array.isArray(schema.prefixItems)) {
+      return `[${schema.prefixItems.map((item) => schemaType(item, depth + 1)).join(', ')}]`;
+    }
+    return `Array<${schemaType(schema.items, depth + 1)}>`;
+  }
   if (schema.type === 'object' || schema.properties) {
     const required = new Set(schema.required ?? []);
     const pad = '  '.repeat(depth + 1);

@@ -37,10 +37,10 @@ export default function RegistrationScreen({ navigation }: Props) {
 
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <View style={{ flex: 1 }}>
-            <FormField label="First Name" placeholder="Jane" icon="person" value={firstName} onChangeText={setFirstName} />
+            <FormField label="First Name" placeholder="Jane" icon="person" value={firstName} autoComplete="given-name" onChangeText={setFirstName} />
           </View>
           <View style={{ flex: 1 }}>
-            <FormField label="Last Name" placeholder="Doe" icon="person" value={lastName} onChangeText={setLastName} />
+            <FormField label="Last Name" placeholder="Doe" icon="person" value={lastName} autoComplete="family-name" onChangeText={setLastName} />
           </View>
         </View>
         <FormField label="Username" placeholder="janedoe123" icon="at" value={username} onChangeText={setUsername} />
@@ -49,6 +49,7 @@ export default function RegistrationScreen({ navigation }: Props) {
           placeholder="jane@example.com"
           icon="mail"
           keyboardType="email-address"
+          autoComplete="email"
           value={email}
           onChangeText={setEmail}
         />

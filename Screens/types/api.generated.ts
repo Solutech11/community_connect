@@ -6,6 +6,10 @@ export type PostAuthRegisterBody = {
   "email": string;
   "password": string;
   "phone"?: string;
+  "location"?: {
+    "type"?: string;
+    "coordinates"?: Array<number>;
+  };
 };
 export type PostAuthRegisterQuery = {
 
@@ -52,7 +56,19 @@ export type PostAuthVerifyEmailResponse = {
       "state": string;
       "lga": string;
       "interests": Array<string>;
+      "avatarUrl": string;
       "createdAt": string;
+      "phone": string;
+      "bio": string;
+      "country": string;
+      "location": {
+        "type": string;
+        "coordinates": Array<number>;
+      };
+      "preferredSetting": string;
+      "preferredGroupSize": string;
+      "participationRole": string;
+      "hobbies": Array<string>;
     };
     "session": {
       "accessToken": string;
@@ -106,7 +122,19 @@ export type PostAuthLoginResponse = {
       "state": string;
       "lga": string;
       "interests": Array<string>;
+      "avatarUrl": string;
       "createdAt": string;
+      "phone": string;
+      "bio": string;
+      "country": string;
+      "location": {
+        "type": string;
+        "coordinates": Array<number>;
+      };
+      "preferredSetting": string;
+      "preferredGroupSize": string;
+      "participationRole": string;
+      "hobbies": Array<string>;
     };
     "session": {
       "accessToken": string;
@@ -217,7 +245,19 @@ export type GetUsersMeResponse = {
       "state": string;
       "lga": string;
       "interests": Array<string>;
+      "avatarUrl": string;
       "createdAt": string;
+      "phone": string;
+      "bio": string;
+      "country": string;
+      "location": {
+        "type": string;
+        "coordinates": Array<number>;
+      };
+      "preferredSetting": string;
+      "preferredGroupSize": string;
+      "participationRole": string;
+      "hobbies": Array<string>;
     };
   };
 };
@@ -233,9 +273,13 @@ export type PatchUsersMeBody = {
   "lga"?: string;
   "location"?: {
     "type"?: string;
-    "coordinates"?: Array<number>;
+    "coordinates": [number, number];
   };
   "interests"?: Array<string>;
+  "preferredSetting"?: "indoor" | "outdoor";
+  "preferredGroupSize"?: "small" | "medium" | "large";
+  "participationRole"?: "participant" | "organizer";
+  "hobbies"?: Array<string>;
 };
 export type PatchUsersMeQuery = {
 
@@ -260,8 +304,19 @@ export type PatchUsersMeResponse = {
       "state": string;
       "lga": string;
       "interests": Array<string>;
+      "avatarUrl": string;
       "createdAt": string;
+      "phone": string;
       "bio": string;
+      "country": string;
+      "location": {
+        "type": string;
+        "coordinates": Array<number>;
+      };
+      "preferredSetting": string;
+      "preferredGroupSize": string;
+      "participationRole": string;
+      "hobbies": Array<string>;
     };
   };
 };
@@ -335,6 +390,34 @@ export type DeleteUsersMePushTokensResponse = {
   "message": string;
 };
 
+export type PostUsersIdReportsBody = {
+  "reason": string;
+  "details"?: string;
+};
+export type PostUsersIdReportsQuery = {
+
+};
+export type PostUsersIdReportsPath = {
+  "id": string;
+};
+export type PostUsersIdReportsHeaders = {
+
+};
+export type PostUsersIdReportsResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "report": {
+      "_id": string;
+      "targetType": string;
+      "targetId": string;
+      "reason": string;
+      "status": string;
+      "createdAt": string;
+    };
+  };
+};
+
 export type GetEventsBody = never;
 export type GetEventsQuery = {
   "page"?: number;
@@ -363,6 +446,7 @@ export type GetEventsResponse = {
         "title": string;
         "slug": string;
         "description": string;
+        "coverImageUrl": string;
         "activityType": string;
         "setting": string;
         "country": string;
@@ -429,6 +513,7 @@ export type PostEventsResponse = {
       "title": string;
       "slug": string;
       "description": string;
+      "coverImageUrl": string;
       "activityType": string;
       "setting": string;
       "country": string;
@@ -470,6 +555,7 @@ export type GetEventsRecommendedResponse = {
         "title": string;
         "slug": string;
         "description": string;
+        "coverImageUrl": string;
         "activityType": string;
         "setting": string;
         "country": string;
@@ -514,6 +600,7 @@ export type GetEventsCreatedMeResponse = {
         "title": string;
         "slug": string;
         "description": string;
+        "coverImageUrl": string;
         "activityType": string;
         "setting": string;
         "country": string;
@@ -552,6 +639,7 @@ export type GetEventsIdResponse = {
       "title": string;
       "slug": string;
       "description": string;
+      "coverImageUrl": string;
       "activityType": string;
       "setting": string;
       "country": string;
@@ -607,6 +695,7 @@ export type PatchEventsIdResponse = {
       "title": string;
       "slug": string;
       "description": string;
+      "coverImageUrl": string;
       "activityType": string;
       "setting": string;
       "country": string;
@@ -666,6 +755,7 @@ export type PostEventsIdOrdersResponse = {
         "title": string;
         "slug": string;
         "description": string;
+        "coverImageUrl": string;
         "activityType": string;
         "setting": string;
         "country": string;
@@ -730,6 +820,7 @@ export type PostEventsIdPublishResponse = {
       "title": string;
       "slug": string;
       "description": string;
+      "coverImageUrl": string;
       "activityType": string;
       "setting": string;
       "country": string;
@@ -768,6 +859,7 @@ export type PostEventsIdCancelResponse = {
       "title": string;
       "slug": string;
       "description": string;
+      "coverImageUrl": string;
       "activityType": string;
       "setting": string;
       "country": string;
@@ -892,6 +984,7 @@ export type GetEventsIdAttendeesResponse = {
           "title": string;
           "slug": string;
           "description": string;
+          "coverImageUrl": string;
           "activityType": string;
           "setting": string;
           "country": string;
@@ -934,9 +1027,18 @@ export type GetEventsIdAttendeesResponse = {
           "state": string;
           "lga": string;
           "interests": Array<string>;
+          "avatarUrl": string;
           "createdAt": string;
         };
+        "checkedIn": true;
+        "checkedInAt": string;
       }>;
+    "summary": {
+      "orders": number;
+      "totalTickets": number;
+      "checkedInTickets": number;
+      "pendingTickets": number;
+    };
   };
 };
 
@@ -965,6 +1067,7 @@ export type PostEventsIdCheckInsResponse = {
         "title": string;
         "slug": string;
         "description": string;
+        "coverImageUrl": string;
         "activityType": string;
         "setting": string;
         "country": string;
@@ -1002,6 +1105,34 @@ export type PostEventsIdCheckInsResponse = {
   };
 };
 
+export type PostEventsIdReportsBody = {
+  "reason": string;
+  "details"?: string;
+};
+export type PostEventsIdReportsQuery = {
+
+};
+export type PostEventsIdReportsPath = {
+  "id": string;
+};
+export type PostEventsIdReportsHeaders = {
+
+};
+export type PostEventsIdReportsResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "report": {
+      "_id": string;
+      "targetType": string;
+      "targetId": string;
+      "reason": string;
+      "status": string;
+      "createdAt": string;
+    };
+  };
+};
+
 export type GetCommunitiesBody = never;
 export type GetCommunitiesQuery = {
   "page"?: number;
@@ -1027,6 +1158,7 @@ export type GetCommunitiesResponse = {
         "name": string;
         "slug": string;
         "description": string;
+        "imageUrl": string;
         "category": string;
         "state": string;
         "lga": string;
@@ -1074,6 +1206,7 @@ export type PostCommunitiesResponse = {
       "name": string;
       "slug": string;
       "description": string;
+      "imageUrl": string;
       "category": string;
       "state": string;
       "lga": string;
@@ -1106,6 +1239,7 @@ export type GetCommunitiesIdResponse = {
       "name": string;
       "slug": string;
       "description": string;
+      "imageUrl": string;
       "category": string;
       "state": string;
       "lga": string;
@@ -1142,6 +1276,7 @@ export type PatchCommunitiesIdResponse = {
       "name": string;
       "slug": string;
       "description": string;
+      "imageUrl": string;
       "category": string;
       "state": string;
       "lga": string;
@@ -1193,6 +1328,7 @@ export type GetCommunitiesIdMembersResponse = {
         "state": string;
         "lga": string;
         "interests": Array<string>;
+        "avatarUrl": string;
         "createdAt": string;
       }>;
   };
@@ -1253,6 +1389,7 @@ export type GetCommunitiesMembershipOrdersOrderNumberVerifyResponse = {
         "name": string;
         "slug": string;
         "description": string;
+        "imageUrl": string;
         "category": string;
         "state": string;
         "lga": string;
@@ -1283,6 +1420,292 @@ export type DeleteCommunitiesIdMembersMeResponse = {
   "message": string;
 };
 
+export type GetCommunitiesIdPostsBody = never;
+export type GetCommunitiesIdPostsQuery = {
+  "page"?: number;
+  "limit"?: number;
+};
+export type GetCommunitiesIdPostsPath = {
+  "id": string;
+};
+export type GetCommunitiesIdPostsHeaders = {
+
+};
+export type GetCommunitiesIdPostsResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "posts": Array<{
+        "_id": string;
+        "communityId": string;
+        "authorId": {
+          "_id": string;
+          "firstName": string;
+          "lastName": string;
+          "email": string;
+          "role": string;
+          "status": string;
+          "state": string;
+          "lga": string;
+          "interests": Array<string>;
+          "avatarUrl": string;
+          "createdAt": string;
+        };
+        "kind": string;
+        "text": string;
+        "imageUrl": string;
+        "createdAt": string;
+      }>;
+    "pagination": {
+      "page": number;
+      "limit": number;
+      "total": number;
+    };
+  };
+};
+
+export type PostCommunitiesIdPostsBody = {
+  "text": string;
+  "imageUrl"?: string;
+};
+export type PostCommunitiesIdPostsQuery = {
+
+};
+export type PostCommunitiesIdPostsPath = {
+  "id": string;
+};
+export type PostCommunitiesIdPostsHeaders = {
+
+};
+export type PostCommunitiesIdPostsResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "post": {
+      "_id": string;
+      "communityId": string;
+      "authorId": {
+        "_id": string;
+        "firstName": string;
+        "lastName": string;
+        "email": string;
+        "role": string;
+        "status": string;
+        "state": string;
+        "lga": string;
+        "interests": Array<string>;
+        "avatarUrl": string;
+        "createdAt": string;
+      };
+      "kind": string;
+      "text": string;
+      "imageUrl": string;
+      "createdAt": string;
+    };
+  };
+};
+
+export type GetCommunitiesIdAnnouncementsBody = never;
+export type GetCommunitiesIdAnnouncementsQuery = {
+  "page"?: number;
+  "limit"?: number;
+};
+export type GetCommunitiesIdAnnouncementsPath = {
+  "id": string;
+};
+export type GetCommunitiesIdAnnouncementsHeaders = {
+
+};
+export type GetCommunitiesIdAnnouncementsResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "announcements": Array<{
+        "_id": string;
+        "communityId": string;
+        "authorId": {
+          "_id": string;
+          "firstName": string;
+          "lastName": string;
+          "email": string;
+          "role": string;
+          "status": string;
+          "state": string;
+          "lga": string;
+          "interests": Array<string>;
+          "avatarUrl": string;
+          "createdAt": string;
+        };
+        "kind": string;
+        "text": string;
+        "imageUrl": string;
+        "createdAt": string;
+      }>;
+    "pagination": {
+      "page": number;
+      "limit": number;
+      "total": number;
+    };
+  };
+};
+
+export type PostCommunitiesIdAnnouncementsBody = {
+  "text": string;
+  "imageUrl"?: string;
+};
+export type PostCommunitiesIdAnnouncementsQuery = {
+
+};
+export type PostCommunitiesIdAnnouncementsPath = {
+  "id": string;
+};
+export type PostCommunitiesIdAnnouncementsHeaders = {
+
+};
+export type PostCommunitiesIdAnnouncementsResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "announcement": {
+      "_id": string;
+      "communityId": string;
+      "authorId": {
+        "_id": string;
+        "firstName": string;
+        "lastName": string;
+        "email": string;
+        "role": string;
+        "status": string;
+        "state": string;
+        "lga": string;
+        "interests": Array<string>;
+        "avatarUrl": string;
+        "createdAt": string;
+      };
+      "kind": string;
+      "text": string;
+      "imageUrl": string;
+      "createdAt": string;
+    };
+  };
+};
+
+export type GetCommunitiesIdMessagesBody = never;
+export type GetCommunitiesIdMessagesQuery = {
+  "page"?: number;
+  "limit"?: number;
+};
+export type GetCommunitiesIdMessagesPath = {
+  "id": string;
+};
+export type GetCommunitiesIdMessagesHeaders = {
+
+};
+export type GetCommunitiesIdMessagesResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "messages": Array<{
+        "_id": string;
+        "communityId": string;
+        "authorId": {
+          "_id": string;
+          "firstName": string;
+          "lastName": string;
+          "email": string;
+          "role": string;
+          "status": string;
+          "state": string;
+          "lga": string;
+          "interests": Array<string>;
+          "avatarUrl": string;
+          "createdAt": string;
+        };
+        "kind": string;
+        "text": string;
+        "imageUrl": string;
+        "createdAt": string;
+        "clientMessageId": string;
+      }>;
+    "pagination": {
+      "page": number;
+      "limit": number;
+      "total": number;
+    };
+  };
+};
+
+export type PostCommunitiesIdMessagesBody = {
+  "clientMessageId": string;
+  "text": string;
+  "imageUrl"?: string;
+};
+export type PostCommunitiesIdMessagesQuery = {
+
+};
+export type PostCommunitiesIdMessagesPath = {
+  "id": string;
+};
+export type PostCommunitiesIdMessagesHeaders = {
+
+};
+export type PostCommunitiesIdMessagesResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "message": {
+      "_id": string;
+      "communityId": string;
+      "authorId": {
+        "_id": string;
+        "firstName": string;
+        "lastName": string;
+        "email": string;
+        "role": string;
+        "status": string;
+        "state": string;
+        "lga": string;
+        "interests": Array<string>;
+        "avatarUrl": string;
+        "createdAt": string;
+      };
+      "kind": string;
+      "text": string;
+      "imageUrl": string;
+      "createdAt": string;
+      "clientMessageId": string;
+    };
+  };
+};
+
+export type PostCommunitiesIdReportsBody = {
+  "reason": string;
+  "details"?: string;
+};
+export type PostCommunitiesIdReportsQuery = {
+
+};
+export type PostCommunitiesIdReportsPath = {
+  "id": string;
+};
+export type PostCommunitiesIdReportsHeaders = {
+
+};
+export type PostCommunitiesIdReportsResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "report": {
+      "_id": string;
+      "targetType": string;
+      "targetId": string;
+      "reason": string;
+      "status": string;
+      "createdAt": string;
+    };
+  };
+};
+
 export type GetFriendsBody = never;
 export type GetFriendsQuery = {
 
@@ -1301,6 +1724,32 @@ export type GetFriendsResponse = {
         "_id": string;
         "requesterId": string;
         "addresseeId": string;
+        "requester": {
+          "_id": string;
+          "firstName": string;
+          "lastName": string;
+          "email": string;
+          "role": string;
+          "status": string;
+          "state": string;
+          "lga": string;
+          "interests": Array<string>;
+          "avatarUrl": string;
+          "createdAt": string;
+        };
+        "addressee": {
+          "_id": string;
+          "firstName": string;
+          "lastName": string;
+          "email": string;
+          "role": string;
+          "status": string;
+          "state": string;
+          "lga": string;
+          "interests": Array<string>;
+          "avatarUrl": string;
+          "createdAt": string;
+        };
         "status": string;
         "createdAt": string;
       }>;
@@ -1325,6 +1774,32 @@ export type GetFriendsRequestsResponse = {
         "_id": string;
         "requesterId": string;
         "addresseeId": string;
+        "requester": {
+          "_id": string;
+          "firstName": string;
+          "lastName": string;
+          "email": string;
+          "role": string;
+          "status": string;
+          "state": string;
+          "lga": string;
+          "interests": Array<string>;
+          "avatarUrl": string;
+          "createdAt": string;
+        };
+        "addressee": {
+          "_id": string;
+          "firstName": string;
+          "lastName": string;
+          "email": string;
+          "role": string;
+          "status": string;
+          "state": string;
+          "lga": string;
+          "interests": Array<string>;
+          "avatarUrl": string;
+          "createdAt": string;
+        };
         "status": string;
         "createdAt": string;
       }>;
@@ -1355,6 +1830,7 @@ export type GetFriendsSuggestionsResponse = {
         "state": string;
         "lga": string;
         "interests": Array<string>;
+        "avatarUrl": string;
         "createdAt": string;
       }>;
   };
@@ -1378,6 +1854,32 @@ export type PostFriendsRequestsUserIdResponse = {
       "_id": string;
       "requesterId": string;
       "addresseeId": string;
+      "requester": {
+        "_id": string;
+        "firstName": string;
+        "lastName": string;
+        "email": string;
+        "role": string;
+        "status": string;
+        "state": string;
+        "lga": string;
+        "interests": Array<string>;
+        "avatarUrl": string;
+        "createdAt": string;
+      };
+      "addressee": {
+        "_id": string;
+        "firstName": string;
+        "lastName": string;
+        "email": string;
+        "role": string;
+        "status": string;
+        "state": string;
+        "lga": string;
+        "interests": Array<string>;
+        "avatarUrl": string;
+        "createdAt": string;
+      };
       "status": string;
       "createdAt": string;
     };
@@ -1404,6 +1906,32 @@ export type PatchFriendsRequestsIdResponse = {
       "_id": string;
       "requesterId": string;
       "addresseeId": string;
+      "requester": {
+        "_id": string;
+        "firstName": string;
+        "lastName": string;
+        "email": string;
+        "role": string;
+        "status": string;
+        "state": string;
+        "lga": string;
+        "interests": Array<string>;
+        "avatarUrl": string;
+        "createdAt": string;
+      };
+      "addressee": {
+        "_id": string;
+        "firstName": string;
+        "lastName": string;
+        "email": string;
+        "role": string;
+        "status": string;
+        "state": string;
+        "lga": string;
+        "interests": Array<string>;
+        "avatarUrl": string;
+        "createdAt": string;
+      };
       "status": string;
       "createdAt": string;
     };
@@ -1444,7 +1972,28 @@ export type GetChatConversationsResponse = {
         "type": string;
         "title": null;
         "participantIds": Array<string>;
+        "participants": Array<{
+            "_id": string;
+            "firstName": string;
+            "lastName": string;
+            "email": string;
+            "role": string;
+            "status": string;
+            "state": string;
+            "lga": string;
+            "interests": Array<string>;
+            "avatarUrl": string;
+            "createdAt": string;
+          }>;
         "lastMessageAt": string;
+        "lastMessagePreview": {
+          "_id": string;
+          "senderId": string;
+          "type": string;
+          "text": string;
+          "createdAt": string;
+        };
+        "unreadCount": number;
       }>;
   };
 };
@@ -1472,7 +2021,28 @@ export type PostChatConversationsResponse = {
       "type": string;
       "title": null;
       "participantIds": Array<string>;
+      "participants": Array<{
+          "_id": string;
+          "firstName": string;
+          "lastName": string;
+          "email": string;
+          "role": string;
+          "status": string;
+          "state": string;
+          "lga": string;
+          "interests": Array<string>;
+          "avatarUrl": string;
+          "createdAt": string;
+        }>;
       "lastMessageAt": string;
+      "lastMessagePreview": {
+        "_id": string;
+        "senderId": string;
+        "type": string;
+        "text": string;
+        "createdAt": string;
+      };
+      "unreadCount": number;
     };
   };
 };
@@ -1496,6 +2066,19 @@ export type GetChatConversationsIdMessagesResponse = {
         "_id": string;
         "conversationId": string;
         "senderId": string;
+        "sender": {
+          "_id": string;
+          "firstName": string;
+          "lastName": string;
+          "email": string;
+          "role": string;
+          "status": string;
+          "state": string;
+          "lga": string;
+          "interests": Array<string>;
+          "avatarUrl": string;
+          "createdAt": string;
+        };
         "clientMessageId": string;
         "type": string;
         "text": string;
@@ -1527,6 +2110,19 @@ export type PostChatConversationsIdMessagesResponse = {
       "_id": string;
       "conversationId": string;
       "senderId": string;
+      "sender": {
+        "_id": string;
+        "firstName": string;
+        "lastName": string;
+        "email": string;
+        "role": string;
+        "status": string;
+        "state": string;
+        "lga": string;
+        "interests": Array<string>;
+        "avatarUrl": string;
+        "createdAt": string;
+      };
       "clientMessageId": string;
       "type": string;
       "text": string;
@@ -1625,6 +2221,7 @@ export type PostAiEventRecommendationsResponse = {
         "title": string;
         "slug": string;
         "description": string;
+        "coverImageUrl": string;
         "activityType": string;
         "setting": string;
         "country": string;
@@ -1724,6 +2321,7 @@ export type GetTicketsResponse = {
           "title": string;
           "slug": string;
           "description": string;
+          "coverImageUrl": string;
           "activityType": string;
           "setting": string;
           "country": string;
@@ -1783,6 +2381,7 @@ export type GetTicketsOrderNumberResponse = {
         "title": string;
         "slug": string;
         "description": string;
+        "coverImageUrl": string;
         "activityType": string;
         "setting": string;
         "country": string;
@@ -1843,6 +2442,7 @@ export type GetTicketsOrderNumberVerifyResponse = {
         "title": string;
         "slug": string;
         "description": string;
+        "coverImageUrl": string;
         "activityType": string;
         "setting": string;
         "country": string;
@@ -1987,7 +2587,27 @@ export type PostDisputesResponse = {
       "subject": string;
       "description": string;
       "status": string;
-      "messages": Array<unknown>;
+      "messages": Array<{
+          "_id": string;
+          "authorId": {
+            "_id": string;
+            "firstName": string;
+            "lastName": string;
+            "email": string;
+            "role": string;
+            "status": string;
+            "state": string;
+            "lga": string;
+            "interests": Array<string>;
+            "avatarUrl": string;
+            "createdAt": string;
+          };
+          "message": string;
+          "attachments": Array<string>;
+          "internal": false;
+          "createdAt": string;
+          "updatedAt": string;
+        }>;
       "createdAt": string;
     };
   };
@@ -2014,7 +2634,27 @@ export type GetDisputesResponse = {
         "subject": string;
         "description": string;
         "status": string;
-        "messages": Array<unknown>;
+        "messages": Array<{
+            "_id": string;
+            "authorId": {
+              "_id": string;
+              "firstName": string;
+              "lastName": string;
+              "email": string;
+              "role": string;
+              "status": string;
+              "state": string;
+              "lga": string;
+              "interests": Array<string>;
+              "avatarUrl": string;
+              "createdAt": string;
+            };
+            "message": string;
+            "attachments": Array<string>;
+            "internal": false;
+            "createdAt": string;
+            "updatedAt": string;
+          }>;
         "createdAt": string;
       }>;
   };
@@ -2041,7 +2681,27 @@ export type GetDisputesIdResponse = {
       "subject": string;
       "description": string;
       "status": string;
-      "messages": Array<unknown>;
+      "messages": Array<{
+          "_id": string;
+          "authorId": {
+            "_id": string;
+            "firstName": string;
+            "lastName": string;
+            "email": string;
+            "role": string;
+            "status": string;
+            "state": string;
+            "lga": string;
+            "interests": Array<string>;
+            "avatarUrl": string;
+            "createdAt": string;
+          };
+          "message": string;
+          "attachments": Array<string>;
+          "internal": false;
+          "createdAt": string;
+          "updatedAt": string;
+        }>;
       "createdAt": string;
     };
   };
@@ -2073,9 +2733,25 @@ export type PostDisputesIdMessagesResponse = {
       "description": string;
       "status": string;
       "messages": Array<{
-          "senderId": string;
+          "_id": string;
+          "authorId": {
+            "_id": string;
+            "firstName": string;
+            "lastName": string;
+            "email": string;
+            "role": string;
+            "status": string;
+            "state": string;
+            "lga": string;
+            "interests": Array<string>;
+            "avatarUrl": string;
+            "createdAt": string;
+          };
           "message": string;
+          "attachments": Array<string>;
+          "internal": false;
           "createdAt": string;
+          "updatedAt": string;
         }>;
       "createdAt": string;
     };
@@ -2106,7 +2782,27 @@ export type PatchDisputesIdStatusResponse = {
       "subject": string;
       "description": string;
       "status": string;
-      "messages": Array<unknown>;
+      "messages": Array<{
+          "_id": string;
+          "authorId": {
+            "_id": string;
+            "firstName": string;
+            "lastName": string;
+            "email": string;
+            "role": string;
+            "status": string;
+            "state": string;
+            "lga": string;
+            "interests": Array<string>;
+            "avatarUrl": string;
+            "createdAt": string;
+          };
+          "message": string;
+          "attachments": Array<string>;
+          "internal": false;
+          "createdAt": string;
+          "updatedAt": string;
+        }>;
       "createdAt": string;
       "resolution": string;
     };
@@ -2650,6 +3346,16 @@ export interface ApiOperationMap {
     headers: DeleteUsersMePushTokensHeaders;
     response: DeleteUsersMePushTokensResponse;
   };
+  "post__users_id_reports": {
+    method: "POST";
+    path: "/users/{id}/reports";
+    authenticated: true;
+    body: PostUsersIdReportsBody;
+    query: PostUsersIdReportsQuery;
+    pathParams: PostUsersIdReportsPath;
+    headers: PostUsersIdReportsHeaders;
+    response: PostUsersIdReportsResponse;
+  };
   "get__events": {
     method: "GET";
     path: "/events";
@@ -2800,6 +3506,16 @@ export interface ApiOperationMap {
     headers: PostEventsIdCheckInsHeaders;
     response: PostEventsIdCheckInsResponse;
   };
+  "post__events_id_reports": {
+    method: "POST";
+    path: "/events/{id}/reports";
+    authenticated: true;
+    body: PostEventsIdReportsBody;
+    query: PostEventsIdReportsQuery;
+    pathParams: PostEventsIdReportsPath;
+    headers: PostEventsIdReportsHeaders;
+    response: PostEventsIdReportsResponse;
+  };
   "get__communities": {
     method: "GET";
     path: "/communities";
@@ -2889,6 +3605,76 @@ export interface ApiOperationMap {
     pathParams: DeleteCommunitiesIdMembersMePath;
     headers: DeleteCommunitiesIdMembersMeHeaders;
     response: DeleteCommunitiesIdMembersMeResponse;
+  };
+  "get__communities_id_posts": {
+    method: "GET";
+    path: "/communities/{id}/posts";
+    authenticated: true;
+    body: GetCommunitiesIdPostsBody;
+    query: GetCommunitiesIdPostsQuery;
+    pathParams: GetCommunitiesIdPostsPath;
+    headers: GetCommunitiesIdPostsHeaders;
+    response: GetCommunitiesIdPostsResponse;
+  };
+  "post__communities_id_posts": {
+    method: "POST";
+    path: "/communities/{id}/posts";
+    authenticated: true;
+    body: PostCommunitiesIdPostsBody;
+    query: PostCommunitiesIdPostsQuery;
+    pathParams: PostCommunitiesIdPostsPath;
+    headers: PostCommunitiesIdPostsHeaders;
+    response: PostCommunitiesIdPostsResponse;
+  };
+  "get__communities_id_announcements": {
+    method: "GET";
+    path: "/communities/{id}/announcements";
+    authenticated: true;
+    body: GetCommunitiesIdAnnouncementsBody;
+    query: GetCommunitiesIdAnnouncementsQuery;
+    pathParams: GetCommunitiesIdAnnouncementsPath;
+    headers: GetCommunitiesIdAnnouncementsHeaders;
+    response: GetCommunitiesIdAnnouncementsResponse;
+  };
+  "post__communities_id_announcements": {
+    method: "POST";
+    path: "/communities/{id}/announcements";
+    authenticated: true;
+    body: PostCommunitiesIdAnnouncementsBody;
+    query: PostCommunitiesIdAnnouncementsQuery;
+    pathParams: PostCommunitiesIdAnnouncementsPath;
+    headers: PostCommunitiesIdAnnouncementsHeaders;
+    response: PostCommunitiesIdAnnouncementsResponse;
+  };
+  "get__communities_id_messages": {
+    method: "GET";
+    path: "/communities/{id}/messages";
+    authenticated: true;
+    body: GetCommunitiesIdMessagesBody;
+    query: GetCommunitiesIdMessagesQuery;
+    pathParams: GetCommunitiesIdMessagesPath;
+    headers: GetCommunitiesIdMessagesHeaders;
+    response: GetCommunitiesIdMessagesResponse;
+  };
+  "post__communities_id_messages": {
+    method: "POST";
+    path: "/communities/{id}/messages";
+    authenticated: true;
+    body: PostCommunitiesIdMessagesBody;
+    query: PostCommunitiesIdMessagesQuery;
+    pathParams: PostCommunitiesIdMessagesPath;
+    headers: PostCommunitiesIdMessagesHeaders;
+    response: PostCommunitiesIdMessagesResponse;
+  };
+  "post__communities_id_reports": {
+    method: "POST";
+    path: "/communities/{id}/reports";
+    authenticated: true;
+    body: PostCommunitiesIdReportsBody;
+    query: PostCommunitiesIdReportsQuery;
+    pathParams: PostCommunitiesIdReportsPath;
+    headers: PostCommunitiesIdReportsHeaders;
+    response: PostCommunitiesIdReportsResponse;
   };
   "get__friends": {
     method: "GET";

@@ -4,6 +4,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import AppIcon, { AppIconName } from '../../components/ui/app-icon';
 import PrimaryButton from '../../components/ui/primary-button';
+import { usePersonalization } from '../../hooks/use-personalization';
 import { colors, fonts } from '../../styles/theme';
 import SetupLayout from '../../layouts/setup-layout';
 import type { RootStackParamList } from '../../types/navigation';
@@ -21,7 +22,8 @@ const cards = [
 ] as const;
 
 export default function InterestsSelectionScreen({ navigation }: Props) {
-  const [selectedCards, setSelectedCards] = useState(new Set(['Workshops', 'Arts']));
+  const { draft, setCategories } = usePersonalization();
+  const [selectedCards, setSelectedCards] = useState(new Set(draft.categories));
 
   const toggle = (title: string) => {
     setSelectedCards((current) => {
@@ -33,6 +35,11 @@ export default function InterestsSelectionScreen({ navigation }: Props) {
       }
       return next;
     });
+  };
+
+  const continueSetup = () => {
+    setCategories(Array.from(selectedCards));
+    navigation.navigate('Preferences');
   };
 
   return (
@@ -98,7 +105,7 @@ export default function InterestsSelectionScreen({ navigation }: Props) {
           })}
         </View>
         <View style={{ flex: 1 }} />
-        <PrimaryButton label="Next Step" onPress={() => navigation.navigate('Preferences')} />
+        <PrimaryButton label="Next Step" onPress={continueSetup} />
       </View>
     </SetupLayout>
   );

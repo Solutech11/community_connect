@@ -18,6 +18,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'DeleteAccount'>;
 export default function DeleteAccountScreen({ navigation }: Props) {
   const { signOut } = useAuth();
   const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -65,7 +66,22 @@ export default function DeleteAccountScreen({ navigation }: Props) {
             <Text style={styles.label}>CONFIRM PASSWORD</Text>
             <View style={styles.passwordField}>
               <Ionicons name="lock-closed-outline" size={25} color="#399760" />
-              <TextInput placeholder="Enter your current password" placeholderTextColor="#778095" secureTextEntry style={styles.passwordInput} value={password} onChangeText={setPassword} />
+              <TextInput
+                autoComplete="password"
+                onChangeText={setPassword}
+                placeholder="Enter your current password"
+                placeholderTextColor="#778095"
+                secureTextEntry={!passwordVisible}
+                style={styles.passwordInput}
+                value={password}
+              />
+              <Pressable
+                accessibilityLabel={passwordVisible ? 'Hide password' : 'Show password'}
+                hitSlop={10}
+                onPress={() => setPasswordVisible((visible) => !visible)}
+              >
+                <Ionicons name={passwordVisible ? 'eye' : 'eye-off'} size={23} color="#778095" />
+              </Pressable>
             </View>
 
             <Pressable disabled={submitting} onPress={deleteAccount} style={[styles.deleteButton, submitting && styles.disabled]}>

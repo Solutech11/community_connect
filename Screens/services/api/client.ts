@@ -3,6 +3,7 @@ import type { ApiFailure, QueryValue } from '../../types/api';
 import type { ApiOperationId, ApiOperationMap } from '../../types/api.generated';
 import { authTokenStorage } from '../storage/auth-token.storage';
 import { apiBaseUrl, apiRequestTimeoutMs } from './config';
+import { apiLogger } from './logger';
 
 type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
@@ -113,6 +114,10 @@ async function parseResponse(response: Response): Promise<unknown> {
 async function rawRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const authenticated = options.authenticated ?? false;
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+  const method = options.method ?? 'GET';
+  const url = buildUrl(path, options.query);
+  const logId = Crypto.randomUUID();
+  const startedAt = Date.now();
   const headers: Record<string, string> = {
     Accept: 'application/json',
     ...options.headers,
@@ -125,11 +130,19 @@ async function rawRequest<T>(path: string, options: RequestOptions = {}): Promis
     headers.Authorization = `Bearer ${accessToken}`;
   }
 
+  apiLogger.request({
+    id: logId,
+    method,
+    url,
+    headers,
+    body: options.body,
+  });
+
   const requestSignal = makeSignal(options.signal, options.timeoutMs ?? apiRequestTimeoutMs);
   let response: Response;
   try {
-    response = await fetch(buildUrl(path, options.query), {
-      method: options.method ?? 'GET',
+    response = await fetch(url, {
+      method,
       headers,
       body:
         options.body === undefined
@@ -140,46 +153,106 @@ async function rawRequest<T>(path: string, options: RequestOptions = {}): Promis
       signal: requestSignal.signal,
     });
   } catch (error) {
-    if (requestSignal.signal.aborted) {
-      throw new ApiError({
-        message: options.signal?.aborted
-          ? 'Request cancelled.'
-          : 'The request timed out. Check your connection and try again.',
-        code: options.signal?.aborted ? 'REQUEST_CANCELLED' : 'REQUEST_TIMEOUT',
-      });
-    }
-    throw new ApiError({
-      message: 'Unable to reach Community Connect. Check your internet connection.',
-      code: 'NETWORK_ERROR',
-      details: error instanceof Error ? error.message : undefined,
+    const requestError = requestSignal.signal.aborted
+      ? new ApiError({
+          message: options.signal?.aborted
+            ? 'Request cancelled.'
+            : 'The request timed out. Check your connection and try again.',
+          code: options.signal?.aborted ? 'REQUEST_CANCELLED' : 'REQUEST_TIMEOUT',
+        })
+      : new ApiError({
+          message: 'Unable to reach Community Connect. Check your internet connection.',
+          code: 'NETWORK_ERROR',
+          details: error instanceof Error ? error.message : undefined,
+        });
+
+    apiLogger.error({
+      id: logId,
+      method,
+      url,
+      durationMs: Date.now() - startedAt,
+      cause: requestError,
     });
+    throw requestError;
   } finally {
     requestSignal.dispose();
   }
 
-  const payload = await parseResponse(response);
+  let payload: unknown;
+  try {
+    payload = await parseResponse(response);
+  } catch (error) {
+    apiLogger.error({
+      id: logId,
+      method,
+      url,
+      status: response.status,
+      durationMs: Date.now() - startedAt,
+      cause: error,
+    });
+    throw error;
+  }
 
   if (response.status === 401 && authenticated && options.retryAfterRefresh !== false) {
+    const authenticationError = isApiFailure(payload)
+      ? new ApiError({
+          message: payload.error.message,
+          code: payload.error.code,
+          status: response.status,
+          requestId: payload.requestId,
+        })
+      : new ApiError({
+          message: 'Authentication is required.',
+          code: 'AUTHENTICATION_REQUIRED',
+          status: response.status,
+        });
+
+    apiLogger.error({
+      id: logId,
+      method,
+      url,
+      status: response.status,
+      durationMs: Date.now() - startedAt,
+      cause: authenticationError,
+    });
     await refreshAccessToken();
     return rawRequest<T>(path, { ...options, retryAfterRefresh: false });
   }
 
   if (!response.ok) {
-    if (isApiFailure(payload)) {
-      throw new ApiError({
-        message: payload.error.message,
-        code: payload.error.code,
-        status: response.status,
-        requestId: payload.requestId,
-        details: payload.error.details,
-      });
-    }
-    throw new ApiError({
-      message: 'Something went wrong. Please try again.',
-      code: `HTTP_${response.status}`,
+    const requestError = isApiFailure(payload)
+      ? new ApiError({
+          message: payload.error.message,
+          code: payload.error.code,
+          status: response.status,
+          requestId: payload.requestId,
+          details: payload.error.details,
+        })
+      : new ApiError({
+          message: 'Something went wrong. Please try again.',
+          code: `HTTP_${response.status}`,
+          status: response.status,
+        });
+
+    apiLogger.error({
+      id: logId,
+      method,
+      url,
       status: response.status,
+      durationMs: Date.now() - startedAt,
+      cause: requestError,
     });
+    throw requestError;
   }
+
+  apiLogger.success({
+    id: logId,
+    method,
+    url,
+    status: response.status,
+    durationMs: Date.now() - startedAt,
+    payload,
+  });
 
   return payload as T;
 }
@@ -303,6 +376,15 @@ const operations: Record<ApiOperationId, { method: HttpMethod; path: string; aut
   'post__wallet_withdrawals_reference_finalize': { method: 'POST', path: '/wallet/withdrawals/{reference}/finalize', authenticated: true },
   'post__uploads_images': { method: 'POST', path: '/uploads/images', authenticated: true },
   'post__webhooks_paystack': { method: 'POST', path: '/webhooks/paystack', authenticated: false },
+  'post__users_id_reports': { method: 'POST', path: '/users/{id}/reports', authenticated: true },
+  'post__events_id_reports': { method: 'POST', path: '/events/{id}/reports', authenticated: true },
+  'get__communities_id_posts': { method: 'GET', path: '/communities/{id}/posts', authenticated: true },
+  'post__communities_id_posts': { method: 'POST', path: '/communities/{id}/posts', authenticated: true },
+  'get__communities_id_announcements': { method: 'GET', path: '/communities/{id}/announcements', authenticated: true },
+  'post__communities_id_announcements': { method: 'POST', path: '/communities/{id}/announcements', authenticated: true },
+  'get__communities_id_messages': { method: 'GET', path: '/communities/{id}/messages', authenticated: true },
+  'post__communities_id_messages': { method: 'POST', path: '/communities/{id}/messages', authenticated: true },
+  'post__communities_id_reports': { method: 'POST', path: '/communities/{id}/reports', authenticated: true },
 };
 
 export const apiClient = {

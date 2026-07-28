@@ -1,4 +1,4 @@
-﻿import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { withDashboardLayout } from "../layouts/dashboard-layout";
 import ForgotPasswordScreen from "../pages/auth/forgot-password-connected";
@@ -50,6 +50,10 @@ import CommunityProfileScreen from "../pages/tabs/community-profile-connected";
 import EditCommunityScreen from "../pages/tabs/edit-community";
 import CommunityRoomScreen from "../pages/tabs/community-room-connected";
 import CreateCommunityScreen from "../pages/tabs/create-community-connected";
+import type {
+  AuthenticatedStartRoute,
+  UnauthenticatedStartRoute,
+} from "../hooks/use-auth";
 import type { RootStackParamList } from "../types/navigation";
 import MainTabs from "./main-tabs";
 
@@ -98,7 +102,9 @@ const DashboardWalletWithdraw = withDashboardLayout(WalletWithdrawScreen);
 const DashboardWalletTransfer = withDashboardLayout(WalletTransferScreen);
 const DashboardWalletDispute = withDashboardLayout(WalletDisputeScreen);
 const DashboardBankAccounts = withDashboardLayout(BankAccountsScreen);
-const DashboardTransactionDetails = withDashboardLayout(TransactionDetailsScreen);
+const DashboardTransactionDetails = withDashboardLayout(
+  TransactionDetailsScreen,
+);
 const DashboardDisputeManagement = withDashboardLayout(DisputeManagementScreen);
 const DashboardMyEventDetails = withDashboardLayout(MyEventDetailsScreen);
 const DashboardEventDetails = withDashboardLayout(EventDetailsScreen);
@@ -106,254 +112,286 @@ const DashboardTicketSelection = withDashboardLayout(TicketSelectionScreen);
 const DashboardCheckout = withDashboardLayout(CheckoutScreen);
 const DashboardPaymentSuccess = withDashboardLayout(PaymentSuccessScreen);
 
-export default function RootStackNavigator({ authenticated }: { authenticated: boolean }) {
+export default function RootStackNavigator({
+  authenticated,
+  authenticatedStartRoute,
+  unauthenticatedStartRoute,
+}: {
+  authenticated: boolean;
+  authenticatedStartRoute: AuthenticatedStartRoute;
+  unauthenticatedStartRoute: UnauthenticatedStartRoute;
+}) {
   return (
     <Stack.Navigator
-      initialRouteName={authenticated ? "Home" : "OnboardingWelcome"}
+      initialRouteName={
+        authenticated ? authenticatedStartRoute : unauthenticatedStartRoute
+      }
       screenOptions={{
         headerShown: false,
         animation: "slide_from_right",
         contentStyle: { backgroundColor: "#071f17" },
       }}
     >
-      <Stack.Screen
-        name="OnboardingWelcome"
-        component={OnboardingWelcomeScreen}
-      />
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen
-        name="Register"
-        component={RegistrationScreen}
-        options={{ animation: "fade" }}
-      />
-      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-      <Stack.Screen
-        name="VerifyEmail"
-        component={VerifyEmailScreen}
-        options={{ animation: "fade" }}
-      />
-      <Stack.Screen
-        name="PersonalizationTopics"
-        component={PersonalizationTopicsScreen}
-        options={{ animation: "fade" }}
-      />
-      <Stack.Screen
-        name="InterestsSelection"
-        component={InterestsSelectionScreen}
-        options={{ animation: "fade" }}
-      />
-      <Stack.Screen
-        name="PersonalizationForm"
-        component={PersonalizationFormScreen}
-        options={{ animation: "fade" }}
-      />
-      <Stack.Screen
-        name="Preferences"
-        component={PreferencesScreen}
-        options={{ animation: "fade" }}
-      />
-      <Stack.Screen name="Home" component={MainTabs} />
-      <Stack.Screen
-        name="CommunityJoin"
-        component={DashboardCommunityJoin}
-        options={{ animation: "fade_from_bottom" }}
-      />
-      <Stack.Screen
-        name="CommunityRoom"
-        component={DashboardCommunityRoom}
-        options={{
-          animation: "slide_from_right",
-          contentStyle: { backgroundColor: "#f7fbf9" },
-        }}
-      />
-      <Stack.Screen
-        name="CommunityProfile"
-        component={DashboardCommunityProfile}
-        options={{
-          animation: "slide_from_right",
-          contentStyle: { backgroundColor: "#f7fbf9" },
-        }}
-      />
-      <Stack.Screen
-        name="CreateCommunity"
-        component={DashboardCreateCommunity}
-        options={{ animation: "fade_from_bottom" }}
-      />
-      <Stack.Screen
-        name="MyEvents"
-        component={DashboardMyEvents}
-        options={{ animation: "fade_from_bottom" }}
-      />
-      <Stack.Screen
-        name="MyCreatedEvents"
-        component={DashboardMyCreatedEvents}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="ManageCreatedEvent"
-        component={DashboardManageCreatedEvent}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="CreateEventIntroduction"
-        component={DashboardCreateEventIntroduction}
-        options={{ animation: "slide_from_bottom" }}
-      />
-      <Stack.Screen
-        name="CreateEventDetails"
-        component={DashboardCreateEventDetails}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="CreateEventDateTime"
-        component={DashboardCreateEventDateTime}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="CreateEventTickets"
-        component={DashboardCreateEventTickets}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="CreateEventReview"
-        component={DashboardCreateEventReview}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="TicketScanner"
-        component={DashboardTicketScanner}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="Notifications"
-        component={DashboardNotifications}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="Friends"
-        component={DashboardFriends}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="ChatThread"
-        component={DashboardChatThread}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="AIChat"
-        component={DashboardAIChat}
-        options={{ animation: "slide_from_bottom" }}
-      />
-      <Stack.Screen
-        name="UpdateProfile"
-        component={DashboardUpdateProfile}
-        options={{
-          animation: "slide_from_right",
-          contentStyle: { backgroundColor: "#f7fbf9" },
-        }}
-      />
-      <Stack.Screen
-        name="Settings"
-        component={DashboardSettings}
-        options={{
-          animation: "slide_from_right",
-          contentStyle: { backgroundColor: "#f7fbf9" },
-        }}
-      />
-      <Stack.Screen
-        name="ChangePassword"
-        component={DashboardChangePassword}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="DeleteAccount"
-        component={DashboardDeleteAccount}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="PrivacyPolicy"
-        component={DashboardPrivacyPolicy}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="TermsConditions"
-        component={DashboardTermsConditions}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="Wallet"
-        component={DashboardWallet}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="Transactions"
-        component={DashboardTransactions}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="WalletTopUp"
-        component={DashboardWalletTopUp}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="WalletWithdraw"
-        component={DashboardWalletWithdraw}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="WalletTransfer"
-        component={DashboardWalletTransfer}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="WalletDispute"
-        component={DashboardWalletDispute}
-        options={{ animation: "slide_from_right" }}
-      />
-      <Stack.Screen
-        name="MyEventDetails"
-        component={DashboardMyEventDetails}
-        options={{
-          animation: "slide_from_right",
-          contentStyle: { backgroundColor: "#f7fbf9" },
-        }}
-      />
-      <Stack.Screen
-        name="EventDetails"
-        component={DashboardEventDetails}
-        options={{ animation: "fade_from_bottom" }}
-      />
-      <Stack.Screen
-        name="TicketSelection"
-        component={DashboardTicketSelection}
-        options={{
-          animation: "fade_from_bottom",
-          presentation: "transparentModal",
-          contentStyle: { backgroundColor: "transparent" },
-        }}
-      />
-      <Stack.Screen
-        name="Checkout"
-        component={DashboardCheckout}
-        options={{
-          animation: "slide_from_right",
-          contentStyle: { backgroundColor: "#f7fbf9" },
-        }}
-      />
-      <Stack.Screen
-        name="PaymentSuccess"
-        component={DashboardPaymentSuccess}
-        options={{
-          animation: "fade_from_bottom",
-          contentStyle: { backgroundColor: "#f7fbf9" },
-        }}
-      />
-      <Stack.Screen name="AISessions" component={DashboardAISessions} />
-      <Stack.Screen name="EditCommunity" component={DashboardEditCommunity} />
-      <Stack.Screen name="BankAccounts" component={DashboardBankAccounts} />
-      <Stack.Screen name="TransactionDetails" component={DashboardTransactionDetails} />
-      <Stack.Screen name="EditTicketType" component={DashboardEditTicketType} />
-      <Stack.Screen name="DisputeManagement" component={DashboardDisputeManagement} />
+      {!authenticated ? (
+        <>
+          <Stack.Screen
+            name="OnboardingWelcome"
+            component={OnboardingWelcomeScreen}
+          />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen
+            name="Register"
+            component={RegistrationScreen}
+            options={{ animation: "fade" }}
+          />
+          <Stack.Screen
+            name="ForgotPassword"
+            component={ForgotPasswordScreen}
+          />
+          <Stack.Screen
+            name="VerifyEmail"
+            component={VerifyEmailScreen}
+            options={{ animation: "fade" }}
+          />
+        </>
+      ) : (
+        <>
+          <Stack.Screen
+            name="PersonalizationTopics"
+            component={PersonalizationTopicsScreen}
+            options={{ animation: "fade" }}
+          />
+          <Stack.Screen
+            name="InterestsSelection"
+            component={InterestsSelectionScreen}
+            options={{ animation: "fade" }}
+          />
+          <Stack.Screen
+            name="PersonalizationForm"
+            component={PersonalizationFormScreen}
+            options={{ animation: "fade" }}
+          />
+          <Stack.Screen
+            name="Preferences"
+            component={PreferencesScreen}
+            options={{ animation: "fade" }}
+          />
+          <Stack.Screen name="Home" component={MainTabs} />
+          <Stack.Screen
+            name="CommunityJoin"
+            component={DashboardCommunityJoin}
+            options={{ animation: "fade_from_bottom" }}
+          />
+          <Stack.Screen
+            name="CommunityRoom"
+            component={DashboardCommunityRoom}
+            options={{
+              animation: "slide_from_right",
+              contentStyle: { backgroundColor: "#f7fbf9" },
+            }}
+          />
+          <Stack.Screen
+            name="CommunityProfile"
+            component={DashboardCommunityProfile}
+            options={{
+              animation: "slide_from_right",
+              contentStyle: { backgroundColor: "#f7fbf9" },
+            }}
+          />
+          <Stack.Screen
+            name="CreateCommunity"
+            component={DashboardCreateCommunity}
+            options={{ animation: "fade_from_bottom" }}
+          />
+          <Stack.Screen
+            name="MyEvents"
+            component={DashboardMyEvents}
+            options={{ animation: "fade_from_bottom" }}
+          />
+          <Stack.Screen
+            name="MyCreatedEvents"
+            component={DashboardMyCreatedEvents}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="ManageCreatedEvent"
+            component={DashboardManageCreatedEvent}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="CreateEventIntroduction"
+            component={DashboardCreateEventIntroduction}
+            options={{ animation: "slide_from_bottom" }}
+          />
+          <Stack.Screen
+            name="CreateEventDetails"
+            component={DashboardCreateEventDetails}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="CreateEventDateTime"
+            component={DashboardCreateEventDateTime}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="CreateEventTickets"
+            component={DashboardCreateEventTickets}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="CreateEventReview"
+            component={DashboardCreateEventReview}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="TicketScanner"
+            component={DashboardTicketScanner}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="Notifications"
+            component={DashboardNotifications}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="Friends"
+            component={DashboardFriends}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="ChatThread"
+            component={DashboardChatThread}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="AIChat"
+            component={DashboardAIChat}
+            options={{ animation: "slide_from_bottom" }}
+          />
+          <Stack.Screen
+            name="UpdateProfile"
+            component={DashboardUpdateProfile}
+            options={{
+              animation: "slide_from_right",
+              contentStyle: { backgroundColor: "#f7fbf9" },
+            }}
+          />
+          <Stack.Screen
+            name="Settings"
+            component={DashboardSettings}
+            options={{
+              animation: "slide_from_right",
+              contentStyle: { backgroundColor: "#f7fbf9" },
+            }}
+          />
+          <Stack.Screen
+            name="ChangePassword"
+            component={DashboardChangePassword}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="DeleteAccount"
+            component={DashboardDeleteAccount}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="PrivacyPolicy"
+            component={DashboardPrivacyPolicy}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="TermsConditions"
+            component={DashboardTermsConditions}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="Wallet"
+            component={DashboardWallet}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="Transactions"
+            component={DashboardTransactions}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="WalletTopUp"
+            component={DashboardWalletTopUp}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="WalletWithdraw"
+            component={DashboardWalletWithdraw}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="WalletTransfer"
+            component={DashboardWalletTransfer}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="WalletDispute"
+            component={DashboardWalletDispute}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="MyEventDetails"
+            component={DashboardMyEventDetails}
+            options={{
+              animation: "slide_from_right",
+              contentStyle: { backgroundColor: "#f7fbf9" },
+            }}
+          />
+          <Stack.Screen
+            name="EventDetails"
+            component={DashboardEventDetails}
+            options={{ animation: "fade_from_bottom" }}
+          />
+          <Stack.Screen
+            name="TicketSelection"
+            component={DashboardTicketSelection}
+            options={{
+              animation: "fade_from_bottom",
+              presentation: "transparentModal",
+              contentStyle: { backgroundColor: "transparent" },
+            }}
+          />
+          <Stack.Screen
+            name="Checkout"
+            component={DashboardCheckout}
+            options={{
+              animation: "slide_from_right",
+              contentStyle: { backgroundColor: "#f7fbf9" },
+            }}
+          />
+          <Stack.Screen
+            name="PaymentSuccess"
+            component={DashboardPaymentSuccess}
+            options={{
+              animation: "fade_from_bottom",
+              contentStyle: { backgroundColor: "#f7fbf9" },
+            }}
+          />
+          <Stack.Screen name="AISessions" component={DashboardAISessions} />
+          <Stack.Screen
+            name="EditCommunity"
+            component={DashboardEditCommunity}
+          />
+          <Stack.Screen name="BankAccounts" component={DashboardBankAccounts} />
+          <Stack.Screen
+            name="TransactionDetails"
+            component={DashboardTransactionDetails}
+          />
+          <Stack.Screen
+            name="EditTicketType"
+            component={DashboardEditTicketType}
+          />
+          <Stack.Screen
+            name="DisputeManagement"
+            component={DashboardDisputeManagement}
+          />
+        </>
+      )}
     </Stack.Navigator>
   );
 }

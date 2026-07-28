@@ -1,38 +1,44 @@
+﻿import { CommonActions } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
+import AppIcon from '../../components/ui/app-icon';
+import { useNotifier } from '../../components/ui/app-notifier';
 import Chip from '../../components/ui/chip';
 import PrimaryButton from '../../components/ui/primary-button';
-import AppIcon from '../../components/ui/app-icon';
-import { colors, fonts } from '../../styles/theme';
+import { hobbyTopics } from '../../data/personalization';
+import { useAuth } from '../../hooks/use-auth';
+import { usePersonalization } from '../../hooks/use-personalization';
 import SetupLayout from '../../layouts/setup-layout';
+import { ApiError } from '../../services/api/client';
+import { MAX_PROFILE_TAGS, normalizeProfileTags } from '../../services/api/user-profile.mapper';
+import { usersApi } from '../../services/api/users.api';
+import { colors, fonts } from '../../styles/theme';
 import type { RootStackParamList } from '../../types/navigation';
 import { setupSteps } from '../../types/setup-flow';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PersonalizationTopics'>;
 
-const chips = [
-  '#Photography',
-  '#BoardGames',
-  '#Hiking',
-  '#Cooking',
-  '#Gardening',
-  '#Travel',
-  '#Reading',
-  '#Technology',
-  '#Art',
-  '#Fitness',
-  '#Music',
-  '#Yoga',
-];
-
 export default function PersonalizationTopicsScreen({ navigation }: Props) {
+  const { refreshProfile } = useAuth();
+  const { notify } = useNotifier();
+  const { draft, reset, setTopics } = usePersonalization();
   const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState(new Set(['#Photography', '#Cooking']));
-  const visibleChips = chips.filter((chip) => chip.toLowerCase().includes(query.toLowerCase()));
+  const [selected, setSelected] = useState(new Set(draft.topics));
+  const [submitting, setSubmitting] = useState(false);
+  const visibleChips = hobbyTopics.filter((chip) => chip.toLowerCase().includes(query.toLowerCase()));
 
   const toggle = (chip: string) => {
+    if (!selected.has(chip) && selected.size >= MAX_PROFILE_TAGS) {
+      notify({
+        title: `Choose up to ${MAX_PROFILE_TAGS} hobbies`,
+        message: `The profile service supports a maximum of ${MAX_PROFILE_TAGS} hobbies.`,
+        tone: 'error',
+      });
+      return;
+    }
+
     setSelected((current) => {
       const next = new Set(current);
       if (next.has(chip)) {
@@ -44,11 +50,38 @@ export default function PersonalizationTopicsScreen({ navigation }: Props) {
     });
   };
 
+  const finishSetup = async (topicValues = Array.from(selected)) => {
+    if (submitting) return;
+
+    const hobbies = normalizeProfileTags(topicValues);
+    setSubmitting(true);
+    try {
+      await usersApi.updateMe({ hobbies });
+      setTopics(topicValues);
+      await refreshProfile();
+      reset();
+      notify({
+        title: 'Profile personalized',
+        message: 'Your hobbies and preferences have been saved.',
+        tone: 'success',
+      });
+      navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'Home' }] }));
+    } catch (error) {
+      notify({
+        title: 'Unable to finish setup',
+        message: error instanceof ApiError ? error.message : 'Your hobbies could not be saved.',
+        tone: 'error',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <SetupLayout
       step={setupSteps.topics}
       onBack={() => navigation.goBack()}
-      onSkip={() => navigation.navigate('Home')}
+      onSkip={() => void finishSetup([])}
     >
       <View style={{ flex: 1, gap: 20 }}>
         <View style={{ gap: 8 }}>
@@ -75,16 +108,17 @@ export default function PersonalizationTopicsScreen({ navigation }: Props) {
         >
           <AppIcon name="search" color={colors.softMuted} size={18} />
           <TextInput
+            editable={!submitting}
             value={query}
             onChangeText={setQuery}
-            placeholder="Search or add custom tag..."
+            placeholder="Search hobbies..."
             placeholderTextColor={colors.softMuted}
             style={{ flex: 1, color: colors.ink, fontSize: 14 }}
           />
         </View>
 
         <Text selectable style={{ color: colors.softMuted, fontSize: 11, fontFamily: fonts.extraBold }}>
-          POPULAR INTERESTS
+          POPULAR HOBBIES
         </Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
           {visibleChips.map((chip) => (
@@ -93,7 +127,11 @@ export default function PersonalizationTopicsScreen({ navigation }: Props) {
         </View>
 
         <View style={{ flex: 1 }} />
-        <PrimaryButton label="Finish" onPress={() => navigation.navigate('Home')} />
+        <PrimaryButton
+          label={submitting ? 'Saving...' : 'Finish'}
+          disabled={submitting}
+          onPress={() => void finishSetup()}
+        />
         <Text selectable style={{ color: colors.softMuted, fontSize: 11, textAlign: 'center' }}>
           You can always change these later in settings
         </Text>
