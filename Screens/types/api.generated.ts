@@ -259,6 +259,10 @@ export type GetUsersMeResponse = {
       "participationRole": string;
       "hobbies": Array<string>;
     };
+    "totals": {
+      "connections": number;
+      "events": number;
+    };
   };
 };
 
@@ -338,6 +342,49 @@ export type DeleteUsersMeResponse = {
   "message": string;
 };
 
+export type PatchUsersMeAvatarBody = {
+  "image": string;
+};
+export type PatchUsersMeAvatarQuery = {
+
+};
+export type PatchUsersMeAvatarPath = {
+
+};
+export type PatchUsersMeAvatarHeaders = {
+
+};
+export type PatchUsersMeAvatarResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "user": {
+      "_id": string;
+      "firstName": string;
+      "lastName": string;
+      "email": string;
+      "role": string;
+      "status": string;
+      "state": string;
+      "lga": string;
+      "interests": Array<string>;
+      "avatarUrl": string;
+      "createdAt": string;
+      "phone": string;
+      "bio": string;
+      "country": string;
+      "location": {
+        "type": string;
+        "coordinates": Array<number>;
+      };
+      "preferredSetting": string;
+      "preferredGroupSize": string;
+      "participationRole": string;
+      "hobbies": Array<string>;
+    };
+  };
+};
+
 export type PatchUsersMePasswordBody = {
   "currentPassword": string;
   "newPassword": string;
@@ -415,6 +462,961 @@ export type PostUsersIdReportsResponse = {
       "status": string;
       "createdAt": string;
     };
+  };
+};
+
+export type GetUsersMeCommunitiesBody = never;
+export type GetUsersMeCommunitiesQuery = {
+  "page"?: number;
+  "limit"?: number;
+  "search"?: string;
+  "role"?: "owner" | "moderator" | "member";
+  "status"?: "pending" | "active";
+  "unreadOnly"?: "true" | "false";
+};
+export type GetUsersMeCommunitiesPath = {
+
+};
+export type GetUsersMeCommunitiesHeaders = {
+
+};
+export type GetUsersMeCommunitiesResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "communities": Array<{
+        "_id": string;
+        "ownerId": string;
+        "name": string;
+        "slug": string;
+        "description": string;
+        "imageUrl": string;
+        "category": string;
+        "state": string;
+        "lga": string;
+        "visibility": string;
+        "membershipType": string;
+        "membershipPriceKobo": number;
+        "members": Array<string>;
+        "createdAt": string;
+        "coverImageUrl": string;
+        "avatarImageUrl": string;
+        "memberCount": number;
+        "viewerMembership": {
+          "role": string;
+          "status": string;
+          "joinedAt": string;
+          "muted": false;
+        };
+        "unreadCount": number;
+        "lastActivityAt": string;
+      }>;
+    "pagination": {
+      "page": number;
+      "limit": number;
+      "total": number;
+      "totalPages": number;
+    };
+  };
+};
+
+export type GetCommunitiesIdRulesBody = never;
+export type GetCommunitiesIdRulesQuery = {
+
+};
+export type GetCommunitiesIdRulesPath = {
+  "id": string;
+};
+export type GetCommunitiesIdRulesHeaders = {
+
+};
+export type GetCommunitiesIdRulesResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "rules": {
+      "communityId": string;
+      "introduction": string;
+      "rules": Array<{
+          "_id": string;
+          "title": string;
+          "description": string;
+          "order": number;
+        }>;
+      "consequences": Array<string>;
+      "updatedAt": string;
+      "updatedBy": {
+        "_id": string;
+        "firstName": string;
+        "lastName": string;
+        "email": string;
+        "role": string;
+        "status": string;
+        "state": string;
+        "lga": string;
+        "interests": Array<string>;
+        "avatarUrl": string;
+        "createdAt": string;
+      };
+    };
+  };
+};
+
+export type PutCommunitiesIdRulesBody = {
+  "introduction": string;
+  "rules": Array<{
+      "title"?: string;
+      "description"?: string;
+      "order"?: number;
+    }>;
+  "consequences": Array<string>;
+};
+export type PutCommunitiesIdRulesQuery = {
+
+};
+export type PutCommunitiesIdRulesPath = {
+  "id": string;
+};
+export type PutCommunitiesIdRulesHeaders = {
+
+};
+export type PutCommunitiesIdRulesResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "rules": {
+      "communityId": string;
+      "introduction": string;
+      "rules": Array<unknown>;
+      "consequences": Array<unknown>;
+      "updatedAt": string;
+      "updatedBy": {
+        "_id": string;
+        "firstName": string;
+        "lastName": string;
+        "email": string;
+        "role": string;
+        "status": string;
+        "state": string;
+        "lga": string;
+        "interests": Array<string>;
+        "avatarUrl": string;
+        "createdAt": string;
+      };
+    };
+  };
+};
+
+export type GetCommunitiesIdSettingsBody = never;
+export type GetCommunitiesIdSettingsQuery = {
+
+};
+export type GetCommunitiesIdSettingsPath = {
+  "id": string;
+};
+export type GetCommunitiesIdSettingsHeaders = {
+
+};
+export type GetCommunitiesIdSettingsResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "settings": {
+      "joinPolicy": string;
+      "messagePermission": string;
+      "membersCanCreatePosts": true;
+      "membersCanInvite": false;
+      "showMemberList": true;
+    };
+  };
+};
+
+export type PatchCommunitiesIdSettingsBody = {
+  "joinPolicy"?: string;
+  "messagePermission"?: string;
+  "membersCanCreatePosts"?: boolean;
+  "membersCanInvite"?: boolean;
+  "showMemberList"?: boolean;
+};
+export type PatchCommunitiesIdSettingsQuery = {
+
+};
+export type PatchCommunitiesIdSettingsPath = {
+  "id": string;
+};
+export type PatchCommunitiesIdSettingsHeaders = {
+
+};
+export type PatchCommunitiesIdSettingsResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "settings": {
+      "joinPolicy": string;
+      "messagePermission": string;
+      "membersCanCreatePosts": true;
+      "membersCanInvite": false;
+      "showMemberList": true;
+    };
+  };
+};
+
+export type PatchCommunitiesIdMembersUserIdBody = {
+  "role"?: string;
+  "status"?: string;
+};
+export type PatchCommunitiesIdMembersUserIdQuery = {
+
+};
+export type PatchCommunitiesIdMembersUserIdPath = {
+  "id": string;
+  "userId": string;
+};
+export type PatchCommunitiesIdMembersUserIdHeaders = {
+
+};
+export type PatchCommunitiesIdMembersUserIdResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "member": {
+      "user": {
+        "_id": string;
+        "firstName": string;
+        "lastName": string;
+        "email": string;
+        "role": string;
+        "status": string;
+        "state": string;
+        "lga": string;
+        "interests": Array<string>;
+        "avatarUrl": string;
+        "createdAt": string;
+      };
+      "communityRole": string;
+      "status": string;
+      "joinedAt": string;
+    };
+  };
+};
+
+export type DeleteCommunitiesIdMembersUserIdBody = never;
+export type DeleteCommunitiesIdMembersUserIdQuery = {
+
+};
+export type DeleteCommunitiesIdMembersUserIdPath = {
+  "id": string;
+  "userId": string;
+};
+export type DeleteCommunitiesIdMembersUserIdHeaders = {
+
+};
+export type DeleteCommunitiesIdMembersUserIdResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "removedUserId": string;
+  };
+};
+
+export type PutCommunitiesIdBansUserIdBody = {
+  "reason": string;
+  "expiresAt"?: string;
+};
+export type PutCommunitiesIdBansUserIdQuery = {
+
+};
+export type PutCommunitiesIdBansUserIdPath = {
+  "id": string;
+  "userId": string;
+};
+export type PutCommunitiesIdBansUserIdHeaders = {
+
+};
+export type PutCommunitiesIdBansUserIdResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "userId": string;
+    "status": string;
+    "reason": string;
+    "expiresAt": string;
+  };
+};
+
+export type DeleteCommunitiesIdBansUserIdBody = never;
+export type DeleteCommunitiesIdBansUserIdQuery = {
+
+};
+export type DeleteCommunitiesIdBansUserIdPath = {
+  "id": string;
+  "userId": string;
+};
+export type DeleteCommunitiesIdBansUserIdHeaders = {
+
+};
+export type DeleteCommunitiesIdBansUserIdResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "userId": string;
+    "status": string;
+  };
+};
+
+export type PostCommunitiesIdJoinRequestsBody = {
+  "message"?: string;
+};
+export type PostCommunitiesIdJoinRequestsQuery = {
+
+};
+export type PostCommunitiesIdJoinRequestsPath = {
+  "id": string;
+};
+export type PostCommunitiesIdJoinRequestsHeaders = {
+
+};
+export type PostCommunitiesIdJoinRequestsResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "joinRequest": {
+      "_id": string;
+      "communityId": string;
+      "requesterId": {
+        "_id": string;
+        "firstName": string;
+        "lastName": string;
+        "email": string;
+        "role": string;
+        "status": string;
+        "state": string;
+        "lga": string;
+        "interests": Array<string>;
+        "avatarUrl": string;
+        "createdAt": string;
+      };
+      "message": string;
+      "status": string;
+      "createdAt": string;
+    };
+  };
+};
+
+export type GetCommunitiesIdJoinRequestsBody = never;
+export type GetCommunitiesIdJoinRequestsQuery = {
+  "page"?: number;
+  "limit"?: number;
+  "status"?: "pending" | "approved" | "rejected";
+};
+export type GetCommunitiesIdJoinRequestsPath = {
+  "id": string;
+};
+export type GetCommunitiesIdJoinRequestsHeaders = {
+
+};
+export type GetCommunitiesIdJoinRequestsResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "joinRequests": Array<unknown>;
+    "pagination": {
+      "page": number;
+      "limit": number;
+      "total": number;
+      "totalPages": number;
+    };
+  };
+};
+
+export type PostCommunitiesIdInvitesBody = {
+  "expiresAt": string;
+  "maxUses"?: number;
+};
+export type PostCommunitiesIdInvitesQuery = {
+
+};
+export type PostCommunitiesIdInvitesPath = {
+  "id": string;
+};
+export type PostCommunitiesIdInvitesHeaders = {
+
+};
+export type PostCommunitiesIdInvitesResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "invite": {
+      "_id": string;
+      "token": string;
+      "expiresAt": string;
+      "maxUses": number;
+    };
+  };
+};
+
+export type PatchCommunitiesIdJoinRequestsRequestIdBody = {
+  "status": string;
+  "note"?: string;
+};
+export type PatchCommunitiesIdJoinRequestsRequestIdQuery = {
+
+};
+export type PatchCommunitiesIdJoinRequestsRequestIdPath = {
+  "id": string;
+  "requestId": string;
+};
+export type PatchCommunitiesIdJoinRequestsRequestIdHeaders = {
+
+};
+export type PatchCommunitiesIdJoinRequestsRequestIdResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "joinRequest": {
+      "_id": string;
+      "status": string;
+    };
+    "member": {
+      "user": {
+        "_id": string;
+        "firstName": string;
+        "lastName": string;
+        "email": string;
+        "role": string;
+        "status": string;
+        "state": string;
+        "lga": string;
+        "interests": Array<string>;
+        "avatarUrl": string;
+        "createdAt": string;
+      };
+      "communityRole": string;
+      "status": string;
+      "joinedAt": string;
+    };
+  };
+};
+
+export type DeleteCommunitiesIdJoinRequestsMeBody = never;
+export type DeleteCommunitiesIdJoinRequestsMeQuery = {
+
+};
+export type DeleteCommunitiesIdJoinRequestsMePath = {
+  "id": string;
+};
+export type DeleteCommunitiesIdJoinRequestsMeHeaders = {
+
+};
+export type DeleteCommunitiesIdJoinRequestsMeResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "joinRequestId": string;
+    "status": string;
+  };
+};
+
+export type PostCommunitiesIdCallsBody = {
+  "type": string;
+  "title"?: string;
+};
+export type PostCommunitiesIdCallsQuery = {
+
+};
+export type PostCommunitiesIdCallsPath = {
+  "id": string;
+};
+export type PostCommunitiesIdCallsHeaders = {
+
+};
+export type PostCommunitiesIdCallsResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "call": {
+      "_id": string;
+      "communityId": string;
+      "type": string;
+      "status": string;
+      "startedBy": string;
+      "participantCount": number;
+      "startedAt": string;
+      "endedAt": null;
+    };
+  };
+};
+
+export type GetCommunitiesIdCallsActiveBody = never;
+export type GetCommunitiesIdCallsActiveQuery = {
+
+};
+export type GetCommunitiesIdCallsActivePath = {
+  "id": string;
+};
+export type GetCommunitiesIdCallsActiveHeaders = {
+
+};
+export type GetCommunitiesIdCallsActiveResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "call": {
+      "_id": string;
+      "communityId": string;
+      "type": string;
+      "status": string;
+      "startedBy": string;
+      "participantCount": number;
+      "startedAt": string;
+      "endedAt": null;
+    };
+  };
+};
+
+export type PostCommunitiesIdCallsCallIdJoinBody = never;
+export type PostCommunitiesIdCallsCallIdJoinQuery = {
+
+};
+export type PostCommunitiesIdCallsCallIdJoinPath = {
+  "id": string;
+  "callId": string;
+};
+export type PostCommunitiesIdCallsCallIdJoinHeaders = {
+
+};
+export type PostCommunitiesIdCallsCallIdJoinResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "call": {
+      "_id": string;
+      "communityId": string;
+      "type": string;
+      "status": string;
+      "startedBy": string;
+      "participantCount": number;
+      "startedAt": string;
+      "endedAt": null;
+    };
+    "provider": string;
+    "roomName": string;
+    "participantToken": string;
+    "expiresAt": string;
+  };
+};
+
+export type DeleteCommunitiesIdCallsCallIdBody = never;
+export type DeleteCommunitiesIdCallsCallIdQuery = {
+
+};
+export type DeleteCommunitiesIdCallsCallIdPath = {
+  "id": string;
+  "callId": string;
+};
+export type DeleteCommunitiesIdCallsCallIdHeaders = {
+
+};
+export type DeleteCommunitiesIdCallsCallIdResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "call": {
+      "_id": string;
+      "communityId": string;
+      "type": string;
+      "status": string;
+      "startedBy": string;
+      "participantCount": number;
+      "startedAt": string;
+      "endedAt": string;
+    };
+  };
+};
+
+export type PostCommunitiesIdOwnershipTransferBody = {
+  "newOwnerId": string;
+  "currentPassword"?: string;
+};
+export type PostCommunitiesIdOwnershipTransferQuery = {
+
+};
+export type PostCommunitiesIdOwnershipTransferPath = {
+  "id": string;
+};
+export type PostCommunitiesIdOwnershipTransferHeaders = {
+
+};
+export type PostCommunitiesIdOwnershipTransferResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "communityId": string;
+    "previousOwnerId": string;
+    "newOwnerId": string;
+    "transferredAt": string;
+  };
+};
+
+export type PutCommunitiesIdMessagesReadBody = {
+  "lastReadMessageId": string;
+};
+export type PutCommunitiesIdMessagesReadQuery = {
+
+};
+export type PutCommunitiesIdMessagesReadPath = {
+  "id": string;
+};
+export type PutCommunitiesIdMessagesReadHeaders = {
+
+};
+export type PutCommunitiesIdMessagesReadResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "communityId": string;
+    "lastReadMessageId": string;
+    "lastReadAt": string;
+    "unreadCount": number;
+  };
+};
+
+export type PatchCommunitiesIdNotificationPreferencesMeBody = {
+  "level": string;
+};
+export type PatchCommunitiesIdNotificationPreferencesMeQuery = {
+
+};
+export type PatchCommunitiesIdNotificationPreferencesMePath = {
+  "id": string;
+};
+export type PatchCommunitiesIdNotificationPreferencesMeHeaders = {
+
+};
+export type PatchCommunitiesIdNotificationPreferencesMeResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "communityId": string;
+    "level": string;
+    "updatedAt": string;
+  };
+};
+
+export type PatchCommunitiesIdAnnouncementsAnnouncementIdBody = {
+  "text"?: string;
+  "imageUrl"?: string;
+  "pinned"?: boolean;
+};
+export type PatchCommunitiesIdAnnouncementsAnnouncementIdQuery = {
+
+};
+export type PatchCommunitiesIdAnnouncementsAnnouncementIdPath = {
+  "id": string;
+  "announcementId": string;
+};
+export type PatchCommunitiesIdAnnouncementsAnnouncementIdHeaders = {
+
+};
+export type PatchCommunitiesIdAnnouncementsAnnouncementIdResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "announcement": {
+      "_id": string;
+      "communityId": string;
+      "authorId": {
+        "_id": string;
+        "firstName": string;
+        "lastName": string;
+        "email": string;
+        "role": string;
+        "status": string;
+        "state": string;
+        "lga": string;
+        "interests": Array<string>;
+        "avatarUrl": string;
+        "createdAt": string;
+      };
+      "kind": string;
+      "text": string;
+      "imageUrl": string;
+      "createdAt": string;
+    };
+  };
+};
+
+export type DeleteCommunitiesIdAnnouncementsAnnouncementIdBody = never;
+export type DeleteCommunitiesIdAnnouncementsAnnouncementIdQuery = {
+
+};
+export type DeleteCommunitiesIdAnnouncementsAnnouncementIdPath = {
+  "id": string;
+  "announcementId": string;
+};
+export type DeleteCommunitiesIdAnnouncementsAnnouncementIdHeaders = {
+
+};
+export type DeleteCommunitiesIdAnnouncementsAnnouncementIdResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "announcementId": string;
+    "deletedAt": string;
+  };
+};
+
+export type PatchCommunitiesIdMessagesMessageIdBody = {
+  "text": string;
+};
+export type PatchCommunitiesIdMessagesMessageIdQuery = {
+
+};
+export type PatchCommunitiesIdMessagesMessageIdPath = {
+  "id": string;
+  "messageId": string;
+};
+export type PatchCommunitiesIdMessagesMessageIdHeaders = {
+
+};
+export type PatchCommunitiesIdMessagesMessageIdResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "message": {
+      "_id": string;
+      "communityId": string;
+      "authorId": {
+        "_id": string;
+        "firstName": string;
+        "lastName": string;
+        "email": string;
+        "role": string;
+        "status": string;
+        "state": string;
+        "lga": string;
+        "interests": Array<string>;
+        "avatarUrl": string;
+        "createdAt": string;
+      };
+      "kind": string;
+      "text": string;
+      "imageUrl": string;
+      "createdAt": string;
+      "clientMessageId": string;
+    };
+  };
+};
+
+export type DeleteCommunitiesIdMessagesMessageIdBody = never;
+export type DeleteCommunitiesIdMessagesMessageIdQuery = {
+
+};
+export type DeleteCommunitiesIdMessagesMessageIdPath = {
+  "id": string;
+  "messageId": string;
+};
+export type DeleteCommunitiesIdMessagesMessageIdHeaders = {
+
+};
+export type DeleteCommunitiesIdMessagesMessageIdResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "messageId": string;
+    "deletedAt": string;
+  };
+};
+
+export type PutCommunitiesIdMessagesMessageIdReactionsEmojiBody = never;
+export type PutCommunitiesIdMessagesMessageIdReactionsEmojiQuery = {
+
+};
+export type PutCommunitiesIdMessagesMessageIdReactionsEmojiPath = {
+  "id": string;
+  "messageId": string;
+  "emoji": string;
+};
+export type PutCommunitiesIdMessagesMessageIdReactionsEmojiHeaders = {
+
+};
+export type PutCommunitiesIdMessagesMessageIdReactionsEmojiResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "messageId": string;
+    "reactions": Array<{
+        "emoji": string;
+        "count": number;
+        "reactedByViewer": true;
+      }>;
+  };
+};
+
+export type DeleteCommunitiesIdMessagesMessageIdReactionsEmojiBody = never;
+export type DeleteCommunitiesIdMessagesMessageIdReactionsEmojiQuery = {
+
+};
+export type DeleteCommunitiesIdMessagesMessageIdReactionsEmojiPath = {
+  "id": string;
+  "messageId": string;
+  "emoji": string;
+};
+export type DeleteCommunitiesIdMessagesMessageIdReactionsEmojiHeaders = {
+
+};
+export type DeleteCommunitiesIdMessagesMessageIdReactionsEmojiResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "messageId": string;
+    "reactions": Array<{
+        "emoji": string;
+        "count": number;
+        "reactedByViewer": false;
+      }>;
+  };
+};
+
+export type PutCommunitiesIdMessagesMessageIdPinBody = never;
+export type PutCommunitiesIdMessagesMessageIdPinQuery = {
+
+};
+export type PutCommunitiesIdMessagesMessageIdPinPath = {
+  "id": string;
+  "messageId": string;
+};
+export type PutCommunitiesIdMessagesMessageIdPinHeaders = {
+
+};
+export type PutCommunitiesIdMessagesMessageIdPinResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "message": {
+      "_id": string;
+      "communityId": string;
+      "authorId": {
+        "_id": string;
+        "firstName": string;
+        "lastName": string;
+        "email": string;
+        "role": string;
+        "status": string;
+        "state": string;
+        "lga": string;
+        "interests": Array<string>;
+        "avatarUrl": string;
+        "createdAt": string;
+      };
+      "kind": string;
+      "text": string;
+      "imageUrl": string;
+      "createdAt": string;
+      "clientMessageId": string;
+    };
+  };
+};
+
+export type DeleteCommunitiesIdMessagesMessageIdPinBody = never;
+export type DeleteCommunitiesIdMessagesMessageIdPinQuery = {
+
+};
+export type DeleteCommunitiesIdMessagesMessageIdPinPath = {
+  "id": string;
+  "messageId": string;
+};
+export type DeleteCommunitiesIdMessagesMessageIdPinHeaders = {
+
+};
+export type DeleteCommunitiesIdMessagesMessageIdPinResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "message": {
+      "_id": string;
+      "communityId": string;
+      "authorId": {
+        "_id": string;
+        "firstName": string;
+        "lastName": string;
+        "email": string;
+        "role": string;
+        "status": string;
+        "state": string;
+        "lga": string;
+        "interests": Array<string>;
+        "avatarUrl": string;
+        "createdAt": string;
+      };
+      "kind": string;
+      "text": string;
+      "imageUrl": string;
+      "createdAt": string;
+      "clientMessageId": string;
+    };
+  };
+};
+
+export type PatchCommunitiesIdPostsPostIdBody = {
+  "text"?: string;
+  "imageUrl"?: string;
+};
+export type PatchCommunitiesIdPostsPostIdQuery = {
+
+};
+export type PatchCommunitiesIdPostsPostIdPath = {
+  "id": string;
+  "postId": string;
+};
+export type PatchCommunitiesIdPostsPostIdHeaders = {
+
+};
+export type PatchCommunitiesIdPostsPostIdResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "post": {
+      "_id": string;
+      "communityId": string;
+      "authorId": {
+        "_id": string;
+        "firstName": string;
+        "lastName": string;
+        "email": string;
+        "role": string;
+        "status": string;
+        "state": string;
+        "lga": string;
+        "interests": Array<string>;
+        "avatarUrl": string;
+        "createdAt": string;
+      };
+      "kind": string;
+      "text": string;
+      "imageUrl": string;
+      "createdAt": string;
+    };
+  };
+};
+
+export type DeleteCommunitiesIdPostsPostIdBody = never;
+export type DeleteCommunitiesIdPostsPostIdQuery = {
+
+};
+export type DeleteCommunitiesIdPostsPostIdPath = {
+  "id": string;
+  "postId": string;
+};
+export type DeleteCommunitiesIdPostsPostIdHeaders = {
+
+};
+export type DeleteCommunitiesIdPostsPostIdResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "postId": string;
+    "deletedAt": string;
   };
 };
 
@@ -1306,7 +2308,11 @@ export type PostCommunitiesIdMembersResponse = {
 
 export type GetCommunitiesIdMembersBody = never;
 export type GetCommunitiesIdMembersQuery = {
-
+  "page"?: number;
+  "limit"?: number;
+  "search"?: string;
+  "role"?: "owner" | "moderator" | "member";
+  "status"?: "active" | "banned";
 };
 export type GetCommunitiesIdMembersPath = {
   "id": string;
@@ -1592,8 +2598,8 @@ export type PostCommunitiesIdAnnouncementsResponse = {
 
 export type GetCommunitiesIdMessagesBody = never;
 export type GetCommunitiesIdMessagesQuery = {
-  "page"?: number;
   "limit"?: number;
+  "before"?: string;
 };
 export type GetCommunitiesIdMessagesPath = {
   "id": string;
@@ -1637,8 +2643,9 @@ export type GetCommunitiesIdMessagesResponse = {
 
 export type PostCommunitiesIdMessagesBody = {
   "clientMessageId": string;
-  "text": string;
-  "imageUrl"?: string;
+  "text"?: string;
+  "attachmentIds"?: Array<string>;
+  "replyToMessageId"?: string;
 };
 export type PostCommunitiesIdMessagesQuery = {
 
@@ -1674,6 +2681,34 @@ export type PostCommunitiesIdMessagesResponse = {
       "imageUrl": string;
       "createdAt": string;
       "clientMessageId": string;
+    };
+  };
+};
+
+export type PostCommunitiesIdMessagesMessageIdReportsBody = {
+  "reason": string;
+  "details"?: string;
+};
+export type PostCommunitiesIdMessagesMessageIdReportsQuery = {
+
+};
+export type PostCommunitiesIdMessagesMessageIdReportsPath = {
+  "id": string;
+  "messageId": string;
+};
+export type PostCommunitiesIdMessagesMessageIdReportsHeaders = {
+
+};
+export type PostCommunitiesIdMessagesMessageIdReportsResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "report": {
+      "_id": string;
+      "targetType": string;
+      "targetId": string;
+      "status": string;
+      "createdAt": string;
     };
   };
 };
@@ -3157,6 +4192,35 @@ export type PostWalletWithdrawalsReferenceFinalizeResponse = {
   };
 };
 
+export type PostUploadsFilesBody = {
+  "file": string;
+  "folder": string;
+};
+export type PostUploadsFilesQuery = {
+
+};
+export type PostUploadsFilesPath = {
+
+};
+export type PostUploadsFilesHeaders = {
+
+};
+export type PostUploadsFilesResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "attachment": {
+      "_id": string;
+      "url": string;
+      "type": string;
+      "name": string;
+      "mimeType": string;
+      "sizeBytes": number;
+      "thumbnailUrl": null;
+    };
+  };
+};
+
 export type PostUploadsImagesBody = {
   "image": string;
   "folder"?: "avatars" | "events" | "communities" | "disputes" | "chat" | "uploads";
@@ -3316,6 +4380,16 @@ export interface ApiOperationMap {
     headers: DeleteUsersMeHeaders;
     response: DeleteUsersMeResponse;
   };
+  "patch__users_me_avatar": {
+    method: "PATCH";
+    path: "/users/me/avatar";
+    authenticated: true;
+    body: PatchUsersMeAvatarBody;
+    query: PatchUsersMeAvatarQuery;
+    pathParams: PatchUsersMeAvatarPath;
+    headers: PatchUsersMeAvatarHeaders;
+    response: PatchUsersMeAvatarResponse;
+  };
   "patch__users_me_password": {
     method: "PATCH";
     path: "/users/me/password";
@@ -3355,6 +4429,316 @@ export interface ApiOperationMap {
     pathParams: PostUsersIdReportsPath;
     headers: PostUsersIdReportsHeaders;
     response: PostUsersIdReportsResponse;
+  };
+  "get__users_me_communities": {
+    method: "GET";
+    path: "/users/me/communities";
+    authenticated: true;
+    body: GetUsersMeCommunitiesBody;
+    query: GetUsersMeCommunitiesQuery;
+    pathParams: GetUsersMeCommunitiesPath;
+    headers: GetUsersMeCommunitiesHeaders;
+    response: GetUsersMeCommunitiesResponse;
+  };
+  "get__communities_id_rules": {
+    method: "GET";
+    path: "/communities/{id}/rules";
+    authenticated: false;
+    body: GetCommunitiesIdRulesBody;
+    query: GetCommunitiesIdRulesQuery;
+    pathParams: GetCommunitiesIdRulesPath;
+    headers: GetCommunitiesIdRulesHeaders;
+    response: GetCommunitiesIdRulesResponse;
+  };
+  "put__communities_id_rules": {
+    method: "PUT";
+    path: "/communities/{id}/rules";
+    authenticated: true;
+    body: PutCommunitiesIdRulesBody;
+    query: PutCommunitiesIdRulesQuery;
+    pathParams: PutCommunitiesIdRulesPath;
+    headers: PutCommunitiesIdRulesHeaders;
+    response: PutCommunitiesIdRulesResponse;
+  };
+  "get__communities_id_settings": {
+    method: "GET";
+    path: "/communities/{id}/settings";
+    authenticated: true;
+    body: GetCommunitiesIdSettingsBody;
+    query: GetCommunitiesIdSettingsQuery;
+    pathParams: GetCommunitiesIdSettingsPath;
+    headers: GetCommunitiesIdSettingsHeaders;
+    response: GetCommunitiesIdSettingsResponse;
+  };
+  "patch__communities_id_settings": {
+    method: "PATCH";
+    path: "/communities/{id}/settings";
+    authenticated: true;
+    body: PatchCommunitiesIdSettingsBody;
+    query: PatchCommunitiesIdSettingsQuery;
+    pathParams: PatchCommunitiesIdSettingsPath;
+    headers: PatchCommunitiesIdSettingsHeaders;
+    response: PatchCommunitiesIdSettingsResponse;
+  };
+  "patch__communities_id_members_userId_": {
+    method: "PATCH";
+    path: "/communities/{id}/members/{userId}";
+    authenticated: true;
+    body: PatchCommunitiesIdMembersUserIdBody;
+    query: PatchCommunitiesIdMembersUserIdQuery;
+    pathParams: PatchCommunitiesIdMembersUserIdPath;
+    headers: PatchCommunitiesIdMembersUserIdHeaders;
+    response: PatchCommunitiesIdMembersUserIdResponse;
+  };
+  "delete__communities_id_members_userId_": {
+    method: "DELETE";
+    path: "/communities/{id}/members/{userId}";
+    authenticated: true;
+    body: DeleteCommunitiesIdMembersUserIdBody;
+    query: DeleteCommunitiesIdMembersUserIdQuery;
+    pathParams: DeleteCommunitiesIdMembersUserIdPath;
+    headers: DeleteCommunitiesIdMembersUserIdHeaders;
+    response: DeleteCommunitiesIdMembersUserIdResponse;
+  };
+  "put__communities_id_bans_userId_": {
+    method: "PUT";
+    path: "/communities/{id}/bans/{userId}";
+    authenticated: true;
+    body: PutCommunitiesIdBansUserIdBody;
+    query: PutCommunitiesIdBansUserIdQuery;
+    pathParams: PutCommunitiesIdBansUserIdPath;
+    headers: PutCommunitiesIdBansUserIdHeaders;
+    response: PutCommunitiesIdBansUserIdResponse;
+  };
+  "delete__communities_id_bans_userId_": {
+    method: "DELETE";
+    path: "/communities/{id}/bans/{userId}";
+    authenticated: true;
+    body: DeleteCommunitiesIdBansUserIdBody;
+    query: DeleteCommunitiesIdBansUserIdQuery;
+    pathParams: DeleteCommunitiesIdBansUserIdPath;
+    headers: DeleteCommunitiesIdBansUserIdHeaders;
+    response: DeleteCommunitiesIdBansUserIdResponse;
+  };
+  "post__communities_id_join_requests": {
+    method: "POST";
+    path: "/communities/{id}/join-requests";
+    authenticated: true;
+    body: PostCommunitiesIdJoinRequestsBody;
+    query: PostCommunitiesIdJoinRequestsQuery;
+    pathParams: PostCommunitiesIdJoinRequestsPath;
+    headers: PostCommunitiesIdJoinRequestsHeaders;
+    response: PostCommunitiesIdJoinRequestsResponse;
+  };
+  "get__communities_id_join_requests": {
+    method: "GET";
+    path: "/communities/{id}/join-requests";
+    authenticated: true;
+    body: GetCommunitiesIdJoinRequestsBody;
+    query: GetCommunitiesIdJoinRequestsQuery;
+    pathParams: GetCommunitiesIdJoinRequestsPath;
+    headers: GetCommunitiesIdJoinRequestsHeaders;
+    response: GetCommunitiesIdJoinRequestsResponse;
+  };
+  "post__communities_id_invites": {
+    method: "POST";
+    path: "/communities/{id}/invites";
+    authenticated: true;
+    body: PostCommunitiesIdInvitesBody;
+    query: PostCommunitiesIdInvitesQuery;
+    pathParams: PostCommunitiesIdInvitesPath;
+    headers: PostCommunitiesIdInvitesHeaders;
+    response: PostCommunitiesIdInvitesResponse;
+  };
+  "patch__communities_id_join_requests_requestId_": {
+    method: "PATCH";
+    path: "/communities/{id}/join-requests/{requestId}";
+    authenticated: true;
+    body: PatchCommunitiesIdJoinRequestsRequestIdBody;
+    query: PatchCommunitiesIdJoinRequestsRequestIdQuery;
+    pathParams: PatchCommunitiesIdJoinRequestsRequestIdPath;
+    headers: PatchCommunitiesIdJoinRequestsRequestIdHeaders;
+    response: PatchCommunitiesIdJoinRequestsRequestIdResponse;
+  };
+  "delete__communities_id_join_requests_me": {
+    method: "DELETE";
+    path: "/communities/{id}/join-requests/me";
+    authenticated: true;
+    body: DeleteCommunitiesIdJoinRequestsMeBody;
+    query: DeleteCommunitiesIdJoinRequestsMeQuery;
+    pathParams: DeleteCommunitiesIdJoinRequestsMePath;
+    headers: DeleteCommunitiesIdJoinRequestsMeHeaders;
+    response: DeleteCommunitiesIdJoinRequestsMeResponse;
+  };
+  "post__communities_id_calls": {
+    method: "POST";
+    path: "/communities/{id}/calls";
+    authenticated: true;
+    body: PostCommunitiesIdCallsBody;
+    query: PostCommunitiesIdCallsQuery;
+    pathParams: PostCommunitiesIdCallsPath;
+    headers: PostCommunitiesIdCallsHeaders;
+    response: PostCommunitiesIdCallsResponse;
+  };
+  "get__communities_id_calls_active": {
+    method: "GET";
+    path: "/communities/{id}/calls/active";
+    authenticated: true;
+    body: GetCommunitiesIdCallsActiveBody;
+    query: GetCommunitiesIdCallsActiveQuery;
+    pathParams: GetCommunitiesIdCallsActivePath;
+    headers: GetCommunitiesIdCallsActiveHeaders;
+    response: GetCommunitiesIdCallsActiveResponse;
+  };
+  "post__communities_id_calls_callId_join": {
+    method: "POST";
+    path: "/communities/{id}/calls/{callId}/join";
+    authenticated: true;
+    body: PostCommunitiesIdCallsCallIdJoinBody;
+    query: PostCommunitiesIdCallsCallIdJoinQuery;
+    pathParams: PostCommunitiesIdCallsCallIdJoinPath;
+    headers: PostCommunitiesIdCallsCallIdJoinHeaders;
+    response: PostCommunitiesIdCallsCallIdJoinResponse;
+  };
+  "delete__communities_id_calls_callId_": {
+    method: "DELETE";
+    path: "/communities/{id}/calls/{callId}";
+    authenticated: true;
+    body: DeleteCommunitiesIdCallsCallIdBody;
+    query: DeleteCommunitiesIdCallsCallIdQuery;
+    pathParams: DeleteCommunitiesIdCallsCallIdPath;
+    headers: DeleteCommunitiesIdCallsCallIdHeaders;
+    response: DeleteCommunitiesIdCallsCallIdResponse;
+  };
+  "post__communities_id_ownership_transfer": {
+    method: "POST";
+    path: "/communities/{id}/ownership-transfer";
+    authenticated: true;
+    body: PostCommunitiesIdOwnershipTransferBody;
+    query: PostCommunitiesIdOwnershipTransferQuery;
+    pathParams: PostCommunitiesIdOwnershipTransferPath;
+    headers: PostCommunitiesIdOwnershipTransferHeaders;
+    response: PostCommunitiesIdOwnershipTransferResponse;
+  };
+  "put__communities_id_messages_read": {
+    method: "PUT";
+    path: "/communities/{id}/messages/read";
+    authenticated: true;
+    body: PutCommunitiesIdMessagesReadBody;
+    query: PutCommunitiesIdMessagesReadQuery;
+    pathParams: PutCommunitiesIdMessagesReadPath;
+    headers: PutCommunitiesIdMessagesReadHeaders;
+    response: PutCommunitiesIdMessagesReadResponse;
+  };
+  "patch__communities_id_notification_preferences_me": {
+    method: "PATCH";
+    path: "/communities/{id}/notification-preferences/me";
+    authenticated: true;
+    body: PatchCommunitiesIdNotificationPreferencesMeBody;
+    query: PatchCommunitiesIdNotificationPreferencesMeQuery;
+    pathParams: PatchCommunitiesIdNotificationPreferencesMePath;
+    headers: PatchCommunitiesIdNotificationPreferencesMeHeaders;
+    response: PatchCommunitiesIdNotificationPreferencesMeResponse;
+  };
+  "patch__communities_id_announcements_announcementId_": {
+    method: "PATCH";
+    path: "/communities/{id}/announcements/{announcementId}";
+    authenticated: true;
+    body: PatchCommunitiesIdAnnouncementsAnnouncementIdBody;
+    query: PatchCommunitiesIdAnnouncementsAnnouncementIdQuery;
+    pathParams: PatchCommunitiesIdAnnouncementsAnnouncementIdPath;
+    headers: PatchCommunitiesIdAnnouncementsAnnouncementIdHeaders;
+    response: PatchCommunitiesIdAnnouncementsAnnouncementIdResponse;
+  };
+  "delete__communities_id_announcements_announcementId_": {
+    method: "DELETE";
+    path: "/communities/{id}/announcements/{announcementId}";
+    authenticated: true;
+    body: DeleteCommunitiesIdAnnouncementsAnnouncementIdBody;
+    query: DeleteCommunitiesIdAnnouncementsAnnouncementIdQuery;
+    pathParams: DeleteCommunitiesIdAnnouncementsAnnouncementIdPath;
+    headers: DeleteCommunitiesIdAnnouncementsAnnouncementIdHeaders;
+    response: DeleteCommunitiesIdAnnouncementsAnnouncementIdResponse;
+  };
+  "patch__communities_id_messages_messageId_": {
+    method: "PATCH";
+    path: "/communities/{id}/messages/{messageId}";
+    authenticated: true;
+    body: PatchCommunitiesIdMessagesMessageIdBody;
+    query: PatchCommunitiesIdMessagesMessageIdQuery;
+    pathParams: PatchCommunitiesIdMessagesMessageIdPath;
+    headers: PatchCommunitiesIdMessagesMessageIdHeaders;
+    response: PatchCommunitiesIdMessagesMessageIdResponse;
+  };
+  "delete__communities_id_messages_messageId_": {
+    method: "DELETE";
+    path: "/communities/{id}/messages/{messageId}";
+    authenticated: true;
+    body: DeleteCommunitiesIdMessagesMessageIdBody;
+    query: DeleteCommunitiesIdMessagesMessageIdQuery;
+    pathParams: DeleteCommunitiesIdMessagesMessageIdPath;
+    headers: DeleteCommunitiesIdMessagesMessageIdHeaders;
+    response: DeleteCommunitiesIdMessagesMessageIdResponse;
+  };
+  "put__communities_id_messages_messageId_reactions_emoji_": {
+    method: "PUT";
+    path: "/communities/{id}/messages/{messageId}/reactions/{emoji}";
+    authenticated: true;
+    body: PutCommunitiesIdMessagesMessageIdReactionsEmojiBody;
+    query: PutCommunitiesIdMessagesMessageIdReactionsEmojiQuery;
+    pathParams: PutCommunitiesIdMessagesMessageIdReactionsEmojiPath;
+    headers: PutCommunitiesIdMessagesMessageIdReactionsEmojiHeaders;
+    response: PutCommunitiesIdMessagesMessageIdReactionsEmojiResponse;
+  };
+  "delete__communities_id_messages_messageId_reactions_emoji_": {
+    method: "DELETE";
+    path: "/communities/{id}/messages/{messageId}/reactions/{emoji}";
+    authenticated: true;
+    body: DeleteCommunitiesIdMessagesMessageIdReactionsEmojiBody;
+    query: DeleteCommunitiesIdMessagesMessageIdReactionsEmojiQuery;
+    pathParams: DeleteCommunitiesIdMessagesMessageIdReactionsEmojiPath;
+    headers: DeleteCommunitiesIdMessagesMessageIdReactionsEmojiHeaders;
+    response: DeleteCommunitiesIdMessagesMessageIdReactionsEmojiResponse;
+  };
+  "put__communities_id_messages_messageId_pin": {
+    method: "PUT";
+    path: "/communities/{id}/messages/{messageId}/pin";
+    authenticated: true;
+    body: PutCommunitiesIdMessagesMessageIdPinBody;
+    query: PutCommunitiesIdMessagesMessageIdPinQuery;
+    pathParams: PutCommunitiesIdMessagesMessageIdPinPath;
+    headers: PutCommunitiesIdMessagesMessageIdPinHeaders;
+    response: PutCommunitiesIdMessagesMessageIdPinResponse;
+  };
+  "delete__communities_id_messages_messageId_pin": {
+    method: "DELETE";
+    path: "/communities/{id}/messages/{messageId}/pin";
+    authenticated: true;
+    body: DeleteCommunitiesIdMessagesMessageIdPinBody;
+    query: DeleteCommunitiesIdMessagesMessageIdPinQuery;
+    pathParams: DeleteCommunitiesIdMessagesMessageIdPinPath;
+    headers: DeleteCommunitiesIdMessagesMessageIdPinHeaders;
+    response: DeleteCommunitiesIdMessagesMessageIdPinResponse;
+  };
+  "patch__communities_id_posts_postId_": {
+    method: "PATCH";
+    path: "/communities/{id}/posts/{postId}";
+    authenticated: true;
+    body: PatchCommunitiesIdPostsPostIdBody;
+    query: PatchCommunitiesIdPostsPostIdQuery;
+    pathParams: PatchCommunitiesIdPostsPostIdPath;
+    headers: PatchCommunitiesIdPostsPostIdHeaders;
+    response: PatchCommunitiesIdPostsPostIdResponse;
+  };
+  "delete__communities_id_posts_postId_": {
+    method: "DELETE";
+    path: "/communities/{id}/posts/{postId}";
+    authenticated: true;
+    body: DeleteCommunitiesIdPostsPostIdBody;
+    query: DeleteCommunitiesIdPostsPostIdQuery;
+    pathParams: DeleteCommunitiesIdPostsPostIdPath;
+    headers: DeleteCommunitiesIdPostsPostIdHeaders;
+    response: DeleteCommunitiesIdPostsPostIdResponse;
   };
   "get__events": {
     method: "GET";
@@ -3665,6 +5049,16 @@ export interface ApiOperationMap {
     pathParams: PostCommunitiesIdMessagesPath;
     headers: PostCommunitiesIdMessagesHeaders;
     response: PostCommunitiesIdMessagesResponse;
+  };
+  "post__communities_id_messages_messageId_reports": {
+    method: "POST";
+    path: "/communities/{id}/messages/{messageId}/reports";
+    authenticated: true;
+    body: PostCommunitiesIdMessagesMessageIdReportsBody;
+    query: PostCommunitiesIdMessagesMessageIdReportsQuery;
+    pathParams: PostCommunitiesIdMessagesMessageIdReportsPath;
+    headers: PostCommunitiesIdMessagesMessageIdReportsHeaders;
+    response: PostCommunitiesIdMessagesMessageIdReportsResponse;
   };
   "post__communities_id_reports": {
     method: "POST";
@@ -4075,6 +5469,16 @@ export interface ApiOperationMap {
     pathParams: PostWalletWithdrawalsReferenceFinalizePath;
     headers: PostWalletWithdrawalsReferenceFinalizeHeaders;
     response: PostWalletWithdrawalsReferenceFinalizeResponse;
+  };
+  "post__uploads_files": {
+    method: "POST";
+    path: "/uploads/files";
+    authenticated: true;
+    body: PostUploadsFilesBody;
+    query: PostUploadsFilesQuery;
+    pathParams: PostUploadsFilesPath;
+    headers: PostUploadsFilesHeaders;
+    response: PostUploadsFilesResponse;
   };
   "post__uploads_images": {
     method: "POST";

@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+﻿import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
@@ -41,6 +41,7 @@ function EventCard({ event, imageIndex = 0, onPress }: { event: EventItem; image
 export default function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user } = useAuth();
+  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Community member';
   const [events, setEvents] = useState<EventItem[]>([]);
   const [tickets, setTickets] = useState<TicketOrder[]>([]);
   const [query, setQuery] = useState('');
@@ -75,7 +76,7 @@ export default function HomeScreen() {
     <>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.header}>
-          <View><Text style={styles.greeting}>Welcome back,</Text><Text style={styles.name}>{user?.firstName ?? 'Community member'}</Text></View>
+          <View><Text style={styles.greeting}>Welcome back,</Text><Text style={styles.name}>{fullName}</Text></View>
           <Pressable onPress={() => navigation.navigate('Notifications')} style={styles.notification}><Ionicons name="notifications-outline" size={23} color={colors.ink} /></Pressable>
         </View>
         <ScrollView
@@ -118,4 +119,3 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: { backgroundColor: colors.paper, flex: 1 }, header: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 26, paddingVertical: 16 }, greeting: { color: '#129a56', fontFamily: fonts.medium, fontSize: 15 }, name: { color: colors.ink, fontFamily: fonts.extraBold, fontSize: 27, marginTop: 3 }, notification: { alignItems: 'center', backgroundColor: colors.white, borderRadius: 24, height: 48, justifyContent: 'center', width: 48 }, content: { paddingBottom: 120, paddingHorizontal: 24 }, search: { alignItems: 'center', backgroundColor: colors.white, borderRadius: 30, flexDirection: 'row', gap: 12, height: 60, paddingHorizontal: 20 }, searchInput: { color: colors.ink, flex: 1, fontFamily: fonts.medium, fontSize: 16 }, categories: { gap: 10, paddingVertical: 18 }, chip: { backgroundColor: colors.white, borderColor: colors.line, borderRadius: 22, borderWidth: 1, paddingHorizontal: 18, paddingVertical: 11 }, chipActive: { backgroundColor: colors.lime, borderColor: colors.lime }, chipText: { color: '#18854e', fontFamily: fonts.bold, fontSize: 13 }, chipTextActive: { color: colors.ink }, aiCard: { alignItems: 'center', backgroundColor: '#0b3527', borderRadius: 25, flexDirection: 'row', gap: 12, padding: 16 }, aiIcon: { alignItems: 'center', backgroundColor: colors.lime, borderRadius: 22, height: 44, justifyContent: 'center', width: 44 }, aiLabel: { color: colors.lime, fontFamily: fonts.extraBold, fontSize: 9 }, aiTitle: { color: colors.white, fontFamily: fonts.bold, fontSize: 14, marginTop: 4 }, sectionRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginTop: 30 }, sectionTitle: { color: colors.ink, fontFamily: fonts.extraBold, fontSize: 22 }, seeAll: { color: '#08b657', fontFamily: fonts.bold, fontSize: 14 }, horizontalList: { gap: 16, paddingVertical: 18 }, list: { gap: 20, marginTop: 18 }, card: { backgroundColor: colors.white, borderRadius: 28, overflow: 'hidden' }, cardImage: { height: 180, width: '100%' }, dateBadge: { alignItems: 'center', backgroundColor: colors.white, borderRadius: 20, left: 14, padding: 9, position: 'absolute', top: 14 }, dateMonth: { color: '#08b657', fontFamily: fonts.extraBold, fontSize: 11 }, dateDay: { color: colors.ink, fontFamily: fonts.extraBold, fontSize: 18 }, cardBody: { padding: 18 }, cardTitle: { color: colors.ink, fontFamily: fonts.extraBold, fontSize: 19 }, metaRow: { alignItems: 'center', flexDirection: 'row', gap: 7, marginTop: 8 }, metaText: { color: '#399760', flex: 1, fontFamily: fonts.medium, fontSize: 13 }, empty: { alignItems: 'center', backgroundColor: colors.white, borderRadius: 24, justifyContent: 'center', minHeight: 150, padding: 20, width: 300 }, emptyText: { color: colors.muted, fontFamily: fonts.medium, textAlign: 'center' }, stateText: { color: colors.muted, fontFamily: fonts.medium, paddingVertical: 30, textAlign: 'center' },
 });
-

@@ -1,0 +1,2 @@
+﻿// A neutral online avatar used only when the API does not provide a profile image.
+export const defaultProfileAvatarUrl = 'https://ui-avatars.com/api/?name=Community+Member&background=e8f7ed&color=116530&bold=true&size=256';

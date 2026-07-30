@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
-import { useState } from "react";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useCallback, useState } from "react";
 import {
   Image,
   Platform,
@@ -12,8 +12,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppAlertModal from "../../components/ui/app-alert-modal";
+import { defaultProfileAvatarUrl } from "../../data/profile";
 import { lightTap as tapFeedback } from "../../hooks/haptics";
 import { useAuth } from "../../hooks/use-auth";
+import { usersApi } from '../../services/api/users.api';
 import { colors, fonts } from "../../styles/theme";
 import type { RootStackNavigationProp } from "../../types/navigation";
 type AlertState = {
@@ -78,6 +80,28 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const [alert, setAlert] = useState<AlertState>(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [totals, setTotals] = useState({ connections: 0, events: 0 });
+  const [totalsLoading, setTotalsLoading] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      const controller = new AbortController();
+      setTotalsLoading(true);
+
+      void usersApi.me(controller.signal)
+        .then((response) => {
+          setTotals(response.data.totals);
+        })
+        .catch(() => {
+          // Keep the last confirmed totals visible when the network is unavailable.
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setTotalsLoading(false);
+        });
+
+      return () => controller.abort();
+    }, []),
+  );
   const showNotice = (label: string) =>
     setAlert({
       title: label,
@@ -94,7 +118,7 @@ export default function ProfileScreen() {
             <View style={styles.avatarWrap}>
               <Image
                 source={{
-                  uri: user?.avatarUrl ?? "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=360&q=85",
+                  uri: user?.avatarUrl || defaultProfileAvatarUrl,
                 }}
                 style={styles.avatar}
               />
@@ -109,11 +133,11 @@ export default function ProfileScreen() {
             <Text style={styles.handle}>{user?.email ?? ""}</Text>
             <View style={styles.stats}>
               <View style={styles.stat}>
-                <Text style={styles.statValue}>142</Text>
+                <Text style={styles.statValue}>{totalsLoading ? '--' : totals.connections.toLocaleString()}</Text>
                 <Text style={styles.statLabel}>Connections</Text>
               </View>
               <View style={styles.stat}>
-                <Text style={styles.statValue}>28</Text>
+                <Text style={styles.statValue}>{totalsLoading ? '--' : totals.events.toLocaleString()}</Text>
                 <Text style={styles.statLabel}>Events</Text>
               </View>
             </View>

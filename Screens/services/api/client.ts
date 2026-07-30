@@ -306,6 +306,7 @@ const operations: Record<ApiOperationId, { method: HttpMethod; path: string; aut
   'post__auth_reset_password': { method: 'POST', path: '/auth/reset-password', authenticated: false },
   'get__users_me': { method: 'GET', path: '/users/me', authenticated: true },
   'patch__users_me': { method: 'PATCH', path: '/users/me', authenticated: true },
+  'patch__users_me_avatar': { method: 'PATCH', path: '/users/me/avatar', authenticated: true },
   'delete__users_me': { method: 'DELETE', path: '/users/me', authenticated: true },
   'patch__users_me_password': { method: 'PATCH', path: '/users/me/password', authenticated: true },
   'post__users_me_push_tokens': { method: 'POST', path: '/users/me/push-tokens', authenticated: true },
@@ -385,6 +386,39 @@ const operations: Record<ApiOperationId, { method: HttpMethod; path: string; aut
   'get__communities_id_messages': { method: 'GET', path: '/communities/{id}/messages', authenticated: true },
   'post__communities_id_messages': { method: 'POST', path: '/communities/{id}/messages', authenticated: true },
   'post__communities_id_reports': { method: 'POST', path: '/communities/{id}/reports', authenticated: true },
+  'get__users_me_communities': { method: 'GET', path: '/users/me/communities', authenticated: true },
+  'get__communities_id_rules': { method: 'GET', path: '/communities/{id}/rules', authenticated: false },
+  'put__communities_id_rules': { method: 'PUT', path: '/communities/{id}/rules', authenticated: true },
+  'get__communities_id_settings': { method: 'GET', path: '/communities/{id}/settings', authenticated: true },
+  'patch__communities_id_settings': { method: 'PATCH', path: '/communities/{id}/settings', authenticated: true },
+  'patch__communities_id_members_userId_': { method: 'PATCH', path: '/communities/{id}/members/{userId}', authenticated: true },
+  'delete__communities_id_members_userId_': { method: 'DELETE', path: '/communities/{id}/members/{userId}', authenticated: true },
+  'put__communities_id_bans_userId_': { method: 'PUT', path: '/communities/{id}/bans/{userId}', authenticated: true },
+  'delete__communities_id_bans_userId_': { method: 'DELETE', path: '/communities/{id}/bans/{userId}', authenticated: true },
+  'post__communities_id_join_requests': { method: 'POST', path: '/communities/{id}/join-requests', authenticated: true },
+  'get__communities_id_join_requests': { method: 'GET', path: '/communities/{id}/join-requests', authenticated: true },
+  'post__communities_id_invites': { method: 'POST', path: '/communities/{id}/invites', authenticated: true },
+  'patch__communities_id_join_requests_requestId_': { method: 'PATCH', path: '/communities/{id}/join-requests/{requestId}', authenticated: true },
+  'delete__communities_id_join_requests_me': { method: 'DELETE', path: '/communities/{id}/join-requests/me', authenticated: true },
+  'post__communities_id_calls': { method: 'POST', path: '/communities/{id}/calls', authenticated: true },
+  'get__communities_id_calls_active': { method: 'GET', path: '/communities/{id}/calls/active', authenticated: true },
+  'post__communities_id_calls_callId_join': { method: 'POST', path: '/communities/{id}/calls/{callId}/join', authenticated: true },
+  'delete__communities_id_calls_callId_': { method: 'DELETE', path: '/communities/{id}/calls/{callId}', authenticated: true },
+  'post__communities_id_ownership_transfer': { method: 'POST', path: '/communities/{id}/ownership-transfer', authenticated: true },
+  'put__communities_id_messages_read': { method: 'PUT', path: '/communities/{id}/messages/read', authenticated: true },
+  'patch__communities_id_notification_preferences_me': { method: 'PATCH', path: '/communities/{id}/notification-preferences/me', authenticated: true },
+  'patch__communities_id_announcements_announcementId_': { method: 'PATCH', path: '/communities/{id}/announcements/{announcementId}', authenticated: true },
+  'delete__communities_id_announcements_announcementId_': { method: 'DELETE', path: '/communities/{id}/announcements/{announcementId}', authenticated: true },
+  'patch__communities_id_messages_messageId_': { method: 'PATCH', path: '/communities/{id}/messages/{messageId}', authenticated: true },
+  'delete__communities_id_messages_messageId_': { method: 'DELETE', path: '/communities/{id}/messages/{messageId}', authenticated: true },
+  'put__communities_id_messages_messageId_reactions_emoji_': { method: 'PUT', path: '/communities/{id}/messages/{messageId}/reactions/{emoji}', authenticated: true },
+  'delete__communities_id_messages_messageId_reactions_emoji_': { method: 'DELETE', path: '/communities/{id}/messages/{messageId}/reactions/{emoji}', authenticated: true },
+  'put__communities_id_messages_messageId_pin': { method: 'PUT', path: '/communities/{id}/messages/{messageId}/pin', authenticated: true },
+  'delete__communities_id_messages_messageId_pin': { method: 'DELETE', path: '/communities/{id}/messages/{messageId}/pin', authenticated: true },
+  'patch__communities_id_posts_postId_': { method: 'PATCH', path: '/communities/{id}/posts/{postId}', authenticated: true },
+  'delete__communities_id_posts_postId_': { method: 'DELETE', path: '/communities/{id}/posts/{postId}', authenticated: true },
+  'post__communities_id_messages_messageId_reports': { method: 'POST', path: '/communities/{id}/messages/{messageId}/reports', authenticated: true },
+  'post__uploads_files': { method: 'POST', path: '/uploads/files', authenticated: true },
 };
 
 export const apiClient = {
@@ -423,12 +457,16 @@ export const apiClient = {
     );
   },
 
-  async upload<T>(path: string, formData: FormData, signal?: AbortSignal) {
-    return rawRequest<T>(path, { method: 'POST', authenticated: true, body: formData, signal });
+  async upload<T>(
+    path: string,
+    formData: FormData,
+    signal?: AbortSignal,
+    method: HttpMethod = 'POST',
+  ) {
+    return rawRequest<T>(path, { method, authenticated: true, body: formData, signal });
   },
 };
 
 export function createIdempotencyKey() {
   return Crypto.randomUUID();
 }
-

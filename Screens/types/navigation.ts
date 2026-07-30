@@ -1,4 +1,4 @@
-﻿import type { RouteProp } from "@react-navigation/native";
+import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 export type CheckoutTicketSelection = {
@@ -48,7 +48,17 @@ export type RootStackParamList = {
   Home: undefined;
   CommunityJoin: { communityId: string };
   CommunityRoom: { communityId: string };
+  CommunityCall: {
+    communityId: string;
+    callId: string;
+    callType: 'voice' | 'video';
+    roomName: string;
+    participantToken: string;
+    expiresAt: string;
+    canEndCall: boolean;
+  };
   CommunityProfile: { communityId: string };
+  CommunityRules: { communityId: string };
   EditCommunity: { communityId: string };
   CreateCommunity: undefined;
   MyEvents: undefined;

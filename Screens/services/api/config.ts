@@ -13,5 +13,9 @@ export const socketBaseUrl = trimTrailingSlash(
   process.env.EXPO_PUBLIC_SOCKET_URL?.trim() || DEFAULT_SOCKET_URL,
 );
 
-export const apiRequestTimeoutMs = 20_000;
+// LiveKit URL is public; access is protected by the short-lived token issued by the backend.
+export const liveKitUrl = trimTrailingSlash(
+  process.env.EXPO_PUBLIC_LIVEKIT_URL?.trim() || '',
+);
 
+export const apiRequestTimeoutMs = 20_000;

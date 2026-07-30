@@ -1,4 +1,4 @@
-﻿import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
@@ -7,10 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppAlertModal from '../../components/ui/app-alert-modal';
 import ProfilePageHeader from '../../components/ui/profile-page-header';
+import { defaultProfileAvatarUrl } from '../../data/profile';
 import { useAuth } from '../../hooks/use-auth';
 import { ApiError } from '../../services/api/client';
 import { MAX_PROFILE_TAGS, normalizeProfileTags } from '../../services/api/user-profile.mapper';
-import { uploadsApi } from '../../services/api/uploads.api';
 import { usersApi } from '../../services/api/users.api';
 import { colors, fonts } from '../../styles/theme';
 import type { RootStackParamList } from '../../types/navigation';
@@ -31,7 +31,7 @@ type FieldProps = {
   placeholder?: string;
 };
 
-const fallbackPhoto = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=440&q=85';
+const fallbackPhoto = defaultProfileAvatarUrl;
 
 function Field({
   label,
@@ -155,11 +155,17 @@ export default function UpdateProfileScreen({ navigation }: Props) {
     if (result.canceled) return;
 
     const asset = result.assets[0];
+    const imageType = asset.mimeType ?? 'image/jpeg';
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(imageType)) {
+      setAlert({ title: 'Unsupported photo', message: 'Choose a JPEG, PNG, or WebP profile photo.' });
+      return;
+    }
+
     setPhoto(asset.uri);
     setPendingPhoto({
       uri: asset.uri,
       name: asset.fileName ?? `avatar-${Date.now()}.jpg`,
-      type: asset.mimeType ?? 'image/jpeg',
+      type: imageType,
     });
   };
 
@@ -192,12 +198,6 @@ export default function UpdateProfileScreen({ navigation }: Props) {
 
     setSubmitting(true);
     try {
-      let avatarUrl = user?.avatarUrl;
-      if (pendingPhoto) {
-        const upload = await uploadsApi.image(pendingPhoto, 'avatars');
-        avatarUrl = upload.data.url;
-      }
-
       await usersApi.updateMe({
         firstName: normalizedFirstName,
         lastName: normalizedLastName,
@@ -211,8 +211,13 @@ export default function UpdateProfileScreen({ navigation }: Props) {
         preferredGroupSize,
         participationRole,
         ...(normalizedPhone ? { phone: normalizedPhone } : {}),
-        ...(avatarUrl ? { avatarUrl } : {}),
       });
+
+      if (pendingPhoto) {
+        const response = await usersApi.updateAvatar(pendingPhoto);
+        setPhoto(response.data.user.avatarUrl || fallbackPhoto);
+      }
+
       await refreshProfile();
       setPendingPhoto(null);
       setAlert({ title: 'Profile Updated', message: 'Your profile changes have been saved.' });

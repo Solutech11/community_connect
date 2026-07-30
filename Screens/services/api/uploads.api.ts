@@ -1,4 +1,4 @@
-import type { PostUploadsImagesResponse } from '../../types/api.generated';
+import type { PostUploadsFilesResponse, PostUploadsImagesResponse } from '../../types/api.generated';
 import type { ImageUpload } from '../../types/api';
 import { apiClient } from './client';
 
@@ -11,5 +11,10 @@ export const uploadsApi = {
     formData.append('folder', folder);
     return apiClient.upload<PostUploadsImagesResponse>('/uploads/images', formData, signal);
   },
+  async communityFile(file: ImageUpload, signal?: AbortSignal) {
+    const formData = new FormData();
+    formData.append('file', file as unknown as Blob);
+    formData.append('folder', 'community-chat');
+    return apiClient.upload<PostUploadsFilesResponse>('/uploads/files', formData, signal);
+  },
 };
-

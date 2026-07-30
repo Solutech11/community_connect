@@ -1,4 +1,4 @@
-﻿{
+{
   "expo": {
     "name": "community_connect",
     "slug": "community_connect",
@@ -12,7 +12,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow Community Connect to use your camera for community video calls.",
+        "NSMicrophoneUsageDescription": "Allow Community Connect to use your microphone for community voice and video calls."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +25,12 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -30,8 +39,9 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Community Connect to use your camera to scan event tickets.",
-          "recordAudioAndroid": false
+          "cameraPermission": "Allow Community Connect to use your camera to scan event tickets and join community video calls.",
+          "recordAudioAndroid": true,
+          "microphonePermission": "Allow Community Connect to use your microphone for community voice and video calls."
         }
       ],
       [
@@ -53,7 +63,9 @@
         {
           "locationWhenInUsePermission": "Allow Community Connect to use your location to recommend nearby events."
         }
-      ]
+      ],
+      "@livekit/react-native-expo-plugin",
+      "@config-plugins/react-native-webrtc"
     ]
   }
 }
