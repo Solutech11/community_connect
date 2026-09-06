@@ -21,6 +21,8 @@ import {
   InfoCard,
   StepProgress,
 } from "../../components/ui/create-event-ui";
+import { defaultProfileAvatarUrl } from "../../data/profile";
+import { useAuth } from "../../hooks/use-auth";
 import { colors, fonts } from "../../styles/theme";
 import type { RootStackParamList } from "../../types/navigation";
 
@@ -28,8 +30,6 @@ type Props = NativeStackScreenProps<RootStackParamList, "CreateEventReview">;
 
 const MAP_IMAGE =
   "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=1000&q=82";
-const HOST_IMAGE =
-  "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=180&q=85";
 
 function combineDateAndTime(dateValue: string, timeValue: string) {
   const date = new Date(dateValue);
@@ -42,8 +42,12 @@ function combineDateAndTime(dateValue: string, timeValue: string) {
 
 export default function CreateEventReviewScreen({ navigation, route }: Props) {
   const { draft } = route.params;
+  const { user } = useAuth();
   const [publishing, setPublishing] = useState(false);
   const [alert, setAlert] = useState<{ title: string; message: string; success?: boolean } | null>(null);
+  const hostName =
+    user ? `${user.firstName} ${user.lastName}`.trim() : "Community Member";
+  const hostEmail = user?.email || "Email unavailable";
 
   const publish = async () => {
     if (publishing) return;
@@ -187,10 +191,14 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
 
         <InfoCard icon="id-card-outline" title="Host Details">
           <View style={styles.host}>
-            <Image source={{ uri: HOST_IMAGE }} style={styles.hostImage} />
+            <Image
+              accessibilityLabel="Your profile photo"
+              source={{ uri: user?.avatarUrl || defaultProfileAvatarUrl }}
+              style={styles.hostImage}
+            />
             <View>
-              <Text style={styles.hostName}>Active Urbanite</Text>
-              <Text style={styles.hostPhone}>{draft.phone}</Text>
+              <Text style={styles.hostName}>{hostName}</Text>
+              <Text style={styles.hostEmail}>{hostEmail}</Text>
             </View>
           </View>
           <View style={styles.tags}>
@@ -351,7 +359,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     fontSize: 13,
   },
-  hostPhone: {
+  hostEmail: {
     color: "#2f9660",
     fontFamily: fonts.medium,
     fontSize: 12,

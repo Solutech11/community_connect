@@ -11,10 +11,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { defaultProfileAvatarUrl } from "../../data/profile";
+import { useAuth } from "../../hooks/use-auth";
 import { colors, fonts } from "../../styles/theme";
-
-const AVATAR =
-  "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=160&q=85";
 
 type HeaderProps = {
   title?: string;
@@ -29,6 +28,8 @@ export function CreateEventHeader({
   closeIcon = false,
   rightText,
 }: HeaderProps) {
+  const { user } = useAuth();
+
   return (
     <SafeAreaView edges={["top"]} style={styles.headerSafe}>
       <View style={styles.header}>
@@ -50,7 +51,11 @@ export function CreateEventHeader({
         {rightText ? (
           <Text style={styles.rightText}>{rightText}</Text>
         ) : (
-          <Image source={{ uri: AVATAR }} style={styles.avatar} />
+          <Image
+            accessibilityLabel="Your profile photo"
+            source={{ uri: user?.avatarUrl || defaultProfileAvatarUrl }}
+            style={styles.avatar}
+          />
         )}
       </View>
     </SafeAreaView>

@@ -213,6 +213,7 @@ async function rawRequest<T>(path: string, options: RequestOptions = {}): Promis
       url,
       status: response.status,
       durationMs: Date.now() - startedAt,
+      payload,
       cause: authenticationError,
     });
     await refreshAccessToken();
@@ -240,6 +241,7 @@ async function rawRequest<T>(path: string, options: RequestOptions = {}): Promis
       url,
       status: response.status,
       durationMs: Date.now() - startedAt,
+      payload,
       cause: requestError,
     });
     throw requestError;

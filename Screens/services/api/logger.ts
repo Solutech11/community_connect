@@ -106,6 +106,8 @@ export const apiLogger = {
 
     console.info(`${LOG_PREFIX} REQUEST ${input.method} ${sanitizeUrl(input.url)}`, {
       id: input.id,
+      method: input.method,
+      url: sanitizeUrl(input.url),
       headers: sanitize(input.headers),
       body: sanitize(input.body),
     });
@@ -116,9 +118,12 @@ export const apiLogger = {
 
     console.info(`${LOG_PREFIX} RESPONSE ${input.status ?? 0} ${input.method} ${sanitizeUrl(input.url)}`, {
       id: input.id,
+      method: input.method,
+      url: sanitizeUrl(input.url),
+      status: input.status ?? 0,
       outcome: 'success',
       durationMs: input.durationMs,
-      payload: sanitize(input.payload),
+      responseBody: sanitize(input.payload),
     });
   },
 
@@ -127,8 +132,12 @@ export const apiLogger = {
 
     console.error(`${LOG_PREFIX} RESPONSE ${input.status ?? 'NETWORK'} ${input.method} ${sanitizeUrl(input.url)}`, {
       id: input.id,
+      method: input.method,
+      url: sanitizeUrl(input.url),
+      status: input.status ?? 'NETWORK',
       outcome: 'error',
       durationMs: input.durationMs,
+      responseBody: sanitize(input.payload),
       error: input.error ?? safeError(input.cause),
     });
   },
