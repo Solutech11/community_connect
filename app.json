@@ -4,36 +4,50 @@
     "slug": "community_connect",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/community-connect-app-icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/community-connect-android-foreground.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0E3B2A"
     },
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Allow Community Connect to use your camera for community video calls.",
-        "NSMicrophoneUsageDescription": "Allow Community Connect to use your microphone for community voice and video calls."
-      }
+        "NSMicrophoneUsageDescription": "Allow Community Connect to use your microphone for community voice and video calls.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bitcode": false,
+      "bundleIdentifier": "com.solutech.communityconnect"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#0E3B2A",
+        "foregroundImage": "./assets/community-connect-android-foreground.png",
+        "backgroundImage": "./assets/community-connect-android-background.png",
+        "monochromeImage": "./assets/community-connect-android-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "CAMERA",
         "RECORD_AUDIO",
-        "MODIFY_AUDIO_SETTINGS"
-      ]
+        "MODIFY_AUDIO_SETTINGS",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.INTERNET",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WAKE_LOCK",
+        "android.permission.BLUETOOTH"
+      ],
+      "package": "com.solutech.community_connect"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/community-connect-app-icon.png"
     },
     "plugins": [
       [
@@ -66,6 +80,11 @@
       ],
       "@livekit/react-native-expo-plugin",
       "@config-plugins/react-native-webrtc"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4111eebb-b42e-4cae-abff-b257d7f6b156"
+      }
+    }
   }
 }

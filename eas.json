@@ -1,0 +1,33 @@
+{
+  "cli": {
+    "version": ">= 21.4.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "environment": "development",
+      "env": {
+        "EXPO_PUBLIC_LIVEKIT_URL": "wss://solutech-j7cov9jk.livekit.cloud"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "environment": "preview",
+      "env": {
+        "EXPO_PUBLIC_LIVEKIT_URL": "wss://solutech-j7cov9jk.livekit.cloud"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_LIVEKIT_URL": "wss://solutech-j7cov9jk.livekit.cloud"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

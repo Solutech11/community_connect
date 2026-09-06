@@ -1,21 +1,40 @@
-import { View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 
-import AppIcon from './app-icon';
 import { colors } from '../../styles/theme';
 
-export default function BrandMark() {
+type BrandMarkProps = {
+  size?: number;
+};
+
+const logo = require('../../../assets/community-connect-logo.png');
+
+export default function BrandMark({ size = 48 }: BrandMarkProps) {
+  const radius = size / 2;
+
   return (
     <View
       style={{
-        height: 48,
-        width: 48,
-        borderRadius: 24,
+        height: size,
+        width: size,
+        borderRadius: radius,
         backgroundColor: colors.lime,
         alignItems: 'center',
         justifyContent: 'center',
+        overflow: 'hidden',
       }}
     >
-      <AppIcon name="people" color={colors.ink} size={24} />
+      <Image
+        accessibilityLabel="Community Connect logo"
+        resizeMode="contain"
+        source={logo}
+        style={[styles.logo, { height: size * 0.94, width: size * 0.94 }]}
+      />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  logo: {
+    marginTop: 1,
+  },
+});

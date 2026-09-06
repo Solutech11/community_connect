@@ -1,10 +1,10 @@
-import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef } from "react";
 import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 
 import { colors } from "../../styles/theme";
+import BrandMark from "./brand-mark";
 
 export default function AppLoadingScreen({ message = "Preparing your community experience" }: { message?: string }) {
   const spin = useRef(new Animated.Value(0)).current;
@@ -43,9 +43,9 @@ export default function AppLoadingScreen({ message = "Preparing your community e
           <View style={[styles.node, styles.nodeTwo]} />
           <View style={[styles.node, styles.nodeThree]} />
         </Animated.View>
-        <LinearGradient colors={[colors.lime, colors.mint]} end={{ x: 1, y: 1 }} start={{ x: 0, y: 0 }} style={styles.mark}>
-          <View style={styles.markInset}><Ionicons color={colors.ink} name="people" size={44} /></View>
-        </LinearGradient>
+        <View style={styles.mark}>
+          <BrandMark size={98} />
+        </View>
       </Animated.View>
       <View style={styles.copy}>
         <View style={styles.eyebrow}><View style={styles.liveDot} /><Text style={styles.eyebrowText}>COMMUNITY CONNECT</Text></View>
@@ -67,7 +67,6 @@ const styles = StyleSheet.create({
   node: { backgroundColor: colors.lime, borderColor: "#0a3525", borderRadius: 8, borderWidth: 4, height: 16, position: "absolute", width: 16 },
   nodeOne: { left: 19, top: 18 }, nodeTwo: { right: -8, top: 84 }, nodeThree: { bottom: 4, left: 45 },
   mark: { alignItems: "center", borderRadius: 49, elevation: 12, height: 98, justifyContent: "center", shadowColor: colors.lime, shadowOffset: { height: 12, width: 0 }, shadowOpacity: 0.32, shadowRadius: 26, width: 98 },
-  markInset: { alignItems: "center", backgroundColor: "rgba(255,255,255,0.2)", borderColor: "rgba(255,255,255,0.3)", borderRadius: 40, borderWidth: 1, height: 80, justifyContent: "center", width: 80 },
   copy: { alignItems: "center", marginTop: 12 },
   eyebrow: { alignItems: "center", backgroundColor: "rgba(255,255,255,0.07)", borderColor: "rgba(255,255,255,0.08)", borderRadius: 20, borderWidth: 1, flexDirection: "row", paddingHorizontal: 12, paddingVertical: 7 },
   liveDot: { backgroundColor: colors.lime, borderRadius: 4, height: 7, marginRight: 8, width: 7 },
