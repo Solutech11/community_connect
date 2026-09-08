@@ -48,6 +48,7 @@ import PersonalizationTopicsScreen from "../pages/personalization/topics";
 import CommunityJoinScreen from "../pages/tabs/community-join-connected";
 import CommunityProfileScreen from "../pages/tabs/community-profile-connected";
 import CommunityRulesScreen from "../pages/tabs/community-rules";
+import CommunityManagementScreen from "../pages/tabs/community-management";
 import EditCommunityScreen from "../pages/tabs/edit-community";
 import CommunityRoomScreen from "../pages/tabs/community-room-connected";
 import CommunityCallScreen from "../pages/tabs/community-call";
@@ -65,6 +66,9 @@ const DashboardCommunityJoin = withDashboardLayout(CommunityJoinScreen);
 const DashboardCommunityRoom = withDashboardLayout(CommunityRoomScreen);
 const DashboardCommunityProfile = withDashboardLayout(CommunityProfileScreen);
 const DashboardCommunityRules = withDashboardLayout(CommunityRulesScreen);
+const DashboardCommunityManagement = withDashboardLayout(
+  CommunityManagementScreen,
+);
 const DashboardEditCommunity = withDashboardLayout(EditCommunityScreen);
 const DashboardCreateCommunity = withDashboardLayout(CreateCommunityScreen);
 const DashboardMyEvents = withDashboardLayout(MyEventsScreen);
@@ -212,6 +216,11 @@ export default function RootStackNavigator({
           <Stack.Screen
             name="CommunityRules"
             component={DashboardCommunityRules}
+            options={{ animation: "slide_from_right" }}
+          />
+          <Stack.Screen
+            name="CommunityManagement"
+            component={DashboardCommunityManagement}
             options={{ animation: "slide_from_right" }}
           />
           <Stack.Screen

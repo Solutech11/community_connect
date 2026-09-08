@@ -51,7 +51,7 @@ export type RootStackParamList = {
   CommunityCall: {
     communityId: string;
     callId: string;
-    callType: 'voice' | 'video';
+    callType: "voice" | "video";
     roomName: string;
     participantToken: string;
     expiresAt: string;
@@ -59,6 +59,7 @@ export type RootStackParamList = {
   };
   CommunityProfile: { communityId: string };
   CommunityRules: { communityId: string };
+  CommunityManagement: { communityId: string };
   EditCommunity: { communityId: string };
   CreateCommunity: undefined;
   MyEvents: undefined;

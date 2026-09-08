@@ -34,19 +34,34 @@ const MAP_IMAGE =
 function combineDateAndTime(dateValue: string, timeValue: string) {
   const date = new Date(dateValue);
   const match = timeValue.match(/^(1[0-2]|[1-9]):([0-5][0-9]) (AM|PM)$/);
-  if (Number.isNaN(date.getTime()) || !match) throw new Error("Invalid event date or time.");
+  if (Number.isNaN(date.getTime()) || !match)
+    throw new Error("Invalid event date or time.");
   const hour = (Number(match[1]) % 12) + (match[3] === "PM" ? 12 : 0);
   date.setHours(hour, Number(match[2]), 0, 0);
   return date.toISOString();
+}
+
+function formatTicketPrice(value: string) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount <= 0) return "Free";
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+  }).format(amount);
 }
 
 export default function CreateEventReviewScreen({ navigation, route }: Props) {
   const { draft } = route.params;
   const { user } = useAuth();
   const [publishing, setPublishing] = useState(false);
-  const [alert, setAlert] = useState<{ title: string; message: string; success?: boolean } | null>(null);
-  const hostName =
-    user ? `${user.firstName} ${user.lastName}`.trim() : "Community Member";
+  const [alert, setAlert] = useState<{
+    title: string;
+    message: string;
+    success?: boolean;
+  } | null>(null);
+  const hostName = user
+    ? `${user.firstName} ${user.lastName}`.trim()
+    : "Community Member";
   const hostEmail = user?.email || "Email unavailable";
 
   const publish = async () => {
@@ -55,11 +70,14 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
     try {
       let coverImageUrl = draft.coverImage;
       if (!/^https:\/\//i.test(coverImageUrl)) {
-        const upload = await uploadsApi.image({
-          uri: coverImageUrl,
-          name: "event-cover-" + Date.now() + ".jpg",
-          type: "image/jpeg",
-        }, "events");
+        const upload = await uploadsApi.image(
+          {
+            uri: coverImageUrl,
+            name: "event-cover-" + Date.now() + ".jpg",
+            type: "image/jpeg",
+          },
+          "events",
+        );
         coverImageUrl = upload.data.url;
       }
 
@@ -80,11 +98,16 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
         timezone: "Africa/Lagos",
         contactPhone: draft.phone || undefined,
         maxCapacity: Number.parseInt(draft.capacity, 10),
-        tags: [draft.activityType, draft.audience, draft.setting].filter(Boolean),
+        tags: [draft.activityType, draft.audience, draft.setting].filter(
+          Boolean,
+        ),
       });
 
       for (const ticket of draft.tickets) {
-        const capacity = ticket.capacity === "Unlimited" ? undefined : Number.parseInt(ticket.capacity, 10);
+        const capacity =
+          ticket.capacity === "Unlimited"
+            ? undefined
+            : Number.parseInt(ticket.capacity, 10);
         await eventsApi.addTicketType(created.data.event._id, {
           title: ticket.title,
           priceKobo: Math.round(Number(ticket.price) * 100),
@@ -92,11 +115,21 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
         });
       }
       await eventsApi.publish(created.data.event._id);
-      setAlert({ title: "Event published!", message: "Your event is now live and ready for the community.", success: true });
+      setAlert({
+        title: "Event submitted",
+        message:
+          "Your event was sent for approval. It will appear publicly after it is approved.",
+        success: true,
+      });
     } catch (error) {
       setAlert({
-        title: "Unable to publish",
-        message: error instanceof ApiError ? error.message : error instanceof Error ? error.message : "Your event could not be published.",
+        title: "Unable to submit",
+        message:
+          error instanceof ApiError
+            ? error.message
+            : error instanceof Error
+              ? error.message
+              : "Your event could not be submitted for approval.",
       });
     } finally {
       setPublishing(false);
@@ -112,7 +145,7 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
   return (
     <View style={styles.safe}>
       <CreateEventHeader onBack={navigation.goBack} title="CommunityConnect" />
-      <StepProgress label="Review & Publish" step={4} />
+      <StepProgress label="Review & Submit" step={4} />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -183,7 +216,9 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
                       : ticket.capacity + " AVAILABLE"}
                   </Text>
                 </View>
-                <Text style={styles.ticketPrice}>{"$" + ticket.price}</Text>
+                <Text style={styles.ticketPrice}>
+                  {formatTicketPrice(ticket.price)}
+                </Text>
               </View>
             ))}
           </View>
@@ -212,8 +247,14 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
       </ScrollView>
 
       <SafeAreaView edges={["bottom"]} style={styles.footer}>
-        <Pressable disabled={publishing} onPress={publish} style={[styles.publish, publishing && { opacity: 0.6 }]}>
-          <Text style={styles.publishText}>{publishing ? "Publishing..." : "Publish Event"}</Text>
+        <Pressable
+          disabled={publishing}
+          onPress={publish}
+          style={[styles.publish, publishing && { opacity: 0.6 }]}
+        >
+          <Text style={styles.publishText}>
+            {publishing ? "Submitting..." : "Submit for Approval"}
+          </Text>
           <Ionicons color={colors.ink} name="rocket-outline" size={22} />
         </Pressable>
         <Pressable

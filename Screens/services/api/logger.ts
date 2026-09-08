@@ -21,36 +21,46 @@ type ApiLogResponse = {
   };
 };
 
-const LOG_PREFIX = '[Community Connect API]';
+const LOG_PREFIX = "[Community Connect API]";
 const MAX_ARRAY_ITEMS = 25;
 const MAX_DEPTH = 6;
-const REDACTED = '[REDACTED]';
-const OMITTED = '[OMITTED]';
+const REDACTED = "[REDACTED]";
+const OMITTED = "[OMITTED]";
+const EMPTY_VALUE = "<none>";
 
 const sensitiveKeyPattern =
   /authorization|password|passcode|otp|one.?time|access.?token|refresh.?token|push.?token|secret|api.?key|paystack|pin|cvv|account.?number|routing.?number/i;
 const personallyIdentifiableKeyPattern = /email|phone|date.?of.?birth/i;
 
 function isLoggingEnabled() {
-  return __DEV__ || process.env.EXPO_PUBLIC_API_LOGGING === 'true';
+  return __DEV__ || process.env.EXPO_PUBLIC_API_LOGGING === "true";
 }
 
 function shouldRedact(key: string) {
-  return sensitiveKeyPattern.test(key) || personallyIdentifiableKeyPattern.test(key);
+  return (
+    sensitiveKeyPattern.test(key) || personallyIdentifiableKeyPattern.test(key)
+  );
 }
 
-function sanitize(value: unknown, key = '', depth = 0, seen = new WeakSet<object>()): unknown {
+function sanitize(
+  value: unknown,
+  key = "",
+  depth = 0,
+  seen = new WeakSet<object>(),
+): unknown {
   if (shouldRedact(key)) return REDACTED;
   if (value === null || value === undefined) return value;
-  if (typeof value === 'string') {
-    return value.length > 1_000 ? `${value.slice(0, 1_000)}...[truncated]` : value;
+  if (typeof value === "string") {
+    return value.length > 1_000
+      ? `${value.slice(0, 1_000)}...[truncated]`
+      : value;
   }
-  if (typeof value !== 'object') return value;
-  if (typeof FormData !== 'undefined' && value instanceof FormData) {
-    return '[FormData contents omitted]';
+  if (typeof value !== "object") return value;
+  if (typeof FormData !== "undefined" && value instanceof FormData) {
+    return "[FormData contents omitted]";
   }
   if (depth >= MAX_DEPTH) return OMITTED;
-  if (seen.has(value)) return '[Circular]';
+  if (seen.has(value)) return "[Circular]";
 
   seen.add(value);
   if (Array.isArray(value)) {
@@ -60,34 +70,39 @@ function sanitize(value: unknown, key = '', depth = 0, seen = new WeakSet<object
     if (value.length > MAX_ARRAY_ITEMS) {
       items.push(`[${value.length - MAX_ARRAY_ITEMS} more items]`);
     }
+    seen.delete(value);
     return items;
   }
 
-  return Object.fromEntries(
+  const result = Object.fromEntries(
     Object.entries(value).map(([entryKey, entryValue]) => [
       entryKey,
       sanitize(entryValue, entryKey, depth + 1, seen),
     ]),
   );
+  seen.delete(value);
+  return result;
 }
 
 function sanitizeUrl(value: string) {
-  const [base, queryString] = value.split('?', 2);
+  const [base, queryString] = value.split("?", 2);
   if (!queryString) return base;
 
   const query = queryString
-    .split('&')
+    .split("&")
     .map((part) => {
-      const [rawKey, ...rawValue] = part.split('=');
+      const [rawKey, ...rawValue] = part.split("=");
       const decodedKey = decodeURIComponent(rawKey);
-      return shouldRedact(decodedKey) ? `${rawKey}=${REDACTED}` : [rawKey, ...rawValue].join('=');
+      return shouldRedact(decodedKey)
+        ? `${rawKey}=${REDACTED}`
+        : [rawKey, ...rawValue].join("=");
     })
-    .join('&');
+    .join("&");
 
   return `${base}?${query}`;
 }
 
-function safeError(error: unknown): ApiLogResponse['error'] {
+function safeError(error: unknown): ApiLogResponse["error"] {
   if (error instanceof Error) {
     const details = error as Error & { code?: string; requestId?: string };
     return {
@@ -97,48 +112,82 @@ function safeError(error: unknown): ApiLogResponse['error'] {
       requestId: details.requestId,
     };
   }
-  return { message: 'Unknown request error' };
+  return { message: "Unknown request error" };
+}
+
+function formatValue(value: unknown, emptyValue = EMPTY_VALUE) {
+  const sanitizedValue = sanitize(value);
+  if (sanitizedValue === undefined) return emptyValue;
+
+  try {
+    return JSON.stringify(sanitizedValue, null, 2) ?? emptyValue;
+  } catch {
+    return "[Unable to format value]";
+  }
+}
+
+function formatBlock(label: string, value: unknown, emptyValue = EMPTY_VALUE) {
+  return [
+    `${label}:`,
+    ...formatValue(value, emptyValue)
+      .split("\n")
+      .map((line) => `  ${line}`),
+  ];
+}
+
+function writeLog(level: "info" | "error", lines: string[]) {
+  const message = lines.join("\n");
+  if (level === "error") {
+    console.error(message);
+  } else {
+    console.info(message);
+  }
+}
+
+function responseLogLines(
+  input: ApiLogResponse,
+  outcome: "success" | "error",
+  error?: unknown,
+) {
+  return [
+    `${LOG_PREFIX} RESPONSE`,
+    `ID: ${input.id}`,
+    `METHOD: ${input.method}`,
+    `URL: ${sanitizeUrl(input.url)}`,
+    `STATUS CODE: ${input.status ?? "NETWORK"}`,
+    `OUTCOME: ${outcome.toUpperCase()}`,
+    ...formatBlock("RESPONSE BODY", input.payload, "<empty>"),
+    `DURATION: ${input.durationMs}ms`,
+    ...(error === undefined ? [] : formatBlock("ERROR", error)),
+  ];
 }
 
 export const apiLogger = {
   request(input: ApiLogRequest) {
     if (!isLoggingEnabled()) return;
 
-    console.info(`${LOG_PREFIX} REQUEST ${input.method} ${sanitizeUrl(input.url)}`, {
-      id: input.id,
-      method: input.method,
-      url: sanitizeUrl(input.url),
-      headers: sanitize(input.headers),
-      body: sanitize(input.body),
-    });
+    writeLog("info", [
+      `${LOG_PREFIX} REQUEST`,
+      `ID: ${input.id}`,
+      `METHOD: ${input.method}`,
+      `URL: ${sanitizeUrl(input.url)}`,
+      ...formatBlock("REQUEST BODY", input.body),
+      ...formatBlock("HEADERS", input.headers),
+    ]);
   },
 
   success(input: ApiLogResponse) {
     if (!isLoggingEnabled()) return;
 
-    console.info(`${LOG_PREFIX} RESPONSE ${input.status ?? 0} ${input.method} ${sanitizeUrl(input.url)}`, {
-      id: input.id,
-      method: input.method,
-      url: sanitizeUrl(input.url),
-      status: input.status ?? 0,
-      outcome: 'success',
-      durationMs: input.durationMs,
-      responseBody: sanitize(input.payload),
-    });
+    writeLog("info", responseLogLines(input, "success"));
   },
 
   error(input: ApiLogResponse & { cause?: unknown }) {
     if (!isLoggingEnabled()) return;
 
-    console.error(`${LOG_PREFIX} RESPONSE ${input.status ?? 'NETWORK'} ${input.method} ${sanitizeUrl(input.url)}`, {
-      id: input.id,
-      method: input.method,
-      url: sanitizeUrl(input.url),
-      status: input.status ?? 'NETWORK',
-      outcome: 'error',
-      durationMs: input.durationMs,
-      responseBody: sanitize(input.payload),
-      error: input.error ?? safeError(input.cause),
-    });
+    writeLog(
+      "error",
+      responseLogLines(input, "error", input.error ?? safeError(input.cause)),
+    );
   },
 };
