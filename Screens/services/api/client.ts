@@ -32,6 +32,7 @@ type OperationOptions<Id extends ApiOperationId> = {
   query?: ApiOperationMap[Id]["query"];
   pathParams?: ApiOperationMap[Id]["pathParams"];
   headers?: ApiOperationMap[Id]["headers"];
+  authenticated?: boolean;
   signal?: AbortSignal;
 };
 
@@ -966,7 +967,7 @@ export const apiClient = {
       ),
       {
         method: operation.method,
-        authenticated: operation.authenticated,
+        authenticated: options.authenticated ?? operation.authenticated,
         body: options.body === undefined ? undefined : (options.body as object),
         query: options.query as Record<string, QueryValue> | undefined,
         headers: options.headers as Record<string, string> | undefined,

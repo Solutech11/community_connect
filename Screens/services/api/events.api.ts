@@ -18,6 +18,12 @@ export const eventsApi = {
     apiClient.request("get__events_created_me", { signal }),
   get: (id: string, signal?: AbortSignal) =>
     apiClient.request("get__events_id_", { pathParams: { id }, signal }),
+  getForManagement: (id: string, signal?: AbortSignal) =>
+    apiClient.request("get__events_id_", {
+      pathParams: { id },
+      authenticated: true,
+      signal,
+    }),
   createDraft: (body: PostEventsBody, signal?: AbortSignal) =>
     apiClient.request("post__events", { body, signal }),
   updateDraft: (id: string, body: PatchEventsIdBody, signal?: AbortSignal) =>
@@ -54,6 +60,7 @@ export const eventsApi = {
     apiClient.request("patch__events_id_ticket_types_ticketTypeId_", {
       pathParams: { id, ticketTypeId },
       body,
+      authenticated: true,
       signal,
     }),
   removeTicketType: (id: string, ticketTypeId: string, signal?: AbortSignal) =>

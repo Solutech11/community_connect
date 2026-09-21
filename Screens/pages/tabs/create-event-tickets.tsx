@@ -28,31 +28,69 @@ type Props = NativeStackScreenProps<RootStackParamList, "CreateEventTickets">;
 const TICKET_IMAGE =
   "https://images.unsplash.com/photo-1521295121783-8a321d551ad2?auto=format&fit=crop&w=400&q=80";
 
-const initialTicket: CreateEventTicket = {
-  capacity: "100",
-  id: "ticket-1",
-  price: "25",
-  title: "General Admission",
-};
+function createInitialTicket(capacity: string): CreateEventTicket {
+  return {
+    capacity: capacity || "100",
+    id: "ticket-1",
+    price: "25",
+    title: "General Admission",
+  };
+}
 
 export default function CreateEventTicketsScreen({ navigation, route }: Props) {
-  const [tickets, setTickets] = useState<CreateEventTicket[]>(
+  const totalCapacity = Number.parseInt(route.params.draft.capacity, 10);
+  const [tickets, setTickets] = useState<CreateEventTicket[]>(() =>
     route.params.draft.tickets.length
       ? route.params.draft.tickets
-      : [initialTicket],
+      : [createInitialTicket(route.params.draft.capacity)],
   );
   const [alert, setAlert] = useState("");
+
+  const hasUnlimitedTier = tickets.some(
+    (ticket) => ticket.capacity.trim().toLowerCase() === "unlimited",
+  );
+  const allocatedCapacity = tickets.reduce((total, ticket) => {
+    const capacity = Number(ticket.capacity);
+    return Number.isInteger(capacity) && capacity > 0
+      ? total + capacity
+      : total;
+  }, 0);
+  const remainingCapacity = Number.isFinite(totalCapacity)
+    ? totalCapacity - allocatedCapacity
+    : null;
+  const capacityComplete =
+    Number.isFinite(totalCapacity) &&
+    !hasUnlimitedTier &&
+    allocatedCapacity === totalCapacity;
 
   const updateTicket = (
     id: string,
     key: keyof Omit<CreateEventTicket, "id">,
     value: string,
   ) => {
-    setTickets((current) =>
-      current.map((ticket) =>
-        ticket.id === id ? { ...ticket, [key]: value } : ticket,
-      ),
-    );
+    setTickets((current) => {
+      let nextValue = value;
+      const numericInput = /^\d+$/.test(value.trim());
+      if (
+        key === "capacity" &&
+        numericInput &&
+        Number.isFinite(totalCapacity)
+      ) {
+        const otherCapacity = current.reduce((total, ticket) => {
+          if (ticket.id === id) return total;
+          const capacity = Number(ticket.capacity);
+          return Number.isInteger(capacity) && capacity > 0
+            ? total + capacity
+            : total;
+        }, 0);
+        const maximumForTicket = Math.max(0, totalCapacity - otherCapacity);
+        nextValue = String(Math.min(Number(value), maximumForTicket));
+      }
+
+      return current.map((ticket) =>
+        ticket.id === id ? { ...ticket, [key]: nextValue } : ticket,
+      );
+    });
   };
 
   const addTicket = () => {
@@ -72,6 +110,37 @@ export default function CreateEventTicketsScreen({ navigation, route }: Props) {
   };
 
   const goNext = () => {
+    const hasInvalidCapacity = tickets.some((ticket) => {
+      const value = ticket.capacity.trim().toLowerCase();
+      return (
+        value !== "unlimited" &&
+        (!value || !Number.isInteger(Number(value)) || Number(value) <= 0)
+      );
+    });
+    if (hasInvalidCapacity) {
+      setAlert(
+        "Enter a positive whole-number capacity for every ticket, or type Unlimited.",
+      );
+      return;
+    }
+    if (
+      !hasUnlimitedTier &&
+      Number.isFinite(totalCapacity) &&
+      allocatedCapacity > totalCapacity
+    ) {
+      setAlert(
+        `Ticket capacities total ${allocatedCapacity}, but the event capacity is ${totalCapacity}. Reduce the ticket capacities before continuing.`,
+      );
+      return;
+    }
+    if (!capacityComplete) {
+      setAlert(
+        hasUnlimitedTier
+          ? "Replace Unlimited with numeric ticket capacities so all tickets can add up to the event capacity."
+          : `Allocate all ${totalCapacity} seats across the ticket tiers before continuing. ${remainingCapacity} seats remain.`,
+      );
+      return;
+    }
     if (
       tickets.some(
         (ticket) =>
@@ -107,6 +176,31 @@ export default function CreateEventTicketsScreen({ navigation, route }: Props) {
           Create different tiers for your attendees. You can add up to 10 unique
           ticket types.
         </Text>
+        <View style={styles.capacityCard}>
+          <View style={styles.capacityIcon}>
+            <Ionicons color="#08ad54" name="people-outline" size={21} />
+          </View>
+          <View style={styles.capacityCopy}>
+            <Text style={styles.capacityLabel}>TOTAL EVENT CAPACITY</Text>
+            <Text style={styles.capacityHint}>
+              {hasUnlimitedTier
+                ? "Use numeric tiers to reach the event capacity"
+                : allocatedCapacity === totalCapacity
+                  ? "All seats allocated across ticket tiers"
+                  : `${allocatedCapacity} of ${Number.isFinite(totalCapacity) ? totalCapacity : "-"} seats assigned`}
+            </Text>
+          </View>
+          <Text
+            style={[
+              styles.capacityValue,
+              remainingCapacity !== null && remainingCapacity < 0
+                ? styles.capacityValueOver
+                : null,
+            ]}
+          >
+            {hasUnlimitedTier ? "∞" : (remainingCapacity ?? "-")}
+          </Text>
+        </View>
 
         {tickets.map((ticket, index) => (
           <TicketCard
@@ -149,7 +243,11 @@ export default function CreateEventTicketsScreen({ navigation, route }: Props) {
           </ImageBackground>
         </View>
       </ScrollView>
-      <BottomActions onBack={navigation.goBack} onNext={goNext} />
+      <BottomActions
+        nextDisabled={Number.isFinite(totalCapacity) && !capacityComplete}
+        onBack={navigation.goBack}
+        onNext={goNext}
+      />
       <AppAlertModal
         message={alert}
         onClose={() => setAlert("")}
@@ -189,10 +287,10 @@ function TicketCard({
       />
       <TicketInput
         keyboardType="decimal-pad"
-        label="PRICE (USD)"
+        label="PRICE (NGN)"
         onChangeText={(value) => onUpdate("price", value)}
         placeholder="0.00"
-        prefix="$"
+        prefix="₦"
         value={ticket.price}
       />
       <TicketInput
@@ -246,6 +344,40 @@ const styles = StyleSheet.create({
     marginBottom: 22,
     marginTop: 7,
   },
+  capacityCard: {
+    alignItems: "center",
+    backgroundColor: "#e8f8ef",
+    borderRadius: 20,
+    flexDirection: "row",
+    marginBottom: 22,
+    padding: 13,
+  },
+  capacityIcon: {
+    alignItems: "center",
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+  },
+  capacityCopy: { flex: 1, marginLeft: 10 },
+  capacityLabel: {
+    color: "#238c50",
+    fontFamily: fonts.bold,
+    fontSize: 10,
+  },
+  capacityHint: {
+    color: "#3b8e5d",
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    marginTop: 3,
+  },
+  capacityValue: {
+    color: "#078d45",
+    fontFamily: fonts.extraBold,
+    fontSize: 22,
+  },
+  capacityValueOver: { color: "#b34b4b" },
   ticketCard: {
     backgroundColor: colors.white,
     borderLeftColor: "#08bd58",

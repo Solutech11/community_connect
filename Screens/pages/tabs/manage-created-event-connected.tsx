@@ -6,7 +6,6 @@ import {
   Image,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -15,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
+import KeyboardAwareScrollView from "../../components/ui/keyboard-aware-scroll-view";
 import ProfilePageHeader from "../../components/ui/profile-page-header";
 import { ApiError } from "../../services/api/client";
 import { eventsApi } from "../../services/api/events.api";
@@ -80,7 +80,7 @@ export default function ManageCreatedEventConnectedScreen({
       refresh ? setRefreshing(true) : setLoading(true);
       try {
         const [eventResponse, attendeeResponse] = await Promise.all([
-          eventsApi.get(eventId),
+          eventsApi.getForManagement(eventId),
           eventsApi.attendees(eventId),
         ]);
         const nextEvent = eventResponse.data.event;
@@ -210,8 +210,9 @@ export default function ManageCreatedEventConnectedScreen({
     <>
       <SafeAreaView edges={[]} style={styles.safe}>
         <ProfilePageHeader title="Manage Event" onBack={navigation.goBack} />
-        <ScrollView
+        <KeyboardAwareScrollView
           contentContainerStyle={styles.content}
+          keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
@@ -323,6 +324,7 @@ export default function ManageCreatedEventConnectedScreen({
                   editable={event.status === "draft"}
                   onChangeText={setTitle}
                   placeholder="Title"
+                  placeholderTextColor={colors.muted}
                   style={styles.input}
                   value={title}
                 />
@@ -331,6 +333,7 @@ export default function ManageCreatedEventConnectedScreen({
                   multiline
                   onChangeText={setDescription}
                   placeholder="Description"
+                  placeholderTextColor={colors.muted}
                   style={[styles.input, styles.multiline]}
                   value={description}
                 />
@@ -339,6 +342,7 @@ export default function ManageCreatedEventConnectedScreen({
                   editable={event.status === "draft"}
                   onChangeText={setStartsAt}
                   placeholder="Start time (ISO 8601)"
+                  placeholderTextColor={colors.muted}
                   style={styles.input}
                   value={startsAt}
                 />
@@ -347,6 +351,7 @@ export default function ManageCreatedEventConnectedScreen({
                   editable={event.status === "draft"}
                   onChangeText={setEndsAt}
                   placeholder="End time (ISO 8601)"
+                  placeholderTextColor={colors.muted}
                   style={styles.input}
                   value={endsAt}
                 />
@@ -355,6 +360,7 @@ export default function ManageCreatedEventConnectedScreen({
                   keyboardType="number-pad"
                   onChangeText={setCapacity}
                   placeholder="Capacity"
+                  placeholderTextColor={colors.muted}
                   style={styles.input}
                   value={capacity}
                 />
@@ -374,6 +380,11 @@ export default function ManageCreatedEventConnectedScreen({
               </Section>
 
               <Section title="Ticket tiers">
+                {event.status !== "draft" ? (
+                  <Text style={styles.meta}>
+                    Ticket tiers can only be changed while the event is a draft.
+                  </Text>
+                ) : null}
                 {ticketTypes.map((ticket) => (
                   <View key={ticket._id} style={styles.ticket}>
                     <View style={styles.ticketCopy}>
@@ -384,13 +395,20 @@ export default function ManageCreatedEventConnectedScreen({
                       </Text>
                     </View>
                     <Pressable
+                      accessibilityState={{
+                        disabled: event.status !== "draft",
+                      }}
+                      disabled={event.status !== "draft"}
                       onPress={() =>
                         navigation.navigate("EditTicketType", {
                           eventId: eventId!,
                           ticketTypeId: ticket._id,
                         })
                       }
-                      style={styles.editTicket}
+                      style={[
+                        styles.editTicket,
+                        event.status !== "draft" && styles.disabledAction,
+                      ]}
                     >
                       <Ionicons
                         color="#078d45"
@@ -399,6 +417,10 @@ export default function ManageCreatedEventConnectedScreen({
                       />
                     </Pressable>
                     <Pressable
+                      accessibilityState={{
+                        disabled: event.status !== "draft",
+                      }}
+                      disabled={event.status !== "draft"}
                       onPress={() =>
                         setConfirm({
                           title: "Remove ticket tier?",
@@ -416,7 +438,10 @@ export default function ManageCreatedEventConnectedScreen({
                           },
                         })
                       }
-                      style={styles.delete}
+                      style={[
+                        styles.delete,
+                        event.status !== "draft" && styles.disabledAction,
+                      ]}
                     >
                       <Ionicons
                         color="#a34b4b"
@@ -427,31 +452,40 @@ export default function ManageCreatedEventConnectedScreen({
                   </View>
                 ))}
                 <TextInput
+                  editable={event.status === "draft"}
                   onChangeText={setTicketTitle}
                   placeholder="Ticket title"
+                  placeholderTextColor={colors.muted}
                   style={styles.input}
                   value={ticketTitle}
                 />
                 <View style={styles.row}>
                   <TextInput
+                    editable={event.status === "draft"}
                     keyboardType="decimal-pad"
                     onChangeText={setTicketPrice}
                     placeholder="Price NGN"
+                    placeholderTextColor={colors.muted}
                     style={[styles.input, styles.flex]}
                     value={ticketPrice}
                   />
                   <TextInput
+                    editable={event.status === "draft"}
                     keyboardType="number-pad"
                     onChangeText={setTicketCapacity}
                     placeholder="Capacity"
+                    placeholderTextColor={colors.muted}
                     style={[styles.input, styles.flex]}
                     value={ticketCapacity}
                   />
                 </View>
                 <Pressable
-                  disabled={submitting}
+                  disabled={submitting || event.status !== "draft"}
                   onPress={addTicket}
-                  style={styles.secondary}
+                  style={[
+                    styles.secondary,
+                    event.status !== "draft" && styles.disabledAction,
+                  ]}
                 >
                   <Text style={styles.secondaryText}>Add ticket tier</Text>
                 </Pressable>
@@ -461,6 +495,7 @@ export default function ManageCreatedEventConnectedScreen({
                 <TextInput
                   onChangeText={setQuery}
                   placeholder="Search attendees"
+                  placeholderTextColor={colors.muted}
                   style={styles.input}
                   value={query}
                 />
@@ -484,7 +519,7 @@ export default function ManageCreatedEventConnectedScreen({
               </Section>
             </>
           ) : null}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
       <AppAlertModal
         visible={Boolean(notice)}
@@ -660,6 +695,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 34,
   },
+  disabledAction: { opacity: 0.45 },
   attendee: {
     alignItems: "center",
     borderBottomColor: "#e7eeea",

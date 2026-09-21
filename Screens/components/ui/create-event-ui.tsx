@@ -128,10 +128,12 @@ export function SelectField({
 export function BottomActions({
   onBack,
   onNext,
+  nextDisabled = false,
   nextLabel = "Next Step",
 }: {
   onBack?: () => void;
   onNext: () => void;
+  nextDisabled?: boolean;
   nextLabel?: string;
 }) {
   return (
@@ -143,7 +145,11 @@ export function BottomActions({
             <Text style={styles.backText}>Back</Text>
           </Pressable>
         ) : null}
-        <Pressable onPress={onNext} style={styles.nextButton}>
+        <Pressable
+          disabled={nextDisabled}
+          onPress={onNext}
+          style={[styles.nextButton, nextDisabled && styles.nextButtonDisabled]}
+        >
           <Text style={styles.nextText}>{nextLabel}</Text>
           <Ionicons color={colors.ink} name="arrow-forward" size={22} />
         </Pressable>
@@ -313,6 +319,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 12,
   },
+  nextButtonDisabled: { opacity: 0.45 },
   nextText: {
     color: colors.ink,
     fontFamily: fonts.extraBold,
