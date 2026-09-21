@@ -10,7 +10,7 @@ import PrimaryButton from "../../components/ui/primary-button";
 import ScreenShell from "../../components/ui/screen-shell";
 import TopBar from "../../components/ui/top-bar";
 import { useAuth } from "../../hooks/use-auth";
-import SetupLayout from "../../layouts/setup-layout";
+import SetupLayout from "../../Layouts/setup-layout";
 import { authApi } from "../../services/api/auth.api";
 import { ApiError } from "../../services/api/client";
 import { colors, fonts } from "../../styles/theme";

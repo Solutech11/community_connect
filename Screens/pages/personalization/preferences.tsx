@@ -7,7 +7,7 @@ import AppIcon from '../../components/ui/app-icon';
 import PrimaryButton from '../../components/ui/primary-button';
 import { useAuth } from '../../hooks/use-auth';
 import { usePersonalization } from '../../hooks/use-personalization';
-import SetupLayout from '../../layouts/setup-layout';
+import SetupLayout from '../../Layouts/setup-layout';
 import { ApiError } from '../../services/api/client';
 import { mapOnboardingPreferences } from '../../services/api/user-profile.mapper';
 import { usersApi } from '../../services/api/users.api';

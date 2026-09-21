@@ -1,7 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
 
-import OnboardingLayout from '../../layouts/onboarding-layout';
+import OnboardingLayout from '../../Layouts/onboarding-layout';
 import type { RootStackParamList } from '../../types/navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OnboardingWelcome'>;

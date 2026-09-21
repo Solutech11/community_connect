@@ -8,7 +8,7 @@ import { useNotifier } from "../../components/ui/app-notifier";
 import FormField from "../../components/ui/form-field";
 import LinkText from "../../components/ui/link-text";
 import PrimaryButton from "../../components/ui/primary-button";
-import SetupLayout from "../../layouts/setup-layout";
+import SetupLayout from "../../Layouts/setup-layout";
 import { authApi } from "../../services/api/auth.api";
 import { ApiError } from "../../services/api/client";
 import { getRegistrationLocation } from "../../services/location/registration-location.service";

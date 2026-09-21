@@ -118,8 +118,8 @@ The mobile app now has a separate production backend. Treat its documented contr
 - Local REST base URL while the owner's server is running: `http://localhost:5000/api/v1`
 - Local Swagger UI: `http://localhost:5000/api/docs/`
 - Local OpenAPI JSON: `http://localhost:5000/api/docs.json`
-- Backend source for contract inspection: `C:\Users\Solutech\Documents\Lincoln\LincolnFinalyrEventapp\Communty_connect_api`
-- Shell equivalent of the backend location: `~/Documents/Lincoln/LincolnFinalyrEventapp/Communty_connect_api`
+- Backend source for contract inspection: `C:\Users\soluw\Documents\Lincoln\Community_Connect\Community_Connect_Api`
+- Shell equivalent of the backend location: `~/Documents/Lincoln/Community_Connect/Community_Connect_Api`
 
 The backend is normally already running on port `5000`. Check `/health` before concluding that an integration failure is caused by frontend code.
 

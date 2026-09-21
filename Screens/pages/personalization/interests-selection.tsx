@@ -6,7 +6,7 @@ import AppIcon, { AppIconName } from '../../components/ui/app-icon';
 import PrimaryButton from '../../components/ui/primary-button';
 import { usePersonalization } from '../../hooks/use-personalization';
 import { colors, fonts } from '../../styles/theme';
-import SetupLayout from '../../layouts/setup-layout';
+import SetupLayout from '../../Layouts/setup-layout';
 import type { RootStackParamList } from '../../types/navigation';
 import { setupSteps } from '../../types/setup-flow';
 

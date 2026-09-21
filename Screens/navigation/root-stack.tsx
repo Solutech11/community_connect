@@ -1,6 +1,6 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
-import { withDashboardLayout } from "../layouts/dashboard-layout";
+import { withDashboardLayout } from "../Layouts/dashboard-layout";
 import ForgotPasswordScreen from "../pages/auth/forgot-password-connected";
 import LoginScreen from "../pages/auth/login-connected";
 import RegistrationScreen from "../pages/auth/registration-connected";

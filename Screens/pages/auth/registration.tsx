@@ -8,7 +8,7 @@ import LinkText from '../../components/ui/link-text';
 import PrimaryButton from '../../components/ui/primary-button';
 import SelectField from '../../components/ui/select-field';
 import { colors, fonts } from '../../styles/theme';
-import SetupLayout from '../../layouts/setup-layout';
+import SetupLayout from '../../Layouts/setup-layout';
 import type { RootStackParamList } from '../../types/navigation';
 import { setupSteps } from '../../types/setup-flow';
 
