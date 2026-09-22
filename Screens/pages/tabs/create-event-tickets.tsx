@@ -1,6 +1,6 @@
 ﻿import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ImageBackground,
   Pressable,
@@ -17,6 +17,7 @@ import {
   CreateEventHeader,
   StepProgress,
 } from "../../components/ui/create-event-ui";
+import { createEventDraftStorage } from "../../services/storage/create-event-draft.storage";
 import { colors, fonts } from "../../styles/theme";
 import type {
   CreateEventTicket,
@@ -45,6 +46,13 @@ export default function CreateEventTicketsScreen({ navigation, route }: Props) {
       : [createInitialTicket(route.params.draft.capacity)],
   );
   const [alert, setAlert] = useState("");
+
+  useEffect(() => {
+    void createEventDraftStorage.save({
+      ...route.params.draft,
+      tickets,
+    });
+  }, [route.params.draft, tickets]);
 
   const hasUnlimitedTier = tickets.some(
     (ticket) => ticket.capacity.trim().toLowerCase() === "unlimited",
@@ -152,9 +160,9 @@ export default function CreateEventTicketsScreen({ navigation, route }: Props) {
       setAlert("Complete the title, price, and capacity for every ticket.");
       return;
     }
-    navigation.navigate("CreateEventReview", {
-      draft: { ...route.params.draft, tickets },
-    });
+    const draft = { ...route.params.draft, tickets };
+    void createEventDraftStorage.save(draft);
+    navigation.navigate("CreateEventReview", { draft });
   };
 
   return (

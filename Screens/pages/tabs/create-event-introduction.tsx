@@ -1,5 +1,6 @@
 ﻿import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useEffect, useState } from "react";
 import {
   ImageBackground,
   Pressable,
@@ -10,8 +11,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AppAlertModal from "../../components/ui/app-alert-modal";
+import { createEventDraftStorage } from "../../services/storage/create-event-draft.storage";
 import { colors, fonts } from "../../styles/theme";
-import type { RootStackParamList } from "../../types/navigation";
+import type {
+  CreateEventDraft,
+  RootStackParamList,
+} from "../../types/navigation";
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -41,6 +47,47 @@ const expectations = [
 ];
 
 export default function CreateEventIntroductionScreen({ navigation }: Props) {
+  const [savedDraft, setSavedDraft] =
+    useState<Partial<CreateEventDraft> | null>(null);
+  const [checkingDraft, setCheckingDraft] = useState(true);
+  const [prompt, setPrompt] = useState<"resume" | "clear" | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void createEventDraftStorage
+      .get()
+      .then((draft) => {
+        if (active) setSavedDraft(draft);
+      })
+      .finally(() => {
+        if (active) setCheckingDraft(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const continueToDetails = () => {
+    if (checkingDraft) return;
+    if (savedDraft) {
+      setPrompt("resume");
+      return;
+    }
+    navigation.navigate("CreateEventDetails");
+  };
+
+  const confirmPrompt = () => {
+    const action = prompt;
+    setPrompt(null);
+    if (action === "resume" && savedDraft) {
+      navigation.navigate("CreateEventDetails", { draft: savedDraft });
+    } else if (action === "clear") {
+      setSavedDraft(null);
+      void createEventDraftStorage.clear();
+    }
+  };
+
   return (
     <SafeAreaView edges={["top"]} style={styles.safe}>
       <View style={styles.header}>
@@ -88,13 +135,44 @@ export default function CreateEventIntroductionScreen({ navigation }: Props) {
 
       <SafeAreaView edges={["bottom"]} style={styles.footer}>
         <Pressable
-          onPress={() => navigation.navigate("CreateEventDetails")}
-          style={styles.continueButton}
+          disabled={checkingDraft}
+          onPress={continueToDetails}
+          style={[styles.continueButton, checkingDraft && styles.disabled]}
         >
-          <Text style={styles.continueText}>Continue to Step 1</Text>
+          <Text style={styles.continueText}>
+            {checkingDraft
+              ? "Checking saved draft..."
+              : savedDraft
+                ? "Resume saved draft"
+                : "Continue to Step 1"}
+          </Text>
           <Ionicons color={colors.white} name="chevron-forward" size={23} />
         </Pressable>
+        {savedDraft ? (
+          <Pressable
+            onPress={() => setPrompt("clear")}
+            style={styles.clearDraftButton}
+          >
+            <Ionicons color="#a34b4b" name="trash-outline" size={17} />
+            <Text style={styles.clearDraftText}>Clear saved draft</Text>
+          </Pressable>
+        ) : null}
       </SafeAreaView>
+      <AppAlertModal
+        cancelText={prompt === "resume" ? "Keep draft" : "Cancel"}
+        confirmText={prompt === "resume" ? "Resume draft" : "Clear draft"}
+        message={
+          prompt === "resume"
+            ? "We found an unfinished event. Would you like to continue where you stopped?"
+            : "This removes the unfinished event from this device."
+        }
+        onClose={() => setPrompt(null)}
+        onConfirm={confirmPrompt}
+        title={
+          prompt === "resume" ? "Resume event draft?" : "Clear event draft?"
+        }
+        visible={prompt !== null}
+      />
     </SafeAreaView>
   );
 }
@@ -189,6 +267,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   footer: { backgroundColor: colors.paper, paddingHorizontal: 24 },
+  disabled: { opacity: 0.55 },
   continueButton: {
     alignItems: "center",
     backgroundColor: "#08bd58",
@@ -202,5 +281,17 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontFamily: fonts.extraBold,
     fontSize: 18,
+  },
+  clearDraftButton: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 6,
+    justifyContent: "center",
+    minHeight: 48,
+  },
+  clearDraftText: {
+    color: "#a34b4b",
+    fontFamily: fonts.bold,
+    fontSize: 13,
   },
 });

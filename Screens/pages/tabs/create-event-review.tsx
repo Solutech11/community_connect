@@ -16,6 +16,7 @@ import AppAlertModal from "../../components/ui/app-alert-modal";
 import { ApiError } from "../../services/api/client";
 import { eventsApi } from "../../services/api/events.api";
 import { uploadsApi } from "../../services/api/uploads.api";
+import { createEventDraftStorage } from "../../services/storage/create-event-draft.storage";
 import {
   CreateEventHeader,
   InfoCard,
@@ -31,14 +32,68 @@ type Props = NativeStackScreenProps<RootStackParamList, "CreateEventReview">;
 const MAP_IMAGE =
   "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=1000&q=82";
 
+const MONTH_INDEX: Record<string, number> = {
+  Apr: 3,
+  Aug: 7,
+  Dec: 11,
+  Feb: 1,
+  Jan: 0,
+  Jul: 6,
+  Jun: 5,
+  Mar: 2,
+  May: 4,
+  Nov: 10,
+  Oct: 9,
+  Sep: 8,
+};
+
+function createLocalDate(year: number, month: number, day: number) {
+  const date = new Date(year, month, day);
+  return date.getFullYear() === year &&
+    date.getMonth() === month &&
+    date.getDate() === day
+    ? date
+    : undefined;
+}
+
+function parseEventDate(value: string) {
+  const dateMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateMatch) {
+    return createLocalDate(
+      Number(dateMatch[1]),
+      Number(dateMatch[2]) - 1,
+      Number(dateMatch[3]),
+    );
+  }
+
+  const legacyMatch = value.match(
+    /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s([A-Z][a-z]{2})\s(\d{1,2}),\s(\d{4})$/,
+  );
+  const month = legacyMatch ? MONTH_INDEX[legacyMatch[1]] : undefined;
+  return legacyMatch && month !== undefined
+    ? createLocalDate(Number(legacyMatch[3]), month, Number(legacyMatch[2]))
+    : undefined;
+}
+
 function combineDateAndTime(dateValue: string, timeValue: string) {
-  const date = new Date(dateValue);
+  const date = parseEventDate(dateValue);
   const match = timeValue.match(/^(1[0-2]|[1-9]):([0-5][0-9]) (AM|PM)$/);
-  if (Number.isNaN(date.getTime()) || !match)
-    throw new Error("Invalid event date or time.");
+  if (!date || !match) throw new Error("Invalid event date or time.");
   const hour = (Number(match[1]) % 12) + (match[3] === "PM" ? 12 : 0);
   date.setHours(hour, Number(match[2]), 0, 0);
   return date.toISOString();
+}
+
+function formatEventDate(value: string) {
+  const date = parseEventDate(value);
+  return date
+    ? new Intl.DateTimeFormat("en-NG", {
+        day: "numeric",
+        month: "short",
+        weekday: "short",
+        year: "numeric",
+      }).format(date)
+    : value;
 }
 
 function formatTicketPrice(value: string) {
@@ -115,6 +170,7 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
         });
       }
       await eventsApi.publish(created.data.event._id);
+      await createEventDraftStorage.clear();
       setAlert({
         title: "Event submitted",
         message:
@@ -175,7 +231,7 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
             </View>
             <View style={styles.detailBody}>
               <Text style={styles.detailPrimary}>
-                {draft.startDate || "Date not selected"}
+                {formatEventDate(draft.startDate) || "Date not selected"}
               </Text>
               <Text style={styles.detailSecondary}>
                 {draft.startTime} - {draft.endTime}

@@ -1,7 +1,7 @@
 ﻿import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -31,6 +31,7 @@ import {
 } from "../../data/event-locations";
 import { aiApi } from "../../services/api/ai.api";
 import { ApiError } from "../../services/api/client";
+import { createEventDraftStorage } from "../../services/storage/create-event-draft.storage";
 import { colors, fonts } from "../../styles/theme";
 import type {
   CreateEventDraft,
@@ -65,6 +66,45 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
   const [dropdown, setDropdown] = useState<DropdownName | null>(null);
   const [alert, setAlert] = useState("");
   const [improving, setImproving] = useState(false);
+
+  useEffect(() => {
+    void createEventDraftStorage.save({
+      ...seed,
+      title,
+      coverImage,
+      description,
+      country,
+      state,
+      lga,
+      venueName,
+      address,
+      phone,
+      capacity,
+      activityType,
+      audience,
+      setting,
+      startDate: seed?.startDate ?? "",
+      startTime: seed?.startTime ?? "",
+      endDate: seed?.endDate ?? "",
+      endTime: seed?.endTime ?? "",
+      tickets: seed?.tickets ?? [],
+    });
+  }, [
+    activityType,
+    address,
+    audience,
+    capacity,
+    country,
+    coverImage,
+    description,
+    lga,
+    phone,
+    seed,
+    setting,
+    state,
+    title,
+    venueName,
+  ]);
 
   const pickCover = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -135,7 +175,10 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
 
   const improveDescriptionWithAi = async () => {
     if (!title.trim() || improving) {
-      if (!title.trim()) setAlert("Add an event title first so Community AI can write relevant copy.");
+      if (!title.trim())
+        setAlert(
+          "Add an event title first so Community AI can write relevant copy.",
+        );
       return;
     }
     setImproving(true);
@@ -149,7 +192,11 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
       });
       setDescription(response.data.message);
     } catch (error) {
-      setAlert(error instanceof ApiError ? error.message : "Community AI could not improve the event copy.");
+      setAlert(
+        error instanceof ApiError
+          ? error.message
+          : "Community AI could not improve the event copy.",
+      );
     } finally {
       setImproving(false);
     }
@@ -193,6 +240,7 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
       endTime: seed?.endTime ?? "",
       tickets: seed?.tickets ?? [],
     };
+    void createEventDraftStorage.save(draft);
     navigation.navigate("CreateEventDateTime", { draft });
   };
 
@@ -243,12 +291,20 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
           textAlignVertical="top"
           value={description}
         />
-        <Pressable disabled={improving} onPress={() => void improveDescriptionWithAi()} style={styles.aiWriter}>
+        <Pressable
+          disabled={improving}
+          onPress={() => void improveDescriptionWithAi()}
+          style={styles.aiWriter}
+        >
           <View style={styles.aiWriterIcon}>
             <Ionicons color={colors.ink} name="sparkles" size={18} />
           </View>
           <View style={styles.aiWriterCopy}>
-            <Text style={styles.aiWriterTitle}>{improving ? "Community AI is writing..." : "Improve with Community AI"}</Text>
+            <Text style={styles.aiWriterTitle}>
+              {improving
+                ? "Community AI is writing..."
+                : "Improve with Community AI"}
+            </Text>
             <Text style={styles.aiWriterText}>
               Generate clear, inviting event copy from your title.
             </Text>

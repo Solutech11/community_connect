@@ -1,6 +1,6 @@
 ﻿import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
@@ -11,6 +11,7 @@ import {
   CreateEventHeader,
   StepProgress,
 } from "../../components/ui/create-event-ui";
+import { createEventDraftStorage } from "../../services/storage/create-event-draft.storage";
 import { colors, fonts } from "../../styles/theme";
 import type { RootStackParamList } from "../../types/navigation";
 
@@ -20,11 +21,28 @@ type DateField = "startDate" | "endDate";
 type TimeField = "startTime" | "endTime";
 
 function parseDate(value: string) {
-  if (!value) {
-    return undefined;
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
   }
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+
+  const date = new Date(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+  );
+  return date.getFullYear() === Number(match[1]) &&
+    date.getMonth() === Number(match[2]) - 1 &&
+    date.getDate() === Number(match[3])
+    ? date
+    : undefined;
+}
+
+function toDateValue(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
 }
 
 function formatDate(date: Date) {
@@ -65,6 +83,13 @@ export default function CreateEventDateTimeScreen({
   const [timePicker, setTimePicker] = useState<TimeField | null>(null);
   const [alert, setAlert] = useState("");
 
+  useEffect(() => {
+    void createEventDraftStorage.save({
+      ...route.params.draft,
+      ...schedule,
+    });
+  }, [route.params.draft, schedule]);
+
   const selectTime = (value: string) => {
     if (!timePicker) {
       return;
@@ -82,12 +107,12 @@ export default function CreateEventDateTimeScreen({
         const currentEndDate = parseDate(current.endDate);
         return {
           ...current,
-          startDate: formatDate(date),
+          startDate: toDateValue(date),
           endDate:
             currentEndDate && currentEndDate < date ? "" : current.endDate,
         };
       }
-      return { ...current, endDate: formatDate(date) };
+      return { ...current, endDate: toDateValue(date) };
     });
   };
 
@@ -113,9 +138,9 @@ export default function CreateEventDateTimeScreen({
       return;
     }
 
-    navigation.navigate("CreateEventTickets", {
-      draft: { ...route.params.draft, ...schedule },
-    });
+    const draft = { ...route.params.draft, ...schedule };
+    void createEventDraftStorage.save(draft);
+    navigation.navigate("CreateEventTickets", { draft });
   };
 
   return (
@@ -221,6 +246,8 @@ function ScheduleCard({
   onDate: () => void;
   onTime: () => void;
 }) {
+  const selectedDate = parseDate(date);
+
   return (
     <View style={styles.scheduleCard}>
       <View style={styles.cardHeading}>
@@ -231,7 +258,7 @@ function ScheduleCard({
       <ScheduleButton
         icon="calendar-outline"
         onPress={onDate}
-        text={date || datePlaceholder}
+        text={selectedDate ? formatDate(selectedDate) : datePlaceholder}
       />
       <Text style={styles.inputLabel}>Time</Text>
       <ScheduleButton
