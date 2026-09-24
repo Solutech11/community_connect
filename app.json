@@ -3,6 +3,7 @@
     "name": "community_connect",
     "slug": "community_connect",
     "version": "1.0.0",
+    "newArchEnabled": true,
     "orientation": "portrait",
     "icon": "./assets/community-connect-app-icon.png",
     "userInterfaceStyle": "light",
@@ -78,6 +79,7 @@
           "locationWhenInUsePermission": "Allow Community Connect to use your location to recommend nearby events."
         }
       ],
+      "@rnmapbox/maps",
       "@livekit/react-native-expo-plugin",
       "@config-plugins/react-native-webrtc"
     ],

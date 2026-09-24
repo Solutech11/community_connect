@@ -1,5 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 
+import { normalizeEventSetting } from "../../types/events";
 import type { CreateEventDraft } from "../../types/navigation";
 
 const CREATE_EVENT_DRAFT_KEY = "community-connect.create-event-draft.v1";
@@ -33,14 +34,22 @@ export const createEventDraftStorage = {
       if (!raw) return null;
 
       const parsed: unknown = JSON.parse(raw);
-      return isStoredDraft(parsed) ? parsed.draft : null;
+      return isStoredDraft(parsed)
+        ? {
+            ...parsed.draft,
+            setting: normalizeEventSetting(parsed.draft.setting),
+          }
+        : null;
     } catch {
       return null;
     }
   },
 
   save(draft: Partial<CreateEventDraft>) {
-    const value: StoredCreateEventDraft = { version: 1, draft };
+    const value: StoredCreateEventDraft = {
+      version: 1,
+      draft: { ...draft, setting: normalizeEventSetting(draft.setting) },
+    };
     const serialized = JSON.stringify(value);
     pendingWrite = pendingWrite
       .catch(() => undefined)

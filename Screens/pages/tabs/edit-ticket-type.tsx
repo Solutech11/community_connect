@@ -37,6 +37,7 @@ export default function EditTicketTypeScreen({ navigation, route }: Props) {
     message: string;
     success?: boolean;
   } | null>(null);
+  const canEditTicket = eventStatus === "draft" || eventStatus === "rejected";
 
   useEffect(() => {
     const controller = new AbortController();
@@ -76,10 +77,12 @@ export default function EditTicketTypeScreen({ navigation, route }: Props) {
   }, [route.params.eventId, route.params.ticketTypeId]);
 
   const save = async () => {
-    if (eventStatus !== "draft") {
+    if (!canEditTicket) {
       setNotice({
         title: "Ticket tier locked",
-        message: `Only draft events can be edited. This event is currently ${eventStatus.replace(/_/g, " ")}.`,
+        message:
+          `Only draft or rejected events can be edited. This event is currently ` +
+          `${eventStatus.replace(/_/g, " ")}.`,
       });
       return;
     }
@@ -119,6 +122,7 @@ export default function EditTicketTypeScreen({ navigation, route }: Props) {
           capacity: nextCapacity,
         },
       );
+      setEventStatus("draft");
       setNotice({
         title: "Ticket tier updated",
         message: "The ticket changes were saved.",
@@ -166,7 +170,7 @@ export default function EditTicketTypeScreen({ navigation, route }: Props) {
                 </Text>
               </View>
             </View>
-            {eventStatus !== "draft" ? (
+            {!canEditTicket ? (
               <View style={styles.lockedNotice}>
                 <Ionicons
                   color="#9a691d"
@@ -176,52 +180,53 @@ export default function EditTicketTypeScreen({ navigation, route }: Props) {
                 <View style={styles.lockedCopy}>
                   <Text style={styles.lockedTitle}>Editing is unavailable</Text>
                   <Text style={styles.lockedText}>
-                    Only draft events can be edited. This event is currently{" "}
+                    Only draft or rejected events can be edited. This event is
+                    currently{" "}
                     {eventStatus.replace(/_/g, " ")}.
                   </Text>
                 </View>
               </View>
             ) : null}
             <Field
-              editable={eventStatus === "draft"}
+              editable={canEditTicket}
               label="Title"
               onChangeText={setTitle}
               value={title}
             />
             <Field
-              editable={eventStatus === "draft"}
+              editable={canEditTicket}
               label="Description"
               multiline
               onChangeText={setDescription}
               value={description}
             />
             <Field
-              editable={eventStatus === "draft"}
+              editable={canEditTicket}
               keyboardType="decimal-pad"
               label="Price (NGN)"
               onChangeText={setPrice}
               value={price}
             />
             <Field
-              editable={eventStatus === "draft"}
+              editable={canEditTicket}
               keyboardType="number-pad"
               label="Capacity"
               onChangeText={setCapacity}
               value={capacity}
             />
             <Pressable
-              disabled={submitting || eventStatus !== "draft"}
+              disabled={submitting || !canEditTicket}
               onPress={() => void save()}
               style={[
                 styles.primary,
-                (submitting || eventStatus !== "draft") && styles.disabled,
+                (submitting || !canEditTicket) && styles.disabled,
               ]}
             >
               {submitting ? (
                 <ActivityIndicator color={colors.ink} />
               ) : (
                 <Text style={styles.primaryText}>
-                  {eventStatus === "draft"
+                  {canEditTicket
                     ? "Save ticket tier"
                     : "Editing unavailable"}
                 </Text>

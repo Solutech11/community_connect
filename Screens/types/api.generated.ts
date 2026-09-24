@@ -7,7 +7,7 @@ export type PostAuthRegisterBody = {
   "password": string;
   "phone"?: string;
   "location"?: {
-    "type"?: string;
+    "type"?: "Point";
     "coordinates"?: Array<number>;
   };
 };
@@ -221,6 +221,38 @@ export type PostAuthResetPasswordResponse = {
   "message": string;
 };
 
+export type GetLocationsSearchBody = never;
+export type GetLocationsSearchQuery = {
+  "q": string;
+  "countryCode"?: string;
+  "latitude"?: number;
+  "longitude"?: number;
+  "limit"?: number;
+};
+export type GetLocationsSearchPath = {
+
+};
+export type GetLocationsSearchHeaders = {
+
+};
+export type GetLocationsSearchResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "results": Array<{
+        "id": string;
+        "name": string;
+        "label": string;
+        "address": string;
+        "latitude": number;
+        "longitude": number;
+        "state": string | null;
+        "localArea": string | null;
+      }>;
+    "attribution": string;
+  };
+};
+
 export type GetUsersMeBody = never;
 export type GetUsersMeQuery = {
 
@@ -276,7 +308,7 @@ export type PatchUsersMeBody = {
   "state"?: string;
   "lga"?: string;
   "location"?: {
-    "type"?: string;
+    "type"?: "Point";
     "coordinates": [number, number];
   };
   "interests"?: Array<string>;
@@ -438,7 +470,7 @@ export type DeleteUsersMePushTokensResponse = {
 };
 
 export type PostUsersIdReportsBody = {
-  "reason": string;
+  "reason": "spam" | "harassment" | "hate" | "violence" | "scam" | "unsafe" | "misinformation" | "other";
   "details"?: string;
 };
 export type PostUsersIdReportsQuery = {
@@ -632,8 +664,9 @@ export type GetCommunitiesIdSettingsResponse = {
 };
 
 export type PatchCommunitiesIdSettingsBody = {
-  "joinPolicy"?: string;
-  "messagePermission"?: string;
+  "joinPolicy"?: "open" | "approval" | "invite_only" | "access_code";
+  "accessCode"?: string;
+  "messagePermission"?: "everyone" | "moderators";
   "membersCanCreatePosts"?: boolean;
   "membersCanInvite"?: boolean;
   "showMemberList"?: boolean;
@@ -662,8 +695,8 @@ export type PatchCommunitiesIdSettingsResponse = {
 };
 
 export type PatchCommunitiesIdMembersUserIdBody = {
-  "role"?: string;
-  "status"?: string;
+  "role"?: "moderator" | "member";
+  "status"?: "active" | "removed";
 };
 export type PatchCommunitiesIdMembersUserIdQuery = {
 
@@ -856,7 +889,7 @@ export type PostCommunitiesIdInvitesResponse = {
 };
 
 export type PatchCommunitiesIdJoinRequestsRequestIdBody = {
-  "status": string;
+  "status": "approved" | "rejected";
   "note"?: string;
 };
 export type PatchCommunitiesIdJoinRequestsRequestIdQuery = {
@@ -918,7 +951,7 @@ export type DeleteCommunitiesIdJoinRequestsMeResponse = {
 };
 
 export type PostCommunitiesIdCallsBody = {
-  "type": string;
+  "type": "voice" | "video";
   "title"?: string;
 };
 export type PostCommunitiesIdCallsQuery = {
@@ -1082,7 +1115,7 @@ export type PutCommunitiesIdMessagesReadResponse = {
 };
 
 export type PatchCommunitiesIdNotificationPreferencesMeBody = {
-  "level": string;
+  "level": "all" | "announcements" | "mentions" | "muted";
 };
 export type PatchCommunitiesIdNotificationPreferencesMeQuery = {
 
@@ -1462,6 +1495,33 @@ export type GetEventsResponse = {
         "maxCapacity": number;
         "tags": Array<string>;
         "status": string;
+        "moderation": {
+          "provider": string;
+          "model": string;
+          "verdict": string;
+          "reviewedAt": string;
+          "reasons": Array<unknown>;
+          "checks": {
+            "content": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "image": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "pricing": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "communityGuidelines": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+          };
+        };
+        "approvedAt": string;
+        "publishedAt": string;
         "createdAt": string;
       }>;
     "sort": string;
@@ -1479,14 +1539,14 @@ export type PostEventsBody = {
   "coverImageUrl"?: string;
   "activityType": string;
   "targetAudience"?: string;
-  "setting": string;
+  "setting": "indoor" | "outdoor" | "online" | "hybrid";
   "country"?: string;
   "state": string;
   "lga": string;
   "venueName": string;
   "address": string;
   "coordinates"?: {
-    "type"?: string;
+    "type"?: "Point";
     "coordinates"?: Array<number>;
   };
   "startsAt": string;
@@ -1529,6 +1589,33 @@ export type PostEventsResponse = {
       "maxCapacity": number;
       "tags": Array<string>;
       "status": string;
+      "moderation": {
+        "provider": string;
+        "model": string;
+        "verdict": string;
+        "reviewedAt": string;
+        "reasons": Array<unknown>;
+        "checks": {
+          "content": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+          "image": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+          "pricing": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+          "communityGuidelines": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+        };
+      };
+      "approvedAt": string;
+      "publishedAt": string;
       "createdAt": string;
     };
   };
@@ -1571,6 +1658,33 @@ export type GetEventsRecommendedResponse = {
         "maxCapacity": number;
         "tags": Array<string>;
         "status": string;
+        "moderation": {
+          "provider": string;
+          "model": string;
+          "verdict": string;
+          "reviewedAt": string;
+          "reasons": Array<unknown>;
+          "checks": {
+            "content": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "image": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "pricing": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "communityGuidelines": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+          };
+        };
+        "approvedAt": string;
+        "publishedAt": string;
         "createdAt": string;
         "distanceKm": number;
         "recommendationScore": number;
@@ -1616,6 +1730,33 @@ export type GetEventsCreatedMeResponse = {
         "maxCapacity": number;
         "tags": Array<string>;
         "status": string;
+        "moderation": {
+          "provider": string;
+          "model": string;
+          "verdict": string;
+          "reviewedAt": string;
+          "reasons": Array<unknown>;
+          "checks": {
+            "content": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "image": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "pricing": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "communityGuidelines": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+          };
+        };
+        "approvedAt": string;
+        "publishedAt": string;
         "createdAt": string;
       }>;
   };
@@ -1655,6 +1796,33 @@ export type GetEventsIdResponse = {
       "maxCapacity": number;
       "tags": Array<string>;
       "status": string;
+      "moderation": {
+        "provider": string;
+        "model": string;
+        "verdict": string;
+        "reviewedAt": string;
+        "reasons": Array<unknown>;
+        "checks": {
+          "content": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+          "image": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+          "pricing": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+          "communityGuidelines": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+        };
+      };
+      "approvedAt": string;
+      "publishedAt": string;
       "createdAt": string;
     };
     "ticketTypes": Array<{
@@ -1677,6 +1845,11 @@ export type PatchEventsIdBody = {
   "startsAt"?: string;
   "endsAt"?: string;
   "maxCapacity"?: number;
+  "setting"?: "indoor" | "outdoor" | "online" | "hybrid";
+  "coordinates"?: {
+    "type": "Point";
+    "coordinates": [number, number];
+  };
 };
 export type PatchEventsIdQuery = {
 
@@ -1711,6 +1884,33 @@ export type PatchEventsIdResponse = {
       "maxCapacity": number;
       "tags": Array<string>;
       "status": string;
+      "moderation": {
+        "provider": string;
+        "model": string;
+        "verdict": string;
+        "reviewedAt": string;
+        "reasons": Array<unknown>;
+        "checks": {
+          "content": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+          "image": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+          "pricing": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+          "communityGuidelines": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+        };
+      };
+      "approvedAt": string;
+      "publishedAt": string;
       "createdAt": string;
     };
   };
@@ -1771,6 +1971,33 @@ export type PostEventsIdOrdersResponse = {
         "maxCapacity": number;
         "tags": Array<string>;
         "status": string;
+        "moderation": {
+          "provider": string;
+          "model": string;
+          "verdict": string;
+          "reviewedAt": string;
+          "reasons": Array<unknown>;
+          "checks": {
+            "content": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "image": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "pricing": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "communityGuidelines": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+          };
+        };
+        "approvedAt": string;
+        "publishedAt": string;
         "createdAt": string;
       };
       "ticketTypeId": {
@@ -1836,6 +2063,33 @@ export type PostEventsIdPublishResponse = {
       "maxCapacity": number;
       "tags": Array<string>;
       "status": string;
+      "moderation": {
+        "provider": string;
+        "model": string;
+        "verdict": string;
+        "reviewedAt": string;
+        "reasons": Array<unknown>;
+        "checks": {
+          "content": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+          "image": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+          "pricing": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+          "communityGuidelines": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+        };
+      };
+      "approvedAt": string;
+      "publishedAt": string;
       "createdAt": string;
     };
   };
@@ -1875,6 +2129,33 @@ export type PostEventsIdCancelResponse = {
       "maxCapacity": number;
       "tags": Array<string>;
       "status": string;
+      "moderation": {
+        "provider": string;
+        "model": string;
+        "verdict": string;
+        "reviewedAt": string;
+        "reasons": Array<unknown>;
+        "checks": {
+          "content": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+          "image": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+          "pricing": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+          "communityGuidelines": {
+            "acceptable": true;
+            "reasons": Array<unknown>;
+          };
+        };
+      };
+      "approvedAt": string;
+      "publishedAt": string;
       "createdAt": string;
     };
   };
@@ -2000,6 +2281,33 @@ export type GetEventsIdAttendeesResponse = {
           "maxCapacity": number;
           "tags": Array<string>;
           "status": string;
+          "moderation": {
+            "provider": string;
+            "model": string;
+            "verdict": string;
+            "reviewedAt": string;
+            "reasons": Array<unknown>;
+            "checks": {
+              "content": {
+                "acceptable": true;
+                "reasons": Array<unknown>;
+              };
+              "image": {
+                "acceptable": true;
+                "reasons": Array<unknown>;
+              };
+              "pricing": {
+                "acceptable": true;
+                "reasons": Array<unknown>;
+              };
+              "communityGuidelines": {
+                "acceptable": true;
+                "reasons": Array<unknown>;
+              };
+            };
+          };
+          "approvedAt": string;
+          "publishedAt": string;
           "createdAt": string;
         };
         "ticketTypeId": {
@@ -2083,6 +2391,33 @@ export type PostEventsIdCheckInsResponse = {
         "maxCapacity": number;
         "tags": Array<string>;
         "status": string;
+        "moderation": {
+          "provider": string;
+          "model": string;
+          "verdict": string;
+          "reviewedAt": string;
+          "reasons": Array<unknown>;
+          "checks": {
+            "content": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "image": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "pricing": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "communityGuidelines": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+          };
+        };
+        "approvedAt": string;
+        "publishedAt": string;
         "createdAt": string;
       };
       "ticketTypeId": {
@@ -2108,7 +2443,7 @@ export type PostEventsIdCheckInsResponse = {
 };
 
 export type PostEventsIdReportsBody = {
-  "reason": string;
+  "reason": "spam" | "harassment" | "hate" | "violence" | "scam" | "unsafe" | "misinformation" | "other";
   "details"?: string;
 };
 export type PostEventsIdReportsQuery = {
@@ -2185,8 +2520,8 @@ export type PostCommunitiesBody = {
   "category": string;
   "state"?: string;
   "lga"?: string;
-  "visibility"?: string;
-  "membershipType"?: string;
+  "visibility"?: "public" | "private";
+  "membershipType"?: "free" | "premium";
   "membershipPriceKobo"?: number;
 };
 export type PostCommunitiesQuery = {
@@ -2256,8 +2591,9 @@ export type GetCommunitiesIdResponse = {
 
 export type PatchCommunitiesIdBody = {
   "description"?: string;
-  "membershipType"?: string;
+  "membershipType"?: "free" | "premium";
   "membershipPriceKobo"?: number;
+  "visibility"?: "public" | "private";
 };
 export type PatchCommunitiesIdQuery = {
 
@@ -2686,7 +3022,7 @@ export type PostCommunitiesIdMessagesResponse = {
 };
 
 export type PostCommunitiesIdMessagesMessageIdReportsBody = {
-  "reason": string;
+  "reason": "spam" | "harassment" | "hate_speech" | "unsafe" | "inappropriate" | "other";
   "details"?: string;
 };
 export type PostCommunitiesIdMessagesMessageIdReportsQuery = {
@@ -2714,7 +3050,7 @@ export type PostCommunitiesIdMessagesMessageIdReportsResponse = {
 };
 
 export type PostCommunitiesIdReportsBody = {
-  "reason": string;
+  "reason": "spam" | "harassment" | "hate" | "violence" | "scam" | "unsafe" | "misinformation" | "other";
   "details"?: string;
 };
 export type PostCommunitiesIdReportsQuery = {
@@ -2922,7 +3258,7 @@ export type PostFriendsRequestsUserIdResponse = {
 };
 
 export type PatchFriendsRequestsIdBody = {
-  "action": string;
+  "action": "accept" | "decline" | "reject";
 };
 export type PatchFriendsRequestsIdQuery = {
 
@@ -3034,7 +3370,7 @@ export type GetChatConversationsResponse = {
 };
 
 export type PostChatConversationsBody = {
-  "type": string;
+  "type": "direct" | "group" | "support";
   "title"?: string;
   "participantIds": Array<string>;
 };
@@ -3124,7 +3460,7 @@ export type GetChatConversationsIdMessagesResponse = {
 
 export type PostChatConversationsIdMessagesBody = {
   "clientMessageId": string;
-  "type"?: string;
+  "type"?: "text" | "image";
   "text"?: string;
   "mediaUrl"?: string;
 };
@@ -3270,6 +3606,33 @@ export type PostAiEventRecommendationsResponse = {
         "maxCapacity": number;
         "tags": Array<string>;
         "status": string;
+        "moderation": {
+          "provider": string;
+          "model": string;
+          "verdict": string;
+          "reviewedAt": string;
+          "reasons": Array<unknown>;
+          "checks": {
+            "content": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "image": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "pricing": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "communityGuidelines": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+          };
+        };
+        "approvedAt": string;
+        "publishedAt": string;
         "createdAt": string;
         "distanceKm": number;
         "recommendationScore": number;
@@ -3370,6 +3733,33 @@ export type GetTicketsResponse = {
           "maxCapacity": number;
           "tags": Array<string>;
           "status": string;
+          "moderation": {
+            "provider": string;
+            "model": string;
+            "verdict": string;
+            "reviewedAt": string;
+            "reasons": Array<unknown>;
+            "checks": {
+              "content": {
+                "acceptable": true;
+                "reasons": Array<unknown>;
+              };
+              "image": {
+                "acceptable": true;
+                "reasons": Array<unknown>;
+              };
+              "pricing": {
+                "acceptable": true;
+                "reasons": Array<unknown>;
+              };
+              "communityGuidelines": {
+                "acceptable": true;
+                "reasons": Array<unknown>;
+              };
+            };
+          };
+          "approvedAt": string;
+          "publishedAt": string;
           "createdAt": string;
         };
         "ticketTypeId": {
@@ -3430,6 +3820,33 @@ export type GetTicketsOrderNumberResponse = {
         "maxCapacity": number;
         "tags": Array<string>;
         "status": string;
+        "moderation": {
+          "provider": string;
+          "model": string;
+          "verdict": string;
+          "reviewedAt": string;
+          "reasons": Array<unknown>;
+          "checks": {
+            "content": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "image": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "pricing": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "communityGuidelines": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+          };
+        };
+        "approvedAt": string;
+        "publishedAt": string;
         "createdAt": string;
       };
       "ticketTypeId": {
@@ -3491,6 +3908,33 @@ export type GetTicketsOrderNumberVerifyResponse = {
         "maxCapacity": number;
         "tags": Array<string>;
         "status": string;
+        "moderation": {
+          "provider": string;
+          "model": string;
+          "verdict": string;
+          "reviewedAt": string;
+          "reasons": Array<unknown>;
+          "checks": {
+            "content": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "image": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "pricing": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+            "communityGuidelines": {
+              "acceptable": true;
+              "reasons": Array<unknown>;
+            };
+          };
+        };
+        "approvedAt": string;
+        "publishedAt": string;
         "createdAt": string;
       };
       "ticketTypeId": {
@@ -3598,7 +4042,7 @@ export type PatchNotificationsIdReadResponse = {
 
 export type PostDisputesBody = {
   "transactionId"?: string;
-  "category": string;
+  "category": "payment" | "withdrawal" | "transfer" | "ticket" | "event" | "harassment" | "other";
   "subject": string;
   "description": string;
 };
@@ -3794,7 +4238,7 @@ export type PostDisputesIdMessagesResponse = {
 };
 
 export type PatchDisputesIdStatusBody = {
-  "status": string;
+  "status": "open" | "under_review" | "awaiting_user" | "resolved" | "closed";
   "resolution"?: string;
 };
 export type PatchDisputesIdStatusQuery = {
@@ -4194,7 +4638,7 @@ export type PostWalletWithdrawalsReferenceFinalizeResponse = {
 
 export type PostUploadsFilesBody = {
   "file": string;
-  "folder": string;
+  "folder": "community-chat";
 };
 export type PostUploadsFilesQuery = {
 
@@ -4349,6 +4793,16 @@ export interface ApiOperationMap {
     pathParams: PostAuthResetPasswordPath;
     headers: PostAuthResetPasswordHeaders;
     response: PostAuthResetPasswordResponse;
+  };
+  "get__locations_search": {
+    method: "GET";
+    path: "/locations/search";
+    authenticated: true;
+    body: GetLocationsSearchBody;
+    query: GetLocationsSearchQuery;
+    pathParams: GetLocationsSearchPath;
+    headers: GetLocationsSearchHeaders;
+    response: GetLocationsSearchResponse;
   };
   "get__users_me": {
     method: "GET";

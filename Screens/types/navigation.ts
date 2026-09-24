@@ -1,5 +1,6 @@
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { EventSetting } from "./events";
 
 export type CheckoutTicketSelection = {
   id: string;
@@ -24,11 +25,13 @@ export type CreateEventDraft = {
   lga: string;
   venueName: string;
   address: string;
+  latitude: string;
+  longitude: string;
   phone: string;
   capacity: string;
   activityType: string;
   audience: string;
-  setting: "Indoor" | "Outdoor";
+  setting: EventSetting;
   startDate: string;
   startTime: string;
   endDate: string;
@@ -63,11 +66,12 @@ export type RootStackParamList = {
   EditCommunity: { communityId: string };
   CreateCommunity: undefined;
   MyEvents: undefined;
-  MyCreatedEvents: undefined;
+  MyCreatedEvents: { initialStatus?: "draft" } | undefined;
   ManageCreatedEvent: { eventId?: string } | undefined;
   EditTicketType: { eventId: string; ticketTypeId: string };
   CreateEventIntroduction: undefined;
   CreateEventDetails: { draft?: Partial<CreateEventDraft> } | undefined;
+  CreateEventLocationPicker: { draft: Partial<CreateEventDraft> };
   CreateEventDateTime: { draft: CreateEventDraft };
   CreateEventTickets: { draft: CreateEventDraft };
   CreateEventReview: { draft: CreateEventDraft };

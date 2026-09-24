@@ -1,7 +1,8 @@
 ﻿import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { ComponentProps } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   ImageBackground,
@@ -14,25 +15,23 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppAlertModal from "../../components/ui/app-alert-modal";
+import AiValidationModal from "../../components/ui/ai-validation-modal";
 import ProfilePageHeader from "../../components/ui/profile-page-header";
 import { ApiError } from "../../services/api/client";
 import { eventsApi } from "../../services/api/events.api";
 import { colors, fonts } from "../../styles/theme";
+import {
+  EVENT_STATUS_VALUES,
+  parseEventStatus,
+  type EventStatus,
+  type ParsedEventStatus,
+} from "../../types/events";
 import type { RootStackParamList } from "../../types/navigation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "MyCreatedEvents">;
 type IconName = ComponentProps<typeof Ionicons>["name"];
-const EVENT_STATUSES = [
-  "draft",
-  "pending_approval",
-  "published",
-  "rejected",
-  "deactivated",
-  "cancelled",
-  "completed",
-] as const;
-type EventStatus = (typeof EVENT_STATUSES)[number];
-type DisplayStatus = EventStatus | "unknown";
+const EVENT_STATUSES = EVENT_STATUS_VALUES;
+type DisplayStatus = ParsedEventStatus;
 type StatusFilter = "all" | EventStatus;
 
 type CreatedCard = {
@@ -126,12 +125,6 @@ const STATUS_META: Record<DisplayStatus, StatusMeta> = {
 
 const STATUS_FILTERS: StatusFilter[] = ["all", ...EVENT_STATUSES];
 
-const isEventStatus = (value: string): value is EventStatus =>
-  (EVENT_STATUSES as readonly string[]).includes(value);
-
-const getStatus = (value: string): DisplayStatus =>
-  isEventStatus(value) ? value : "unknown";
-
 const formatEventDate = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Date to be confirmed";
@@ -163,48 +156,71 @@ const getAction = (status: DisplayStatus) => {
   }
 };
 
-export default function MyCreatedEventsScreen({ navigation }: Props) {
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+export default function MyCreatedEventsScreen({ navigation, route }: Props) {
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
+    route.params?.initialStatus ?? "all",
+  );
   const [q, setQ] = useState("");
   const [createdEvents, setCreatedEvents] = useState<CreatedCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [publishingEventId, setPublishingEventId] = useState<string | null>(
+    null,
+  );
   const [notice, setNotice] = useState<{
     title: string;
     message: string;
   } | null>(null);
   useEffect(() => {
-    const controller = new AbortController();
-    eventsApi
-      .createdByMe(controller.signal)
-      .then((response) => {
+    if (!route.params?.initialStatus) return;
+    setStatusFilter(route.params.initialStatus);
+    setQ("");
+    navigation.setParams({ initialStatus: undefined });
+  }, [navigation, route.params?.initialStatus]);
+
+  const loadCreatedEvents = useCallback(
+    async (signal?: AbortSignal, showError = true) => {
+      setLoading(true);
+      try {
+        const response = await eventsApi.createdByMe(signal);
         setCreatedEvents(
           response.data.events.map((event, index) => ({
             id: event._id,
             title: event.title,
             meta:
-              getStatus(event.status) === "draft"
+              parseEventStatus(event.status) === "draft"
                 ? `Draft saved on ${new Date(event.createdAt).toLocaleDateString()}`
                 : formatEventDate(event.startsAt),
             image:
               event.coverImageUrl || (index % 2 ? images.run : images.garden),
-            status: getStatus(event.status),
+            status: parseEventStatus(event.status),
           })),
         );
-      })
-      .catch((error: unknown) => {
+      } catch (error: unknown) {
         if (error instanceof ApiError && error.code === "REQUEST_CANCELLED")
           return;
-        setNotice({
-          title: "Events unavailable",
-          message:
-            error instanceof ApiError
-              ? error.message
-              : "Unable to load your created events.",
-        });
-      })
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, []);
+        if (showError) {
+          setNotice({
+            title: "Events unavailable",
+            message:
+              error instanceof ApiError
+                ? error.message
+                : "Unable to load your created events.",
+          });
+        }
+      } finally {
+        if (!signal?.aborted) setLoading(false);
+      }
+    },
+    [],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      const controller = new AbortController();
+      void loadCreatedEvents(controller.signal);
+      return () => controller.abort();
+    }, [loadCreatedEvents]),
+  );
   const shown = useMemo(
     () =>
       createdEvents.filter(
@@ -234,6 +250,69 @@ export default function MyCreatedEventsScreen({ navigation }: Props) {
   }, [createdEvents]);
   const selectedStatusMeta =
     statusFilter === "all" ? undefined : STATUS_META[statusFilter];
+
+  const publishEventForReview = async (eventId: string) => {
+    if (publishingEventId) return;
+    setPublishingEventId(eventId);
+    try {
+      const response = await eventsApi.publish(eventId);
+      const status = parseEventStatus(response.data.event.status);
+      setCreatedEvents((current) =>
+        current.map((event) =>
+          event.id === eventId
+            ? {
+                ...event,
+                meta:
+                  status === "draft"
+                    ? event.meta
+                    : formatEventDate(response.data.event.startsAt),
+                status,
+              }
+            : event,
+        ),
+      );
+      await loadCreatedEvents(undefined, false);
+      setNotice({
+        title:
+          status === "published"
+            ? "Event published"
+            : status === "rejected"
+              ? "AI review needs attention"
+              : "Event review updated",
+        message: response.message,
+      });
+    } catch (error) {
+      const reason =
+        error instanceof ApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "The publish check could not be completed.";
+      const aiReviewFailed =
+        error instanceof ApiError &&
+        /\b(ai|moderation|moderate|flagged|content policy|safety review)\b/i.test(
+          `${error.code} ${error.message}`,
+        );
+
+      await loadCreatedEvents(undefined, false);
+      const reviewAlreadyRunning =
+        error instanceof ApiError && error.code === "EVENT_NOT_SUBMITTABLE";
+      setNotice({
+        title: reviewAlreadyRunning
+          ? "AI review already in progress"
+          : aiReviewFailed
+            ? "AI review needs attention"
+            : "Unable to publish",
+        message: reviewAlreadyRunning
+          ? "This event is already being reviewed or its status changed. Refresh the event list and try again if it is still pending."
+          : aiReviewFailed
+            ? `Our AI review flagged this event: ${reason}. Update the draft and try again.`
+            : `We couldn't submit this event for approval. Reason: ${reason}. Review its status in My Created Events.`,
+      });
+    } finally {
+      setPublishingEventId(null);
+    }
+  };
 
   return (
     <>
@@ -375,18 +454,79 @@ export default function MyCreatedEventsScreen({ navigation }: Props) {
                       </Text>
                     </View>
                   </View>
-                  <Pressable
-                    accessibilityLabel={`${action.label} for ${x.title}`}
-                    onPress={() =>
-                      navigation.navigate("ManageCreatedEvent", {
-                        eventId: x.id,
-                      })
-                    }
-                    style={s.manage}
-                  >
-                    <Text style={s.manageText}>{action.label}</Text>
-                    <Ionicons name={action.icon} size={19} color={colors.ink} />
-                  </Pressable>
+                  {x.status === "draft" || x.status === "pending_approval" ? (
+                    <View style={s.draftActions}>
+                      <Pressable
+                        accessibilityLabel={
+                          x.status === "draft"
+                            ? `Submit ${x.title} for approval`
+                            : `Validate and publish ${x.title}`
+                        }
+                        disabled={publishingEventId !== null}
+                        onPress={() => void publishEventForReview(x.id)}
+                        style={[
+                          s.publishDraft,
+                          publishingEventId !== null && s.disabledAction,
+                        ]}
+                      >
+                        {publishingEventId === x.id ? (
+                          <ActivityIndicator color="#fff" size="small" />
+                        ) : (
+                          <Ionicons
+                            name={
+                              x.status === "draft"
+                                ? "cloud-upload-outline"
+                                : "sparkles"
+                            }
+                            size={18}
+                            color="#fff"
+                          />
+                        )}
+                        <Text style={s.publishDraftText}>
+                          {publishingEventId === x.id
+                            ? x.status === "pending_approval"
+                              ? "Validating..."
+                              : "Submitting..."
+                            : x.status === "draft"
+                              ? "Submit for approval"
+                              : "Validate & publish"}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        accessibilityLabel={`${action.label} for ${x.title}`}
+                        onPress={() =>
+                          navigation.navigate("ManageCreatedEvent", {
+                            eventId: x.id,
+                          })
+                        }
+                        style={[s.manage, s.manageSecondary]}
+                      >
+                        <Text style={s.manageText}>{action.label}</Text>
+                        <Ionicons
+                          name={action.icon}
+                          size={19}
+                          color={colors.ink}
+                        />
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <Pressable
+                      accessibilityLabel={`${action.label} for ${x.title}`}
+                      onPress={() =>
+                        navigation.navigate("ManageCreatedEvent", {
+                          eventId: x.id,
+                        })
+                      }
+                      style={s.manage}
+                    >
+                      <Text style={s.manageText}>{action.label}</Text>
+                      <Ionicons
+                        name={action.icon}
+                        size={19}
+                        color={colors.ink}
+                      />
+                    </Pressable>
+                  )}
                 </View>
               </View>
             );
@@ -433,6 +573,7 @@ export default function MyCreatedEventsScreen({ navigation }: Props) {
         message={notice?.message ?? ""}
         onClose={() => setNotice(null)}
       />
+      <AiValidationModal visible={publishingEventId !== null} />
     </>
   );
 }
@@ -591,6 +732,22 @@ const s = StyleSheet.create({
     lineHeight: 17,
     marginTop: 2,
   },
+  draftActions: { gap: 8, marginTop: 14 },
+  publishDraft: {
+    alignItems: "center",
+    backgroundColor: "#0d4933",
+    borderRadius: 18,
+    flexDirection: "row",
+    gap: 9,
+    justifyContent: "center",
+    minHeight: 48,
+    paddingHorizontal: 16,
+  },
+  publishDraftText: {
+    color: "#fff",
+    fontFamily: fonts.bold,
+    fontSize: 13,
+  },
   manage: {
     alignItems: "center",
     backgroundColor: colors.lime,
@@ -602,6 +759,13 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 13,
   },
+  manageSecondary: {
+    backgroundColor: "#f3faf6",
+    borderColor: "#dcece3",
+    borderWidth: 1,
+    marginTop: 0,
+  },
+  disabledAction: { opacity: 0.55 },
   manageText: { color: colors.ink, fontFamily: fonts.bold, fontSize: 14 },
   loadingState: { alignItems: "center", marginTop: 42 },
   emptyState: { alignItems: "center", marginTop: 52, paddingHorizontal: 20 },

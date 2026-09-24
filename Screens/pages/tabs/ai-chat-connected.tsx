@@ -106,7 +106,7 @@ export default function AIChatConnectedScreen({ navigation, route }: Props) {
   return (
     <>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.safe}
       >
         <SafeAreaView edges={["top"]} style={styles.headerSafe}>

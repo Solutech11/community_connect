@@ -23,7 +23,8 @@ export function toGeneralReportReason(reason: ReportReason) {
 }
 
 export function toCommunityReportReason(reason: ReportReason) {
-  return reason === "Inappropriate Content"
-    ? "inappropriate"
-    : toGeneralReportReason(reason);
+  // `inappropriate` is a stored moderation reason, but it is not accepted by
+  // the community report request contract. Keep the user-facing choice while
+  // submitting it through the supported `other` request value.
+  return toGeneralReportReason(reason);
 }

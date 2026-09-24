@@ -1,9 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  ImageBackground,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -14,24 +17,91 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
+import AppSelectSheet from "../../components/ui/app-select-sheet";
 import KeyboardAwareScrollView from "../../components/ui/keyboard-aware-scroll-view";
 import ProfilePageHeader from "../../components/ui/profile-page-header";
 import { ApiError } from "../../services/api/client";
 import { eventsApi } from "../../services/api/events.api";
+import { uploadsApi } from "../../services/api/uploads.api";
 import { colors, fonts } from "../../styles/theme";
+import type { ImageUpload } from "../../types/api";
 import type {
   GetEventsIdAttendeesResponse,
   GetEventsIdResponse,
 } from "../../types/api.generated";
+import {
+  EVENT_SETTING_VALUES,
+  isEventSetting,
+  normalizeEventSetting,
+  type EventSetting,
+} from "../../types/events";
 import type { RootStackParamList } from "../../types/navigation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ManageCreatedEvent">;
-type Event = GetEventsIdResponse["data"]["event"];
+type ModerationCheck = { acceptable?: boolean; reasons?: unknown[] };
+type EventModeration = {
+  verdict?: string;
+  reviewedAt?: string;
+  reasons?: unknown[];
+  checks?: Partial<
+    Record<
+      "content" | "image" | "pricing" | "communityGuidelines",
+      ModerationCheck
+    >
+  >;
+};
+type Event = Omit<GetEventsIdResponse["data"]["event"], "moderation"> & {
+  moderation?: EventModeration;
+};
 type TicketType = GetEventsIdResponse["data"]["ticketTypes"][number];
 type Attendee = GetEventsIdAttendeesResponse["data"]["attendees"][number];
 
 const AVATAR =
   "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&q=85";
+const DEFAULT_EVENT_COVER =
+  "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1400&q=88";
+const STATUS_TONES: Record<
+  string,
+  { label: string; background: string; foreground: string }
+> = {
+  draft: { label: "Draft", background: "#eef2f0", foreground: "#53625a" },
+  pending_approval: {
+    label: "Pending review",
+    background: "#fff3d7",
+    foreground: "#986813",
+  },
+  published: {
+    label: "Published",
+    background: "#def6e8",
+    foreground: "#087b3d",
+  },
+  rejected: {
+    label: "Rejected",
+    background: "#fde6e8",
+    foreground: "#b42335",
+  },
+  deactivated: {
+    label: "Deactivated",
+    background: "#f3e8ea",
+    foreground: "#8f3947",
+  },
+  cancelled: {
+    label: "Cancelled",
+    background: "#f3e8ea",
+    foreground: "#8f3947",
+  },
+  completed: {
+    label: "Completed",
+    background: "#e6effb",
+    foreground: "#315e99",
+  },
+};
+const MODERATION_RULES = [
+  ["content", "Event content"],
+  ["image", "Cover image"],
+  ["pricing", "Ticket pricing"],
+  ["communityGuidelines", "Community guidelines"],
+] as const;
 const money = (kobo: number) =>
   new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(
     kobo / 100,
@@ -50,6 +120,8 @@ export default function ManageCreatedEventConnectedScreen({
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
   const [capacity, setCapacity] = useState("");
+  const [setting, setSetting] = useState<EventSetting>("indoor");
+  const [settingPickerOpen, setSettingPickerOpen] = useState(false);
   const [ticketTitle, setTicketTitle] = useState("");
   const [ticketPrice, setTicketPrice] = useState("");
   const [ticketCapacity, setTicketCapacity] = useState("");
@@ -57,6 +129,13 @@ export default function ManageCreatedEventConnectedScreen({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [savingDetails, setSavingDetails] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [publishCooldownUntil, setPublishCooldownUntil] = useState<number | null>(
+    null,
+  );
+  const [publishCooldownSeconds, setPublishCooldownSeconds] = useState(0);
   const [notice, setNotice] = useState<{
     title: string;
     message: string;
@@ -92,6 +171,7 @@ export default function ManageCreatedEventConnectedScreen({
         setStartsAt(nextEvent.startsAt);
         setEndsAt(nextEvent.endsAt);
         setCapacity(String(nextEvent.maxCapacity));
+        setSetting(normalizeEventSetting(nextEvent.setting));
       } catch (error) {
         setNotice({
           title: "Management unavailable",
@@ -107,9 +187,44 @@ export default function ManageCreatedEventConnectedScreen({
     },
     [eventId],
   );
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
+
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (publishCooldownUntil === null) return;
+
+    const updateRemaining = () => {
+      const remaining = Math.max(
+        0,
+        Math.ceil((publishCooldownUntil - Date.now()) / 1000),
+      );
+      setPublishCooldownSeconds(remaining);
+      if (remaining === 0) setPublishCooldownUntil(null);
+    };
+
+    updateRemaining();
+    const timer = setInterval(updateRemaining, 1000);
+    return () => clearInterval(timer);
+  }, [publishCooldownUntil]);
+
+  useEffect(() => {
+    setPublishCooldownUntil(null);
+    setPublishCooldownSeconds(0);
+  }, [eventId]);
+
+  const canEditEvent =
+    event?.status === "draft" || event?.status === "rejected";
+  const isRepublish = event?.status === "rejected";
+  const publishActionLabel = isRepublish ? "Republish" : "Submit";
+  const publishingProgressLabel = isRepublish
+    ? "Republishing..."
+    : "Submitting...";
+  const publishCooldownLabel = isRepublish
+    ? `Republish in ${publishCooldownSeconds}s`
+    : `Submit again in ${publishCooldownSeconds}s`;
 
   const act = async (action: () => Promise<unknown>, success: string) => {
     if (submitting) return;
@@ -131,7 +246,32 @@ export default function ManageCreatedEventConnectedScreen({
     }
   };
 
-  const saveDetails = () => {
+  const submitEvent = async () => {
+    if (
+      !eventId ||
+      submitting ||
+      publishing ||
+      publishCooldownSeconds > 0
+    ) {
+      return;
+    }
+    setPublishCooldownUntil(Date.now() + 60_000);
+    setPublishCooldownSeconds(60);
+    setPublishing(true);
+    try {
+      const wasRejected = event?.status === "rejected";
+      await act(
+        () => eventsApi.publish(eventId),
+        wasRejected
+          ? "Event republished for moderation."
+          : "Event submitted for approval.",
+      );
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const saveDetails = async () => {
     const maxCapacity = Number(capacity);
     const parsedStart = new Date(startsAt);
     const parsedEnd = new Date(endsAt);
@@ -152,17 +292,60 @@ export default function ManageCreatedEventConnectedScreen({
       });
       return;
     }
-    void act(
-      () =>
-        eventsApi.updateDraft(eventId, {
-          title: title.trim(),
-          description: description.trim(),
-          startsAt: parsedStart.toISOString(),
-          endsAt: parsedEnd.toISOString(),
-          maxCapacity,
-        }),
-      "Event details saved.",
-    );
+    setSavingDetails(true);
+    try {
+      await act(
+        () =>
+          eventsApi.updateDraft(eventId, {
+            title: title.trim(),
+            description: description.trim(),
+            startsAt: parsedStart.toISOString(),
+            endsAt: parsedEnd.toISOString(),
+            maxCapacity,
+            setting,
+          }),
+        "Event details saved.",
+      );
+    } finally {
+      setSavingDetails(false);
+    }
+  };
+
+  const changeCoverImage = async () => {
+    if (!eventId || !canEditEvent || submitting || uploadingCover) return;
+    setUploadingCover(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [16, 9],
+        mediaTypes: ["images"],
+        quality: 0.85,
+      });
+      if (result.canceled || !result.assets[0]) return;
+
+      const asset = result.assets[0];
+      const image: ImageUpload = {
+        uri: asset.uri,
+        name: asset.fileName ?? `event-cover-${Date.now()}.jpg`,
+        type: asset.mimeType ?? "image/jpeg",
+      };
+      await act(async () => {
+        const uploaded = await uploadsApi.image(image, "events");
+        await eventsApi.updateDraft(eventId, {
+          coverImageUrl: uploaded.data.url,
+        });
+      }, "Event cover image updated.");
+    } catch (error) {
+      setNotice({
+        title: "Image update failed",
+        message:
+          error instanceof ApiError
+            ? error.message
+            : "Unable to choose an event cover image.",
+      });
+    } finally {
+      setUploadingCover(false);
+    }
   };
 
   const addTicket = () => {
@@ -229,13 +412,89 @@ export default function ManageCreatedEventConnectedScreen({
           ) : null}
           {event ? (
             <>
-              <View style={styles.hero}>
-                <Text style={styles.status}>{event.status}</Text>
-                <Text style={styles.heroTitle}>{event.title}</Text>
-                <Text style={styles.heroMeta}>
+              <ImageBackground
+                accessibilityLabel={`${event.title} cover image`}
+                imageStyle={styles.heroImage}
+                source={{ uri: event.coverImageUrl || DEFAULT_EVENT_COVER }}
+                style={styles.hero}
+              >
+                <View style={styles.heroShade} />
+                {canEditEvent ? (
+                  <Pressable
+                    accessibilityLabel="Edit event image"
+                    accessibilityRole="button"
+                    accessibilityState={{
+                      busy: uploadingCover,
+                      disabled: submitting || uploadingCover,
+                    }}
+                    android_ripple={{ color: "#d6f0df" }}
+                    disabled={submitting || uploadingCover}
+                    onPress={() => void changeCoverImage()}
+                    style={({ pressed }) => [
+                      styles.coverEdit,
+                      pressed && !uploadingCover && styles.actionPressed,
+                      (submitting || uploadingCover) && styles.actionDisabled,
+                    ]}
+                  >
+                    {uploadingCover ? (
+                      <ActivityIndicator color="#087b3d" size="small" />
+                    ) : (
+                      <Ionicons
+                        color="#087b3d"
+                        name="camera-outline"
+                        size={16}
+                      />
+                    )}
+                    <Text style={styles.coverEditText}>
+                      {uploadingCover ? "Saving image..." : "Edit image"}
+                    </Text>
+                  </Pressable>
+                ) : null}
+                <View
+                  style={[
+                    styles.statusPill,
+                    {
+                      backgroundColor:
+                        STATUS_TONES[event.status]?.background ?? "#eef2f0",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusText,
+                      {
+                        color:
+                          STATUS_TONES[event.status]?.foreground ?? "#53625a",
+                      },
+                    ]}
+                  >
+                    {STATUS_TONES[event.status]?.label ??
+                      event.status.replace(/_/g, " ")}
+                  </Text>
+                </View>
+                <Text numberOfLines={2} style={styles.heroTitle}>
+                  {event.title}
+                </Text>
+                <Text numberOfLines={2} style={styles.heroMeta}>
                   {event.venueName}, {event.address}
                 </Text>
-              </View>
+              </ImageBackground>
+              {event.moderation?.verdict ? (
+                <ModerationVerdictCard moderation={event.moderation} />
+              ) : event.status === "pending_approval" ? (
+                <View style={[styles.verdictCard, styles.verdictPending]}>
+                  <Ionicons color="#986813" name="time-outline" size={22} />
+                  <View style={styles.verdictCopy}>
+                    <Text style={[styles.verdictTitle, styles.pendingTitle]}>
+                      Review pending
+                    </Text>
+                    <Text style={[styles.verdictMessage, styles.pendingMessage]}>
+                      This event is waiting for moderation. The current API does
+                      not allow changes while review is in progress.
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
               <View style={styles.stats}>
                 <Stat label="Guests" value={String(totalGuests)} />
                 <Stat label="Capacity" value={String(event.maxCapacity)} />
@@ -243,35 +502,82 @@ export default function ManageCreatedEventConnectedScreen({
               </View>
               <View style={styles.actions}>
                 <Pressable
+                  accessibilityLabel="Scan event tickets"
+                  accessibilityRole="button"
+                  android_ripple={{ color: "#cdebd8" }}
                   onPress={() =>
                     navigation.navigate("TicketScanner", { eventId })
                   }
-                  style={styles.action}
+                  style={({ pressed }) => [
+                    styles.action,
+                    styles.scanAction,
+                    pressed && styles.actionPressed,
+                  ]}
                 >
                   <Ionicons
-                    color={colors.ink}
+                    color="#078d45"
                     name="qr-code-outline"
-                    size={22}
+                    size={20}
                   />
-                  <Text style={styles.actionText}>Scan</Text>
+                  <Text style={[styles.actionText, styles.scanActionText]}>
+                    Scan tickets
+                  </Text>
+                  <Ionicons color="#078d45" name="chevron-forward" size={16} />
                 </Pressable>
                 {event.status === "draft" || event.status === "rejected" ? (
                   <Pressable
-                    disabled={submitting}
-                    onPress={() =>
-                      void act(
-                        () => eventsApi.publish(eventId!),
-                        "Event submitted for approval.",
-                      )
+                    accessibilityLabel={
+                      publishing
+                        ? isRepublish
+                          ? "Republishing event"
+                          : "Submitting event"
+                        : isRepublish
+                          ? "Republish event"
+                          : "Submit event for review"
                     }
-                    style={styles.action}
+                    accessibilityRole="button"
+                    accessibilityState={{
+                      busy: publishing,
+                      disabled:
+                        submitting ||
+                        publishing ||
+                        publishCooldownSeconds > 0,
+                    }}
+                    android_ripple={{ color: "#9cdfb5" }}
+                    disabled={
+                      submitting ||
+                      publishing ||
+                      publishCooldownSeconds > 0
+                    }
+                    onPress={() => void submitEvent()}
+                    style={({ pressed }) => [
+                      styles.action,
+                      styles.submitAction,
+                      pressed && !publishing && styles.actionPressed,
+                      submitting && styles.actionDisabled,
+                      publishing && styles.actionDisabled,
+                      publishCooldownSeconds > 0 && styles.actionDisabled,
+                    ]}
                   >
-                    <Ionicons
-                      color={colors.ink}
-                      name="cloud-upload-outline"
-                      size={22}
-                    />
-                    <Text style={styles.actionText}>Submit</Text>
+                    {publishing ? (
+                      <ActivityIndicator color={colors.ink} size="small" />
+                    ) : (
+                      <Ionicons
+                        color={colors.ink}
+                        name="cloud-upload-outline"
+                        size={20}
+                      />
+                    )}
+                    <Text style={[styles.actionText, styles.submitActionText]}>
+                      {publishing
+                        ? publishingProgressLabel
+                        : publishCooldownSeconds > 0
+                          ? publishCooldownLabel
+                          : publishActionLabel}
+                    </Text>
+                    {!publishing && publishCooldownSeconds === 0 ? (
+                      <Ionicons color={colors.ink} name="arrow-forward" size={16} />
+                    ) : null}
                   </Pressable>
                 ) : null}
                 {event.status === "published" ? (
@@ -321,7 +627,7 @@ export default function ManageCreatedEventConnectedScreen({
 
               <Section title="Event details">
                 <TextInput
-                  editable={event.status === "draft"}
+                  editable={canEditEvent}
                   onChangeText={setTitle}
                   placeholder="Title"
                   placeholderTextColor={colors.muted}
@@ -329,7 +635,7 @@ export default function ManageCreatedEventConnectedScreen({
                   value={title}
                 />
                 <TextInput
-                  editable={event.status === "draft"}
+                  editable={canEditEvent}
                   multiline
                   onChangeText={setDescription}
                   placeholder="Description"
@@ -339,7 +645,7 @@ export default function ManageCreatedEventConnectedScreen({
                 />
                 <TextInput
                   autoCapitalize="none"
-                  editable={event.status === "draft"}
+                  editable={canEditEvent}
                   onChangeText={setStartsAt}
                   placeholder="Start time (ISO 8601)"
                   placeholderTextColor={colors.muted}
@@ -348,7 +654,7 @@ export default function ManageCreatedEventConnectedScreen({
                 />
                 <TextInput
                   autoCapitalize="none"
-                  editable={event.status === "draft"}
+                  editable={canEditEvent}
                   onChangeText={setEndsAt}
                   placeholder="End time (ISO 8601)"
                   placeholderTextColor={colors.muted}
@@ -356,7 +662,7 @@ export default function ManageCreatedEventConnectedScreen({
                   value={endsAt}
                 />
                 <TextInput
-                  editable={event.status === "draft"}
+                  editable={canEditEvent}
                   keyboardType="number-pad"
                   onChangeText={setCapacity}
                   placeholder="Capacity"
@@ -364,25 +670,57 @@ export default function ManageCreatedEventConnectedScreen({
                   style={styles.input}
                   value={capacity}
                 />
-                {event.status === "draft" ? (
+                <Text style={styles.fieldLabel}>Setting</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={!canEditEvent}
+                  onPress={() => setSettingPickerOpen(true)}
+                  style={[
+                    styles.settingPicker,
+                    !canEditEvent && styles.readOnly,
+                  ]}
+                >
+                  <Text style={styles.settingValue}>{setting}</Text>
+                  {canEditEvent ? (
+                    <Ionicons color="#668071" name="chevron-down" size={18} />
+                  ) : null}
+                </Pressable>
+                {canEditEvent ? (
                   <Pressable
-                    disabled={submitting}
-                    onPress={saveDetails}
-                    style={styles.primary}
+                    accessibilityLabel="Save event details"
+                    accessibilityRole="button"
+                    accessibilityState={{
+                      busy: savingDetails,
+                      disabled: submitting || savingDetails,
+                    }}
+                    disabled={submitting || savingDetails}
+                    onPress={() => void saveDetails()}
+                    style={[
+                      styles.primary,
+                      (submitting || savingDetails) && styles.actionDisabled,
+                    ]}
                   >
-                    <Text style={styles.primaryText}>Save details</Text>
+                    {savingDetails ? (
+                      <ActivityIndicator color={colors.ink} size="small" />
+                    ) : (
+                      <Text style={styles.primaryText}>Save details</Text>
+                    )}
                   </Pressable>
                 ) : (
                   <Text style={styles.meta}>
-                    Only draft events can be edited.
+                    {event.status === "pending_approval"
+                      ? "Events cannot be edited while moderation is in progress."
+                      : "Only draft or rejected events can be edited."}
                   </Text>
                 )}
               </Section>
 
               <Section title="Ticket tiers">
-                {event.status !== "draft" ? (
+                {!canEditEvent ? (
                   <Text style={styles.meta}>
-                    Ticket tiers can only be changed while the event is a draft.
+                    {event.status === "pending_approval"
+                      ? "Ticket tiers cannot be changed while moderation is in progress."
+                      : "Ticket tiers can only be changed on draft or rejected events."}
                   </Text>
                 ) : null}
                 {ticketTypes.map((ticket) => (
@@ -396,9 +734,9 @@ export default function ManageCreatedEventConnectedScreen({
                     </View>
                     <Pressable
                       accessibilityState={{
-                        disabled: event.status !== "draft",
+                        disabled: !canEditEvent,
                       }}
-                      disabled={event.status !== "draft"}
+                      disabled={!canEditEvent}
                       onPress={() =>
                         navigation.navigate("EditTicketType", {
                           eventId: eventId!,
@@ -407,7 +745,7 @@ export default function ManageCreatedEventConnectedScreen({
                       }
                       style={[
                         styles.editTicket,
-                        event.status !== "draft" && styles.disabledAction,
+                        !canEditEvent && styles.disabledAction,
                       ]}
                     >
                       <Ionicons
@@ -418,9 +756,9 @@ export default function ManageCreatedEventConnectedScreen({
                     </Pressable>
                     <Pressable
                       accessibilityState={{
-                        disabled: event.status !== "draft",
+                        disabled: !canEditEvent,
                       }}
-                      disabled={event.status !== "draft"}
+                      disabled={!canEditEvent}
                       onPress={() =>
                         setConfirm({
                           title: "Remove ticket tier?",
@@ -440,7 +778,7 @@ export default function ManageCreatedEventConnectedScreen({
                       }
                       style={[
                         styles.delete,
-                        event.status !== "draft" && styles.disabledAction,
+                        !canEditEvent && styles.disabledAction,
                       ]}
                     >
                       <Ionicons
@@ -452,7 +790,7 @@ export default function ManageCreatedEventConnectedScreen({
                   </View>
                 ))}
                 <TextInput
-                  editable={event.status === "draft"}
+                  editable={canEditEvent}
                   onChangeText={setTicketTitle}
                   placeholder="Ticket title"
                   placeholderTextColor={colors.muted}
@@ -461,7 +799,7 @@ export default function ManageCreatedEventConnectedScreen({
                 />
                 <View style={styles.row}>
                   <TextInput
-                    editable={event.status === "draft"}
+                    editable={canEditEvent}
                     keyboardType="decimal-pad"
                     onChangeText={setTicketPrice}
                     placeholder="Price NGN"
@@ -470,7 +808,7 @@ export default function ManageCreatedEventConnectedScreen({
                     value={ticketPrice}
                   />
                   <TextInput
-                    editable={event.status === "draft"}
+                    editable={canEditEvent}
                     keyboardType="number-pad"
                     onChangeText={setTicketCapacity}
                     placeholder="Capacity"
@@ -480,11 +818,11 @@ export default function ManageCreatedEventConnectedScreen({
                   />
                 </View>
                 <Pressable
-                  disabled={submitting || event.status !== "draft"}
+                  disabled={submitting || !canEditEvent}
                   onPress={addTicket}
                   style={[
                     styles.secondary,
-                    event.status !== "draft" && styles.disabledAction,
+                    !canEditEvent && styles.disabledAction,
                   ]}
                 >
                   <Text style={styles.secondaryText}>Add ticket tier</Text>
@@ -540,7 +878,126 @@ export default function ManageCreatedEventConnectedScreen({
           if (action) void action();
         }}
       />
+      <AppSelectSheet
+        onClose={() => setSettingPickerOpen(false)}
+        onSelect={(value) => {
+          if (isEventSetting(value)) setSetting(value);
+        }}
+        options={[...EVENT_SETTING_VALUES]}
+        title="Event setting"
+        value={setting}
+        visible={settingPickerOpen}
+      />
     </>
+  );
+}
+
+function ModerationVerdictCard({ moderation }: { moderation: EventModeration }) {
+  const rejected = moderation.verdict === "rejected";
+  const failedRules = MODERATION_RULES.flatMap(([key, label]) => {
+    const check = moderation.checks?.[key];
+    if (check?.acceptable !== false) return [];
+    return [{ label, reasons: moderationReasons(check.reasons) }];
+  });
+  const failedReasonSet = new Set(
+    failedRules.flatMap((rule) =>
+      rule.reasons.map((reason) => reason.toLowerCase()),
+    ),
+  );
+  const overallReasons = moderationReasons(moderation.reasons).filter(
+    (reason) => !failedReasonSet.has(reason.toLowerCase()),
+  );
+
+  if (rejected) {
+    return (
+      <View style={[styles.verdictCard, styles.verdictRejected]}>
+        <Ionicons color="#b42335" name="alert-circle" size={22} />
+        <View style={styles.verdictCopy}>
+          <Text style={[styles.verdictTitle, styles.rejectedTitle]}>
+            Moderation rejected this event
+          </Text>
+          <Text style={[styles.verdictMessage, styles.rejectedMessage]}>
+            Review the failed rules and update the event before submitting it
+            again.
+          </Text>
+          {failedRules.length ? (
+            <View style={styles.ruleList}>
+              <Text style={[styles.ruleHeading, styles.rejectedTitle]}>
+                Rules to fix
+              </Text>
+              {failedRules.map((rule) => (
+                <View key={rule.label} style={styles.ruleItem}>
+                  <Text style={[styles.ruleName, styles.rejectedTitle]}>
+                    {rule.label}
+                  </Text>
+                  {rule.reasons.length ? (
+                    rule.reasons.map((reason, index) => (
+                      <Text
+                        key={`${rule.label}-${index}`}
+                        style={[styles.ruleReason, styles.rejectedMessage]}
+                      >
+                        {reason}
+                      </Text>
+                    ))
+                  ) : (
+                    <Text style={[styles.ruleReason, styles.rejectedMessage]}>
+                      The reviewer did not provide a specific reason.
+                    </Text>
+                  )}
+                </View>
+              ))}
+            </View>
+          ) : null}
+          {overallReasons.length ? (
+            <View style={styles.ruleList}>
+              <Text style={[styles.ruleHeading, styles.rejectedTitle]}>
+                {failedRules.length
+                  ? "Additional reviewer notes"
+                  : "Review reasons"}
+              </Text>
+              {overallReasons.map((reason, index) => (
+                <Text
+                  key={`overall-${index}`}
+                  style={[styles.ruleReason, styles.rejectedMessage]}
+                >
+                  {reason}
+                </Text>
+              ))}
+            </View>
+          ) : null}
+          {!failedRules.length && !overallReasons.length ? (
+            <Text style={[styles.ruleReason, styles.rejectedMessage]}>
+              The moderation service did not return rule details.
+            </Text>
+          ) : null}
+        </View>
+      </View>
+    );
+  }
+
+  if (moderation.verdict === "approved") {
+    return (
+      <View style={[styles.verdictCard, styles.verdictApproved]}>
+        <Ionicons color="#087b3d" name="checkmark-circle" size={22} />
+        <View style={styles.verdictCopy}>
+          <Text style={[styles.verdictTitle, styles.approvedTitle]}>
+            Moderation passed
+          </Text>
+          <Text style={[styles.verdictMessage, styles.approvedMessage]}>
+            This event passed the moderation checks.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  return null;
+}
+
+function moderationReasons(reasons?: unknown[]) {
+  if (!reasons) return [];
+  return reasons.flatMap((reason) =>
+    typeof reason === "string" && reason.trim() ? [reason.trim()] : [],
   );
 }
 
@@ -574,20 +1031,46 @@ const styles = StyleSheet.create({
   hero: {
     backgroundColor: "#083120",
     borderRadius: 30,
+    height: 230,
+    justifyContent: "flex-end",
     marginTop: 15,
     padding: 22,
-  },
-  status: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.lime,
-    borderRadius: 14,
-    color: colors.ink,
-    fontFamily: fonts.bold,
-    fontSize: 9,
     overflow: "hidden",
+  },
+  heroImage: { borderRadius: 30 },
+  heroShade: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.42)",
+  },
+  coverEdit: {
+    alignItems: "center",
+    backgroundColor: colors.white,
+    borderRadius: 18,
+    flexDirection: "row",
+    gap: 6,
+    paddingHorizontal: 13,
+    paddingVertical: 10,
+    position: "absolute",
+    right: 14,
+    top: 14,
+    zIndex: 1,
+    elevation: 2,
+  },
+  coverEditText: {
+    color: "#087b3d",
+    fontFamily: fonts.bold,
+    fontSize: 11,
+  },
+  statusPill: {
+    alignSelf: "flex-start",
+    borderRadius: 14,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    textTransform: "uppercase",
+  },
+  statusText: {
+    fontFamily: fonts.bold,
+    fontSize: 10,
+    textTransform: "capitalize",
   },
   heroTitle: {
     color: colors.white,
@@ -601,6 +1084,48 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 7,
   },
+  verdictCard: {
+    alignItems: "flex-start",
+    borderRadius: 22,
+    flexDirection: "row",
+    gap: 11,
+    marginTop: 14,
+    padding: 16,
+  },
+  verdictRejected: {
+    backgroundColor: "#fff0f1",
+    borderColor: "#f2c4ca",
+    borderWidth: 1,
+  },
+  verdictApproved: {
+    backgroundColor: "#e8f8ee",
+    borderColor: "#bfe8ce",
+    borderWidth: 1,
+  },
+  verdictPending: {
+    backgroundColor: "#fff7e7",
+    borderColor: "#f1ddb3",
+    borderWidth: 1,
+  },
+  verdictCopy: { flex: 1 },
+  verdictTitle: { fontFamily: fonts.extraBold, fontSize: 14 },
+  rejectedTitle: { color: "#a62132" },
+  approvedTitle: { color: "#087b3d" },
+  pendingTitle: { color: "#875d13" },
+  verdictMessage: {
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    lineHeight: 17,
+    marginTop: 4,
+  },
+  rejectedMessage: { color: "#803b44" },
+  approvedMessage: { color: "#356b4c" },
+  pendingMessage: { color: "#7b6744" },
+  ruleList: { gap: 8, marginTop: 13 },
+  ruleHeading: { fontFamily: fonts.bold, fontSize: 11 },
+  ruleItem: { gap: 3 },
+  ruleName: { fontFamily: fonts.bold, fontSize: 11 },
+  ruleReason: { fontFamily: fonts.medium, fontSize: 11, lineHeight: 16 },
   stats: { flexDirection: "row", gap: 10, marginTop: 12 },
   stat: {
     alignItems: "center",
@@ -621,6 +1146,23 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   actionText: { color: colors.ink, fontFamily: fonts.bold, fontSize: 10 },
+  scanAction: {
+    backgroundColor: "#eaf8ef",
+    borderColor: "#bfe7cd",
+    borderWidth: 1,
+    minHeight: 48,
+  },
+  scanActionText: { color: "#087b3d", fontSize: 11 },
+  submitAction: {
+    backgroundColor: colors.lime,
+    borderColor: "#9edfb5",
+    borderWidth: 1,
+    elevation: 2,
+    minHeight: 48,
+  },
+  submitActionText: { fontSize: 11 },
+  actionPressed: { opacity: 0.82, transform: [{ scale: 0.97 }] },
+  actionDisabled: { opacity: 0.65 },
   section: {
     backgroundColor: colors.white,
     borderRadius: 24,
@@ -643,6 +1185,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
+  fieldLabel: {
+    color: colors.ink,
+    fontFamily: fonts.bold,
+    fontSize: 11,
+    marginTop: 11,
+  },
+  settingPicker: {
+    alignItems: "center",
+    backgroundColor: "#f1f7f4",
+    borderRadius: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 7,
+    minHeight: 48,
+    paddingHorizontal: 14,
+  },
+  settingValue: {
+    color: colors.ink,
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    textTransform: "capitalize",
+  },
+  readOnly: { opacity: 0.65 },
   multiline: { minHeight: 90, textAlignVertical: "top" },
   row: { flexDirection: "row", gap: 8 },
   flex: { flex: 1 },

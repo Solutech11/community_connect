@@ -21,14 +21,16 @@ import { colors, fonts } from "../../styles/theme";
 import type {
   GetDisputesIdResponse,
   GetDisputesResponse,
+  PostDisputesBody,
 } from "../../types/api.generated";
 import type { RootStackParamList } from "../../types/navigation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "WalletDispute">;
 type Dispute = GetDisputesResponse["data"]["disputes"][number];
 type DisputeDetails = GetDisputesIdResponse["data"]["dispute"];
+type DisputeCategory = PostDisputesBody["category"];
 
-const CATEGORIES = [
+const CATEGORIES: DisputeCategory[] = [
   "payment",
   "withdrawal",
   "transfer",
@@ -45,7 +47,7 @@ export default function WalletDisputeConnectedScreen({
   const { user } = useAuth();
   const canManage = user?.role === "admin" || user?.role === "moderator";
   const transaction = route.params.transaction;
-  const [category, setCategory] = useState("payment");
+  const [category, setCategory] = useState<DisputeCategory>("payment");
   const [subject, setSubject] = useState(`Issue with ${transaction.title}`);
   const [description, setDescription] = useState("");
   const [disputes, setDisputes] = useState<Dispute[]>([]);

@@ -7,7 +7,24 @@ import type {
   PostEventsIdReportsBody,
   PostEventsIdTicketTypesBody,
 } from "../../types/api.generated";
+import type { EventSetting } from "../../types/events";
 import { apiClient, createIdempotencyKey } from "./client";
+
+type CreateEventRequestBody = Omit<
+  PostEventsBody,
+  "coordinates" | "setting"
+> & {
+  coordinates: {
+    type: "Point";
+    coordinates: [number, number];
+  };
+  setting: EventSetting;
+};
+
+// The backend event update schema accepts coverImageUrl, though the generated
+// OpenAPI PATCH type currently omits it.
+export type EventUpdateBody = PatchEventsIdBody &
+  Pick<PostEventsBody, "coverImageUrl">;
 
 export const eventsApi = {
   list: (query: GetEventsQuery = {}, signal?: AbortSignal) =>
@@ -24,9 +41,9 @@ export const eventsApi = {
       authenticated: true,
       signal,
     }),
-  createDraft: (body: PostEventsBody, signal?: AbortSignal) =>
+  createDraft: (body: CreateEventRequestBody, signal?: AbortSignal) =>
     apiClient.request("post__events", { body, signal }),
-  updateDraft: (id: string, body: PatchEventsIdBody, signal?: AbortSignal) =>
+  updateDraft: (id: string, body: EventUpdateBody, signal?: AbortSignal) =>
     apiClient.request("patch__events_id_", {
       pathParams: { id },
       body,
@@ -37,6 +54,7 @@ export const eventsApi = {
   publish: (id: string, signal?: AbortSignal) =>
     apiClient.request("post__events_id_publish", {
       pathParams: { id },
+      authenticated: true,
       signal,
     }),
   cancel: (id: string, signal?: AbortSignal) =>

@@ -196,6 +196,7 @@ The frontend currently does not include Axios, Socket.IO client, or Expo SecureS
 - Send JSON with `Content-Type: application/json` unless the endpoint is a multipart upload.
 - Protected routes require `Authorization: Bearer <accessToken>`.
 - Use the exact method, path, body, query, and parameter definitions shown in Swagger.
+- When an API requires latitude and longitude, add or map both values into the relevant screen and request using the documented shape and order; for GeoJSON points, coordinates are `[longitude, latitude]`. Do not omit or guess these values. If another required API field has no clear source in the UI or existing data, ask me whether to add an input or map it before proceeding.
 - Treat money as integer minor units (kobo). Never send formatted currency strings or floating-point naira amounts to financial endpoints.
 - Add `Idempotency-Key` to financial and order creation requests when required by Swagger. Generate a new cryptographically random key for a new user action and reuse the same key only when retrying that same action.
 - Send dates as the exact ISO date or timestamp shape requested by the endpoint. Keep display formatting out of request DTOs.

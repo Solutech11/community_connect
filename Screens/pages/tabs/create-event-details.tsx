@@ -1,20 +1,12 @@
 ﻿import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
-import { useEffect, useState } from "react";
-import {
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import AppSelectSheet from "../../components/ui/app-select-sheet";
+import KeyboardAwareScrollView from "../../components/ui/keyboard-aware-scroll-view";
 import {
   BottomActions,
   CreateEventHeader,
@@ -31,8 +23,14 @@ import {
 } from "../../data/event-locations";
 import { aiApi } from "../../services/api/ai.api";
 import { ApiError } from "../../services/api/client";
+import { getRegistrationLocation } from "../../services/location/registration-location.service";
 import { createEventDraftStorage } from "../../services/storage/create-event-draft.storage";
 import { colors, fonts } from "../../styles/theme";
+import {
+  EVENT_SETTING_VALUES,
+  normalizeEventSetting,
+  type EventSetting,
+} from "../../types/events";
 import type {
   CreateEventDraft,
   RootStackParamList,
@@ -46,6 +44,11 @@ const DEFAULT_COVER =
 
 export default function CreateEventDetailsScreen({ navigation, route }: Props) {
   const seed = route.params?.draft;
+  const latestDraft = useRef<Partial<CreateEventDraft>>(seed ?? {});
+  const appliedRouteDraft = useRef<Partial<CreateEventDraft> | undefined>(
+    undefined,
+  );
+  const [draftHydrated, setDraftHydrated] = useState(false);
   const [title, setTitle] = useState(seed?.title ?? "");
   const [coverImage, setCoverImage] = useState(seed?.coverImage ?? "");
   const [description, setDescription] = useState(seed?.description ?? "");
@@ -54,22 +57,73 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
   const [lga, setLga] = useState(seed?.lga ?? "Ikeja");
   const [venueName, setVenueName] = useState(seed?.venueName ?? "");
   const [address, setAddress] = useState(seed?.address ?? "");
+  const [latitude, setLatitude] = useState(seed?.latitude ?? "");
+  const [longitude, setLongitude] = useState(seed?.longitude ?? "");
   const [phone, setPhone] = useState(seed?.phone ?? "");
   const [capacity, setCapacity] = useState(seed?.capacity ?? "");
   const [activityType, setActivityType] = useState(
     seed?.activityType ?? "Workshop",
   );
   const [audience, setAudience] = useState(seed?.audience ?? "All Ages");
-  const [setting, setSetting] = useState<"Indoor" | "Outdoor">(
-    seed?.setting ?? "Indoor",
+  const [setting, setSetting] = useState<EventSetting>(() =>
+    normalizeEventSetting(seed?.setting),
   );
   const [dropdown, setDropdown] = useState<DropdownName | null>(null);
   const [alert, setAlert] = useState("");
   const [improving, setImproving] = useState(false);
+  const [locating, setLocating] = useState(false);
+
+  const applyDraft = useCallback((draft: Partial<CreateEventDraft>) => {
+    latestDraft.current = { ...latestDraft.current, ...draft };
+    setTitle(draft.title ?? "");
+    setCoverImage(draft.coverImage ?? "");
+    setDescription(draft.description ?? "");
+    setCountry(draft.country ?? "Nigeria");
+    setState(draft.state ?? "Lagos");
+    setLga(draft.lga ?? "Ikeja");
+    setVenueName(draft.venueName ?? "");
+    setAddress(draft.address ?? "");
+    setLatitude(draft.latitude ?? "");
+    setLongitude(draft.longitude ?? "");
+    setPhone(draft.phone ?? "");
+    setCapacity(draft.capacity ?? "");
+    setActivityType(draft.activityType ?? "Workshop");
+    setAudience(draft.audience ?? "All Ages");
+    setSetting(normalizeEventSetting(draft.setting));
+  }, []);
 
   useEffect(() => {
+    let active = true;
+    void createEventDraftStorage.get().then((storedDraft) => {
+      if (!active) return;
+      const initialDraft = seed ?? storedDraft;
+      if (initialDraft) applyDraft(initialDraft);
+      appliedRouteDraft.current = seed;
+      setDraftHydrated(true);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [applyDraft]);
+
+  useEffect(() => {
+    const nextDraft = route.params?.draft;
+    if (
+      !draftHydrated ||
+      !nextDraft ||
+      nextDraft === appliedRouteDraft.current
+    ) {
+      return;
+    }
+    appliedRouteDraft.current = nextDraft;
+    applyDraft(nextDraft);
+  }, [applyDraft, draftHydrated, route.params?.draft]);
+
+  useEffect(() => {
+    if (!draftHydrated) return;
     void createEventDraftStorage.save({
-      ...seed,
+      ...latestDraft.current,
       title,
       coverImage,
       description,
@@ -78,16 +132,18 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
       lga,
       venueName,
       address,
+      latitude,
+      longitude,
       phone,
       capacity,
       activityType,
       audience,
       setting,
-      startDate: seed?.startDate ?? "",
-      startTime: seed?.startTime ?? "",
-      endDate: seed?.endDate ?? "",
-      endTime: seed?.endTime ?? "",
-      tickets: seed?.tickets ?? [],
+      startDate: latestDraft.current.startDate ?? "",
+      startTime: latestDraft.current.startTime ?? "",
+      endDate: latestDraft.current.endDate ?? "",
+      endTime: latestDraft.current.endTime ?? "",
+      tickets: latestDraft.current.tickets ?? [],
     });
   }, [
     activityType,
@@ -98,6 +154,8 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
     coverImage,
     description,
     lga,
+    latitude,
+    longitude,
     phone,
     seed,
     setting,
@@ -115,6 +173,74 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
     });
     if (!result.canceled) {
       setCoverImage(result.assets[0].uri);
+    }
+  };
+
+  const buildDraft = (): CreateEventDraft => ({
+    ...latestDraft.current,
+    title,
+    coverImage: coverImage || DEFAULT_COVER,
+    description,
+    country,
+    state,
+    lga,
+    venueName,
+    address,
+    latitude,
+    longitude,
+    phone,
+    capacity,
+    activityType,
+    audience,
+    setting,
+    startDate: latestDraft.current.startDate ?? "",
+    startTime: latestDraft.current.startTime ?? "",
+    endDate: latestDraft.current.endDate ?? "",
+    endTime: latestDraft.current.endTime ?? "",
+    tickets: latestDraft.current.tickets ?? [],
+  });
+
+  const chooseLocationOnMap = () => {
+    const draft = buildDraft();
+    void createEventDraftStorage.save(draft);
+    navigation.navigate("CreateEventLocationPicker", { draft });
+  };
+
+  const useCurrentLocation = async () => {
+    if (locating) return;
+    setLocating(true);
+    try {
+      const location = await getRegistrationLocation();
+      if (!location) {
+        setAlert(
+          "Location access is unavailable. Enter the venue latitude and longitude manually.",
+        );
+        return;
+      }
+
+      const coordinates = location.coordinates;
+      const currentLongitude = coordinates?.[0];
+      const currentLatitude = coordinates?.[1];
+      if (
+        typeof currentLongitude !== "number" ||
+        typeof currentLatitude !== "number" ||
+        !Number.isFinite(currentLongitude) ||
+        !Number.isFinite(currentLatitude)
+      ) {
+        setAlert(
+          "Could not read valid coordinates. Enter the venue latitude and longitude manually.",
+        );
+        return;
+      }
+
+      setLatitude(String(currentLatitude));
+      setLongitude(String(currentLongitude));
+    } catch {
+      setAlert(
+        "Could not get your current location. Enter the venue coordinates manually.",
+      );
+    } finally {
+      setLocating(false);
     }
   };
 
@@ -203,6 +329,18 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
   };
 
   const goNext = () => {
+    const latitudeValue = Number(latitude);
+    const longitudeValue = Number(longitude);
+    const validCoordinates =
+      latitude.trim() !== "" &&
+      longitude.trim() !== "" &&
+      Number.isFinite(latitudeValue) &&
+      latitudeValue >= -90 &&
+      latitudeValue <= 90 &&
+      Number.isFinite(longitudeValue) &&
+      longitudeValue >= -180 &&
+      longitudeValue <= 180;
+
     if (
       !title.trim() ||
       !description.trim() ||
@@ -219,40 +357,33 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
       );
       return;
     }
+    if (!validCoordinates) {
+      setAlert(
+        "Enter a valid venue latitude (-90 to 90) and longitude (-180 to 180), or use your current location.",
+      );
+      return;
+    }
 
-    const draft: CreateEventDraft = {
-      title: title.trim(),
-      coverImage: coverImage || DEFAULT_COVER,
-      description: description.trim(),
-      country,
-      state,
-      lga,
-      venueName: venueName.trim(),
-      address: address.trim(),
-      phone: phone.trim(),
-      capacity: capacity.trim(),
-      activityType,
-      audience,
-      setting,
-      startDate: seed?.startDate ?? "",
-      startTime: seed?.startTime ?? "",
-      endDate: seed?.endDate ?? "",
-      endTime: seed?.endTime ?? "",
-      tickets: seed?.tickets ?? [],
-    };
+    const draft = buildDraft();
+    draft.title = title.trim();
+    draft.description = description.trim();
+    draft.venueName = venueName.trim();
+    draft.address = address.trim();
+    draft.latitude = latitude.trim();
+    draft.longitude = longitude.trim();
+    draft.phone = phone.trim();
+    draft.capacity = capacity.trim();
     void createEventDraftStorage.save(draft);
     navigation.navigate("CreateEventDateTime", { draft });
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={styles.safe}
-    >
+    <View style={styles.safe}>
       <CreateEventHeader title="CommunityConnect" onBack={navigation.goBack} />
       <StepProgress label="Basic Info" step={1} />
-      <ScrollView
+      <KeyboardAwareScrollView
         contentContainerStyle={styles.content}
+        keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -344,6 +475,51 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
           value={address}
         />
 
+        <View style={styles.coordinatesSection}>
+          <View style={styles.coordinatesHeading}>
+            <View style={styles.coordinatesCopy}>
+              <Text style={styles.label}>Venue Coordinates</Text>
+              <Text style={styles.coordinatesHint}>
+                Add the venue location to help attendees find your event.
+              </Text>
+            </View>
+            <Pressable
+              disabled={locating}
+              onPress={() => void useCurrentLocation()}
+              style={[
+                styles.locationButton,
+                locating && styles.locationButtonDisabled,
+              ]}
+            >
+              <Ionicons color="#078d45" name="navigate-outline" size={16} />
+              <Text style={styles.locationButtonText}>
+                {locating ? "Finding..." : "Use current location"}
+              </Text>
+            </Pressable>
+          </View>
+          <Pressable onPress={chooseLocationOnMap} style={styles.mapButton}>
+            <Ionicons color="#078d45" name="map-outline" size={17} />
+            <Text style={styles.mapButtonText}>Choose on map</Text>
+            <Ionicons color="#078d45" name="arrow-forward" size={16} />
+          </Pressable>
+          <EventField
+            icon="navigate-outline"
+            keyboardType="numbers-and-punctuation"
+            label="Latitude"
+            onChangeText={setLatitude}
+            placeholder="e.g. 6.5244"
+            value={latitude}
+          />
+          <EventField
+            icon="compass-outline"
+            keyboardType="numbers-and-punctuation"
+            label="Longitude"
+            onChangeText={setLongitude}
+            placeholder="e.g. 3.3792"
+            value={longitude}
+          />
+        </View>
+
         <EventField
           icon="call-outline"
           keyboardType="phone-pad"
@@ -373,29 +549,34 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
 
         <View style={styles.block}>
           <Text style={styles.label}>Event Setting</Text>
-          <View style={styles.toggle}>
-            {(["Indoor", "Outdoor"] as const).map((item) => (
-              <Pressable
-                key={item}
-                onPress={() => setSetting(item)}
-                style={[
-                  styles.toggleOption,
-                  setting === item && styles.toggleOptionOn,
-                ]}
-              >
-                <Text
+          <View style={styles.settingOptions}>
+            {EVENT_SETTING_VALUES.map((item) => {
+              const selected = setting === item;
+              const label = item.charAt(0).toUpperCase() + item.slice(1);
+
+              return (
+                <Pressable
+                  key={item}
+                  onPress={() => setSetting(item)}
                   style={[
-                    styles.toggleText,
-                    setting === item && styles.toggleTextOn,
+                    styles.settingOption,
+                    selected && styles.toggleOptionOn,
                   ]}
                 >
-                  {item}
-                </Text>
-              </Pressable>
-            ))}
+                  <Text
+                    style={[
+                      styles.toggleText,
+                      selected && styles.toggleTextOn,
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
       <BottomActions onNext={goNext} />
       <AppSelectSheet
         allowCustomValue={dropdown === "lga"}
@@ -412,7 +593,7 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
         title="Complete event details"
         visible={!!alert}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -420,6 +601,51 @@ const styles = StyleSheet.create({
   safe: { backgroundColor: colors.paper, flex: 1 },
   content: { gap: 28, padding: 24, paddingBottom: 36 },
   block: { gap: 12 },
+  coordinatesSection: { gap: 16 },
+  coordinatesHeading: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 12,
+    justifyContent: "space-between",
+  },
+  coordinatesCopy: { flex: 1, gap: 4 },
+  coordinatesHint: {
+    color: "#668071",
+    fontFamily: fonts.medium,
+    fontSize: 11,
+  },
+  locationButton: {
+    alignItems: "center",
+    backgroundColor: "#e7f8ef",
+    borderRadius: 18,
+    flexDirection: "row",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+  },
+  locationButtonDisabled: { opacity: 0.55 },
+  locationButtonText: {
+    color: "#078d45",
+    fontFamily: fonts.bold,
+    fontSize: 10,
+  },
+  mapButton: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: colors.white,
+    borderColor: "#dbece1",
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 13,
+    paddingVertical: 10,
+  },
+  mapButtonText: {
+    color: "#078d45",
+    fontFamily: fonts.bold,
+    fontSize: 11,
+  },
   label: {
     color: colors.ink,
     fontFamily: fonts.bold,
@@ -485,19 +711,23 @@ const styles = StyleSheet.create({
     fontSize: 17,
     marginBottom: -8,
   },
-  toggle: {
-    backgroundColor: colors.white,
-    borderRadius: 30,
+  settingOptions: {
     flexDirection: "row",
-    padding: 5,
+    flexWrap: "wrap",
+    gap: 10,
   },
-  toggleOption: {
+  settingOption: {
     alignItems: "center",
-    borderRadius: 25,
-    flex: 1,
-    paddingVertical: 13,
+    backgroundColor: colors.white,
+    borderColor: "#e1f0e8",
+    borderRadius: 20,
+    borderWidth: 1,
+    flexBasis: "48%",
+    justifyContent: "center",
+    minHeight: 50,
+    paddingHorizontal: 12,
   },
-  toggleOptionOn: { backgroundColor: "#08bd58" },
+  toggleOptionOn: { backgroundColor: "#08bd58", borderColor: "#08bd58" },
   toggleText: {
     color: "#32965d",
     fontFamily: fonts.medium,

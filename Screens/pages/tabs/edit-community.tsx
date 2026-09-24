@@ -17,16 +17,27 @@ import ProfilePageHeader from "../../components/ui/profile-page-header";
 import { ApiError } from "../../services/api/client";
 import { communitiesApi } from "../../services/api/communities.api";
 import { colors, fonts } from "../../styles/theme";
-import type { GetCommunitiesIdResponse } from "../../types/api.generated";
+import type {
+  GetCommunitiesIdResponse,
+  PatchCommunitiesIdBody,
+} from "../../types/api.generated";
 import type { RootStackParamList } from "../../types/navigation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EditCommunity">;
 type Community = GetCommunitiesIdResponse["data"]["community"];
+type CommunityMembershipType = NonNullable<
+  PatchCommunitiesIdBody["membershipType"]
+>;
+
+function parseMembershipType(value: string): CommunityMembershipType {
+  return value === "premium" ? "premium" : "free";
+}
 
 export default function EditCommunityScreen({ navigation, route }: Props) {
   const [community, setCommunity] = useState<Community | null>(null);
   const [description, setDescription] = useState("");
-  const [membershipType, setMembershipType] = useState("free");
+  const [membershipType, setMembershipType] =
+    useState<CommunityMembershipType>("free");
   const [price, setPrice] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -40,7 +51,7 @@ export default function EditCommunityScreen({ navigation, route }: Props) {
         const item = response.data.community;
         setCommunity(item);
         setDescription(item.description);
-        setMembershipType(item.membershipType);
+        setMembershipType(parseMembershipType(item.membershipType));
         setPrice(item.membershipPriceKobo ? String(item.membershipPriceKobo / 100) : "");
       })
       .catch((error) => {
@@ -57,7 +68,7 @@ export default function EditCommunityScreen({ navigation, route }: Props) {
       setNotice({ title: "Add more detail", message: "The community description must contain at least 10 characters." });
       return;
     }
-    if (membershipType === "paid" && (!Number.isFinite(priceNaira) || priceNaira <= 0)) {
+    if (membershipType === "premium" && (!Number.isFinite(priceNaira) || priceNaira <= 0)) {
       setNotice({ title: "Enter a price", message: "Paid membership requires a positive naira amount." });
       return;
     }
@@ -67,7 +78,7 @@ export default function EditCommunityScreen({ navigation, route }: Props) {
       await communitiesApi.update(route.params.communityId, {
         description: description.trim(),
         membershipType,
-        membershipPriceKobo: membershipType === "paid" ? Math.round(priceNaira * 100) : 0,
+        membershipPriceKobo: membershipType === "premium" ? Math.round(priceNaira * 100) : 0,
       });
       setNotice({ title: "Community updated", message: "Your changes were saved successfully.", success: true });
     } catch (error) {
@@ -93,13 +104,13 @@ export default function EditCommunityScreen({ navigation, route }: Props) {
             <TextInput multiline onChangeText={setDescription} style={[styles.input, styles.multiline]} textAlignVertical="top" value={description} />
             <Text style={styles.label}>Membership type</Text>
             <View style={styles.options}>
-              {["free", "paid"].map((item) => (
+              {(["free", "premium"] as const).map((item) => (
                 <Pressable key={item} onPress={() => setMembershipType(item)} style={[styles.option, membershipType === item && styles.optionActive]}>
-                  <Text style={styles.optionText}>{item}</Text>
+                  <Text style={styles.optionText}>{item === "free" ? "Free" : "Paid"}</Text>
                 </Pressable>
               ))}
             </View>
-            {membershipType === "paid" ? <><Text style={styles.label}>Membership price (NGN)</Text><TextInput keyboardType="decimal-pad" onChangeText={setPrice} placeholder="5000" placeholderTextColor="#718078" style={styles.input} value={price} /></> : null}
+            {membershipType === "premium" ? <><Text style={styles.label}>Membership price (NGN)</Text><TextInput keyboardType="decimal-pad" onChangeText={setPrice} placeholder="5000" placeholderTextColor="#718078" style={styles.input} value={price} /></> : null}
             <Pressable disabled={submitting} onPress={() => void save()} style={[styles.primary, submitting && styles.disabled]}>
               {submitting ? <ActivityIndicator color={colors.ink} /> : <Text style={styles.primaryText}>Save changes</Text>}
             </Pressable>

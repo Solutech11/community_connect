@@ -13,6 +13,7 @@ import ManageCreatedEventScreen from "../pages/tabs/manage-created-event-connect
 import EditTicketTypeScreen from "../pages/tabs/edit-ticket-type";
 import CreateEventIntroductionScreen from "../pages/tabs/create-event-introduction";
 import CreateEventDetailsScreen from "../pages/tabs/create-event-details";
+import CreateEventLocationPickerScreen from "../pages/tabs/create-event-location-picker";
 import CreateEventDateTimeScreen from "../pages/tabs/create-event-date-time";
 import CreateEventTicketsScreen from "../pages/tabs/create-event-tickets";
 import CreateEventReviewScreen from "../pages/tabs/create-event-review";
@@ -115,7 +116,6 @@ const DashboardTransactionDetails = withDashboardLayout(
 const DashboardDisputeManagement = withDashboardLayout(DisputeManagementScreen);
 const DashboardMyEventDetails = withDashboardLayout(MyEventDetailsScreen);
 const DashboardEventDetails = withDashboardLayout(EventDetailsScreen);
-const DashboardTicketSelection = withDashboardLayout(TicketSelectionScreen);
 const DashboardCheckout = withDashboardLayout(CheckoutScreen);
 const DashboardPaymentSuccess = withDashboardLayout(PaymentSuccessScreen);
 
@@ -259,6 +259,11 @@ export default function RootStackNavigator({
             options={{ animation: "slide_from_right" }}
           />
           <Stack.Screen
+            name="CreateEventLocationPicker"
+            component={CreateEventLocationPickerScreen}
+            options={{ animation: "slide_from_right", headerShown: false }}
+          />
+          <Stack.Screen
             name="CreateEventDateTime"
             component={DashboardCreateEventDateTime}
             options={{ animation: "slide_from_right" }}
@@ -379,7 +384,7 @@ export default function RootStackNavigator({
           />
           <Stack.Screen
             name="TicketSelection"
-            component={DashboardTicketSelection}
+            component={TicketSelectionScreen}
             options={{
               animation: "fade_from_bottom",
               presentation: "transparentModal",

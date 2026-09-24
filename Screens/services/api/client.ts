@@ -397,6 +397,11 @@ const operations: Record<
     path: "/auth/reset-password",
     authenticated: false,
   },
+  get__locations_search: {
+    method: "GET",
+    path: "/locations/search",
+    authenticated: true,
+  },
   get__users_me: { method: "GET", path: "/users/me", authenticated: true },
   patch__users_me: { method: "PATCH", path: "/users/me", authenticated: true },
   patch__users_me_avatar: {

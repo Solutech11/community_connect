@@ -113,6 +113,7 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
     title: string;
     message: string;
     success?: boolean;
+    viewDrafts?: boolean;
   } | null>(null);
   const hostName = user
     ? `${user.firstName} ${user.lastName}`.trim()
@@ -142,12 +143,16 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
         coverImageUrl,
         activityType: draft.activityType,
         targetAudience: draft.audience || undefined,
-        setting: draft.setting.toLowerCase(),
+        setting: draft.setting,
         country: draft.country || "Nigeria",
         state: draft.state,
         lga: draft.lga,
         venueName: draft.venueName,
         address: draft.address,
+        coordinates: {
+          type: "Point",
+          coordinates: [Number(draft.longitude), Number(draft.latitude)],
+        },
         startsAt: combineDateAndTime(draft.startDate, draft.startTime),
         endsAt: combineDateAndTime(draft.endDate, draft.endTime),
         timezone: "Africa/Lagos",
@@ -169,7 +174,33 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
           ...(capacity ? { capacity } : {}),
         });
       }
-      await eventsApi.publish(created.data.event._id);
+      // Publish only after the event and all ticket tiers have been created.
+      try {
+        await eventsApi.publish(created.data.event._id);
+      } catch (error) {
+        const reason =
+          error instanceof ApiError
+            ? error.message
+            : error instanceof Error
+              ? error.message
+              : "The publish check could not be completed.";
+        const aiReviewFailed =
+          error instanceof ApiError &&
+          /\b(ai|moderation|moderate|flagged|content policy|safety review)\b/i.test(
+            `${error.code} ${error.message}`,
+          );
+
+        setAlert({
+          title: aiReviewFailed
+            ? "AI review needs attention"
+            : "Saved to Drafts",
+          message: aiReviewFailed
+            ? `We couldn't verify this event for publishing because our AI review flagged an issue: ${reason}. Your event remains saved under My Created Events > Drafts.`
+            : `We couldn't verify this event for publishing. Reason: ${reason}. Your event remains saved under My Created Events > Drafts.`,
+          viewDrafts: true,
+        });
+        return;
+      }
       await createEventDraftStorage.clear();
       setAlert({
         title: "Event submitted",
@@ -194,8 +225,11 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
 
   const closeAlert = () => {
     const succeeded = alert?.success;
+    const viewDrafts = alert?.viewDrafts;
     setAlert(null);
-    if (succeeded) navigation.navigate("MyCreatedEvents");
+    if (succeeded) navigation.popTo("MyCreatedEvents");
+    else if (viewDrafts)
+      navigation.navigate("MyCreatedEvents", { initialStatus: "draft" });
   };
 
   return (
@@ -322,10 +356,19 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
       </SafeAreaView>
 
       <AppAlertModal
-        confirmText={alert?.success ? "View My Created Events" : "Okay"}
+        confirmOnly={Boolean(alert?.viewDrafts)}
+        confirmText={
+          alert?.viewDrafts
+            ? "View Drafts"
+            : alert?.success
+              ? "View My Created Events"
+              : "Okay"
+        }
         message={alert?.message ?? ""}
         onClose={closeAlert}
+        onConfirm={alert?.viewDrafts ? closeAlert : undefined}
         title={alert?.title ?? ""}
+        tone={alert?.viewDrafts ? "warning" : undefined}
         visible={Boolean(alert)}
       />
     </View>

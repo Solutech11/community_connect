@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef } from "react";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { lightTap as tapFeedback } from '../../hooks/haptics';
-import { colors, fonts } from '../../styles/theme';
-import { useNotifier, type NotifierTone } from './app-notifier';
+import { lightTap as tapFeedback } from "../../hooks/haptics";
+import { colors, fonts } from "../../styles/theme";
+import { useNotifier, type NotifierTone } from "./app-notifier";
 
 type AppAlertModalProps = {
   visible: boolean;
@@ -11,6 +11,7 @@ type AppAlertModalProps = {
   message: string;
   confirmText?: string;
   cancelText?: string;
+  confirmOnly?: boolean;
   tone?: NotifierTone;
   onConfirm?: () => void;
   onClose: () => void;
@@ -19,16 +20,24 @@ type AppAlertModalProps = {
 function inferTone(title: string, message: string): NotifierTone {
   const copy = `${title} ${message}`.toLowerCase();
 
-  if (/unsuccessful|error|failed|unable|unavailable|invalid|denied|incorrect|expired/.test(copy)) {
-    return 'error';
+  if (
+    /unsuccessful|error|failed|unable|unavailable|invalid|denied|incorrect|expired/.test(
+      copy,
+    )
+  ) {
+    return "error";
   }
-  if (/success|created|updated|completed|verified|sent|saved|removed|deleted/.test(copy)) {
-    return 'success';
+  if (
+    /success|created|updated|completed|verified|sent|saved|removed|deleted/.test(
+      copy,
+    )
+  ) {
+    return "success";
   }
   if (/warning|pending|attention|not added/.test(copy)) {
-    return 'warning';
+    return "warning";
   }
-  return 'info';
+  return "info";
 }
 
 function AppAlertNotification({
@@ -61,8 +70,9 @@ export default function AppAlertModal(props: AppAlertModalProps) {
     visible,
     title,
     message,
-    confirmText = 'Okay',
-    cancelText = 'Cancel',
+    confirmText = "Okay",
+    cancelText = "Cancel",
+    confirmOnly = false,
     onConfirm,
     onClose,
   } = props;
@@ -74,7 +84,12 @@ export default function AppAlertModal(props: AppAlertModalProps) {
   }
 
   return (
-    <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}>
+    <Modal
+      animationType="fade"
+      transparent
+      visible={visible}
+      onRequestClose={onClose}
+    >
       <View style={styles.overlay}>
         <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
 
@@ -83,9 +98,14 @@ export default function AppAlertModal(props: AppAlertModalProps) {
           <Text style={styles.message}>{message}</Text>
 
           <View style={styles.actions}>
-            <Pressable onPress={onClose} style={[styles.button, styles.cancelButton]}>
-              <Text style={styles.cancelButtonText}>{cancelText}</Text>
-            </Pressable>
+            {!confirmOnly ? (
+              <Pressable
+                onPress={onClose}
+                style={[styles.button, styles.cancelButton]}
+              >
+                <Text style={styles.cancelButtonText}>{cancelText}</Text>
+              </Pressable>
+            ) : null}
             <Pressable
               onPress={() => {
                 tapFeedback();
@@ -104,10 +124,10 @@ export default function AppAlertModal(props: AppAlertModalProps) {
 
 const styles = StyleSheet.create({
   overlay: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(5, 10, 8, 0.32)',
+    alignItems: "center",
+    backgroundColor: "rgba(5, 10, 8, 0.32)",
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 24,
   },
   card: {
@@ -116,32 +136,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingTop: 24,
     paddingBottom: 18,
-    width: '100%',
+    width: "100%",
   },
   title: {
-    color: '#0f1734',
+    color: "#0f1734",
     fontFamily: fonts.extraBold,
     fontSize: 22,
-    textAlign: 'center',
+    textAlign: "center",
   },
   message: {
-    color: '#5f708b',
+    color: "#5f708b",
     fontFamily: fonts.medium,
     fontSize: 15,
     lineHeight: 24,
     marginTop: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
-  actions: { flexDirection: 'row', gap: 10, marginTop: 22 },
-  cancelButton: { backgroundColor: '#edf3f0', flex: 1, marginTop: 0 },
+  actions: { flexDirection: "row", gap: 10, marginTop: 22 },
+  cancelButton: { backgroundColor: "#edf3f0", flex: 1, marginTop: 0 },
   confirmButton: { flex: 1, marginTop: 0 },
   cancelButtonText: { color: colors.ink, fontFamily: fonts.bold, fontSize: 15 },
   button: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: colors.lime,
     borderRadius: 22,
     height: 56,
-    justifyContent: 'center',
+    justifyContent: "center",
     marginTop: 22,
   },
   buttonText: {

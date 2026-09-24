@@ -22,10 +22,15 @@ import { ApiError } from "../../services/api/client";
 import { communitiesApi } from "../../services/api/communities.api";
 import { uploadsApi } from "../../services/api/uploads.api";
 import { colors, fonts } from "../../styles/theme";
+import type { PostCommunitiesBody } from "../../types/api.generated";
 import type { RootStackParamList } from "../../types/navigation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CreateCommunity">;
 type LocationDropdown = "state" | "lga" | null;
+type CommunityVisibility = NonNullable<PostCommunitiesBody["visibility"]>;
+type CommunityMembershipType = NonNullable<
+  PostCommunitiesBody["membershipType"]
+>;
 
 type Notice = {
   title: string;
@@ -41,8 +46,10 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
   const [lga, setLga] = useState("");
   const [locationDropdown, setLocationDropdown] =
     useState<LocationDropdown>(null);
-  const [visibility, setVisibility] = useState("public");
-  const [membershipType, setMembershipType] = useState("free");
+  const [visibility, setVisibility] =
+    useState<CommunityVisibility>("public");
+  const [membershipType, setMembershipType] =
+    useState<CommunityMembershipType>("free");
   const [price, setPrice] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -100,7 +107,7 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
       return;
     }
     if (
-      membershipType === "paid" &&
+      membershipType === "premium" &&
       (!Number.isFinite(priceNaira) || priceNaira <= 0)
     ) {
       setNotice({
@@ -136,7 +143,7 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
         visibility,
         membershipType,
         membershipPriceKobo:
-          membershipType === "paid" ? Math.round(priceNaira * 100) : 0,
+          membershipType === "premium" ? Math.round(priceNaira * 100) : 0,
       });
       setNotice({
         title: "Community created",
@@ -229,7 +236,7 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
 
           <Text style={styles.label}>Visibility</Text>
           <View style={styles.options}>
-            {["public", "private"].map((item) => (
+            {(["public", "private"] as const).map((item) => (
               <Option
                 key={item}
                 active={visibility === item}
@@ -241,17 +248,17 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
 
           <Text style={styles.label}>Membership</Text>
           <View style={styles.options}>
-            {["free", "paid"].map((item) => (
+            {(["free", "premium"] as const).map((item) => (
               <Option
                 key={item}
                 active={membershipType === item}
-                label={item}
+                label={item === "free" ? "Free" : "Paid"}
                 onPress={() => setMembershipType(item)}
               />
             ))}
           </View>
 
-          {membershipType === "paid" ? (
+          {membershipType === "premium" ? (
             <Field
               label="Membership price (NGN)"
               value={price}

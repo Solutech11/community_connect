@@ -23,19 +23,40 @@ import type {
   GetCommunitiesIdAnnouncementsResponse,
   GetCommunitiesIdPostsResponse,
   GetCommunitiesIdRulesResponse,
+  PatchCommunitiesIdSettingsBody,
 } from "../../types/api.generated";
 import type { RootStackParamList } from "../../types/navigation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CommunityManagement">;
 type Tab = "People" | "Settings" | "Content";
 type Role = "owner" | "moderator" | "member";
+type JoinPolicy = NonNullable<PatchCommunitiesIdSettingsBody["joinPolicy"]>;
+type MessagePermission = NonNullable<
+  PatchCommunitiesIdSettingsBody["messagePermission"]
+>;
 type Settings = {
-  joinPolicy: string;
-  messagePermission: string;
+  joinPolicy: JoinPolicy;
+  messagePermission: MessagePermission;
+  accessCode: string;
   membersCanCreatePosts: boolean;
   membersCanInvite: boolean;
   showMemberList: boolean;
 };
+const JOIN_POLICIES = [
+  "open",
+  "approval",
+  "invite_only",
+  "access_code",
+] as const satisfies readonly JoinPolicy[];
+const MESSAGE_PERMISSIONS = ["everyone", "moderators"] as const satisfies readonly MessagePermission[];
+
+function parseJoinPolicy(value: string): JoinPolicy {
+  return JOIN_POLICIES.find((policy) => policy === value) ?? "open";
+}
+
+function parseMessagePermission(value: string): MessagePermission {
+  return MESSAGE_PERMISSIONS.find((permission) => permission === value) ?? "everyone";
+}
 type Rule = GetCommunitiesIdRulesResponse["data"]["rules"]["rules"][number];
 type Post = GetCommunitiesIdPostsResponse["data"]["posts"][number];
 type Announcement =
@@ -211,7 +232,14 @@ export default function CommunityManagementScreen({
           communitiesApi.posts(communityId, { page: 1, limit: 100 }),
           communitiesApi.announcements(communityId, { page: 1, limit: 100 }),
         ]);
-        setSettings(settingsResponse.data.settings);
+        setSettings({
+          ...settingsResponse.data.settings,
+          joinPolicy: parseJoinPolicy(settingsResponse.data.settings.joinPolicy),
+          messagePermission: parseMessagePermission(
+            settingsResponse.data.settings.messagePermission,
+          ),
+          accessCode: "",
+        });
         const ruleDocument = rulesResponse.data.rules;
         setRulesIntro(ruleDocument.introduction);
         setRuleDrafts(
@@ -290,6 +318,9 @@ export default function CommunityManagementScreen({
       () =>
         communitiesApi.updateSettings(communityId, {
           joinPolicy: settings.joinPolicy,
+          ...(settings.joinPolicy === "access_code" && settings.accessCode.trim()
+            ? { accessCode: settings.accessCode.trim() }
+            : {}),
           messagePermission: settings.messagePermission,
           membersCanCreatePosts: settings.membersCanCreatePosts,
           membersCanInvite: settings.membersCanInvite,
@@ -718,19 +749,43 @@ export default function CommunityManagementScreen({
               <>
                 <Section title="Joining">
                   <ChoiceRow
-                    values={["open", "approval", "invite_only"]}
+                    values={[...JOIN_POLICIES]}
                     value={settings.joinPolicy}
                     onChange={(joinPolicy) =>
-                      setSettings({ ...settings, joinPolicy })
+                      setSettings({
+                        ...settings,
+                        joinPolicy: parseJoinPolicy(joinPolicy),
+                      })
                     }
                   />
+                  {settings.joinPolicy === "access_code" ? (
+                    <>
+                      <TextInput
+                        autoCapitalize="characters"
+                        onChangeText={(accessCode) =>
+                          setSettings({ ...settings, accessCode })
+                        }
+                        placeholder="Set or replace access code"
+                        placeholderTextColor="#718078"
+                        style={styles.input}
+                        value={settings.accessCode}
+                      />
+                      <Text style={styles.meta}>
+                        Leave blank to keep the current code.
+                      </Text>
+                    </>
+                  ) : null}
                 </Section>
                 <Section title="Message permissions">
                   <ChoiceRow
-                    values={["everyone", "moderators"]}
+                    values={[...MESSAGE_PERMISSIONS]}
                     value={settings.messagePermission}
                     onChange={(messagePermission) =>
-                      setSettings({ ...settings, messagePermission })
+                      setSettings({
+                        ...settings,
+                        messagePermission:
+                          parseMessagePermission(messagePermission),
+                      })
                     }
                   />
                 </Section>
