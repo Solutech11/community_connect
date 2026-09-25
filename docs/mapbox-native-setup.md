@@ -4,13 +4,12 @@ The event location picker uses `@rnmapbox/maps` and requires an Expo development
 
 ## Public map token
 
-Create a restricted Mapbox public access token (`pk...`) and set it locally as:
+Create a restricted Mapbox public access token (`pk...`) and add it to
+`Screens/services/api/config.ts` as `mapboxPublicAccessToken`.
 
-```text
-EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.your-public-token
-```
-
-The app reads this value when it starts. It is a client-side token and must not be a secret token. Add the same variable to the EAS `development` environment before creating a new development build.
+The app reads this public client token from the JavaScript bundle. Changing it
+only requires restarting Metro after the development client already includes the
+Mapbox native module. Never put a secret (`sk...`) Mapbox token in this file.
 
 ## Native build
 

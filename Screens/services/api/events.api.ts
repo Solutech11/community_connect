@@ -21,10 +21,10 @@ type CreateEventRequestBody = Omit<
   setting: EventSetting;
 };
 
-// The backend event update schema accepts coverImageUrl, though the generated
-// OpenAPI PATCH type currently omits it.
+// The backend update schema accepts these fields, though the generated OpenAPI
+// PATCH type currently omits them.
 export type EventUpdateBody = PatchEventsIdBody &
-  Pick<PostEventsBody, "coverImageUrl">;
+  Pick<PostEventsBody, "coverImageUrl" | "targetAudience">;
 
 export const eventsApi = {
   list: (query: GetEventsQuery = {}, signal?: AbortSignal) =>

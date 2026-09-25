@@ -1,7 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppAlertModal from '../../components/ui/app-alert-modal';
@@ -15,6 +23,7 @@ import type { RootStackParamList } from '../../types/navigation';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Notifications'>;
 type NotificationDto = GetNotificationsResponse['data']['notifications'][number];
+type NotificationView = NotificationDto & { readAt?: string };
 type NotificationFilter = 'All' | 'Events' | 'Communities' | 'Friends';
 
 function categoryFor(type: string): Exclude<NotificationFilter, 'All'> {
@@ -23,17 +32,18 @@ function categoryFor(type: string): Exclude<NotificationFilter, 'All'> {
   return 'Events';
 }
 
-function wasRead(item: NotificationDto) {
-  const record = item as object & { readAt?: unknown };
-  return typeof record.readAt === 'string';
+function wasRead(item: NotificationView) {
+  return typeof item.readAt === 'string';
 }
 
 export default function NotificationsScreen({ navigation }: Props) {
   const [filter, setFilter] = useState<NotificationFilter>('All');
-  const [notifications, setNotifications] = useState<NotificationDto[]>([]);
+  const [notifications, setNotifications] = useState<NotificationView[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
+  const [selectedNotification, setSelectedNotification] = useState<NotificationView | null>(null);
+  const readRequests = useRef(new Set<string>());
 
   const load = useCallback(async (refresh = false) => {
     refresh ? setRefreshing(true) : setLoading(true);
@@ -75,15 +85,46 @@ export default function NotificationsScreen({ navigation }: Props) {
     }
   };
 
-  const openNotification = async (item: NotificationDto) => {
+  const openNotification = (item: NotificationView) => {
     lightTap();
-    try {
-      if (!wasRead(item)) await notificationsApi.markRead(item._id);
-      setNotice({ title: item.title, message: item.body });
-      await load();
-    } catch (error) {
-      setNotice({ title: item.title, message: error instanceof ApiError ? error.message : item.body });
-    }
+    setSelectedNotification(item);
+    if (wasRead(item) || readRequests.current.has(item._id)) return;
+
+    const optimisticReadAt = new Date().toISOString();
+    readRequests.current.add(item._id);
+    setNotifications((current) =>
+      current.map((notification) =>
+        notification._id === item._id
+          ? { ...notification, readAt: optimisticReadAt }
+          : notification,
+      ),
+    );
+
+    void notificationsApi.markRead(item._id)
+      .then((response) => {
+        setNotifications((current) =>
+          current.map((notification) =>
+            notification._id === item._id
+              ? { ...notification, readAt: response.data.notification.readAt }
+              : notification,
+          ),
+        );
+      })
+      .catch(() => {
+        // Keep the read update quiet; restore the unread marker if the server rejected it.
+        setNotifications((current) =>
+          current.map((notification) => {
+            if (
+              notification._id !== item._id ||
+              notification.readAt !== optimisticReadAt
+            ) {
+              return notification;
+            }
+            return { ...notification, readAt: undefined };
+          }),
+        );
+      })
+      .finally(() => readRequests.current.delete(item._id));
   };
 
   return (
@@ -129,6 +170,61 @@ export default function NotificationsScreen({ navigation }: Props) {
         </ScrollView>
       </SafeAreaView>
       <AppAlertModal visible={Boolean(notice)} title={notice?.title ?? ''} message={notice?.message ?? ''} onClose={() => setNotice(null)} />
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setSelectedNotification(null)}
+        transparent
+        visible={Boolean(selectedNotification)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable
+            accessibilityLabel="Close notification details"
+            onPress={() => setSelectedNotification(null)}
+            style={StyleSheet.absoluteFillObject}
+          />
+          {selectedNotification ? (
+            <View accessibilityViewIsModal style={styles.detailCard}>
+              <View style={styles.detailHeader}>
+                <View style={styles.detailIcon}>
+                  <Ionicons
+                    color="#08b657"
+                    name={
+                      categoryFor(selectedNotification.type) === 'Friends'
+                        ? 'person-add'
+                        : categoryFor(selectedNotification.type) === 'Communities'
+                          ? 'people'
+                          : 'calendar'
+                    }
+                    size={22}
+                  />
+                </View>
+                <Pressable
+                  accessibilityLabel="Close notification details"
+                  hitSlop={10}
+                  onPress={() => setSelectedNotification(null)}
+                  style={styles.closeButton}
+                >
+                  <Ionicons color={colors.muted} name="close" size={22} />
+                </Pressable>
+              </View>
+              <Text style={styles.detailCategory}>{categoryFor(selectedNotification.type)}</Text>
+              <ScrollView
+                style={styles.detailScroll}
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={styles.detailTitle}>{selectedNotification.title}</Text>
+                <Text style={styles.detailBody}>{selectedNotification.body}</Text>
+              </ScrollView>
+              <View style={styles.detailFooter}>
+                <Ionicons color="#3d9c65" name="time-outline" size={16} />
+                <Text style={styles.detailTime}>
+                  {new Date(selectedNotification.createdAt).toLocaleString()}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+        </View>
+      </Modal>
     </>
   );
 }
@@ -151,5 +247,77 @@ const styles = StyleSheet.create({
   time: { color: '#3d9c65', fontFamily: fonts.bold, fontSize: 11, marginTop: 6 },
   unreadDot: { backgroundColor: '#0cb75a', borderRadius: 5, height: 8, marginTop: 3, width: 8 },
   stateText: { color: colors.muted, fontFamily: fonts.medium, fontSize: 14, paddingVertical: 30, textAlign: 'center' },
+  modalOverlay: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(5, 10, 8, 0.42)',
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  detailCard: {
+    backgroundColor: colors.white,
+    borderRadius: 26,
+    maxHeight: '78%',
+    padding: 22,
+    width: '100%',
+  },
+  detailHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  detailIcon: {
+    alignItems: 'center',
+    backgroundColor: '#e6faee',
+    borderRadius: 24,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
+  },
+  closeButton: {
+    alignItems: 'center',
+    backgroundColor: '#f1f6f3',
+    borderRadius: 18,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  detailCategory: {
+    color: '#3d9c65',
+    fontFamily: fonts.bold,
+    fontSize: 12,
+    letterSpacing: 0.4,
+    marginTop: 18,
+    textTransform: 'uppercase',
+  },
+  detailScroll: { flexGrow: 0, flexShrink: 1, marginTop: 8 },
+  detailTitle: {
+    color: colors.ink,
+    fontFamily: fonts.extraBold,
+    fontSize: 20,
+    lineHeight: 28,
+  },
+  detailBody: {
+    color: '#42534a',
+    fontFamily: fonts.medium,
+    fontSize: 15,
+    lineHeight: 24,
+    marginTop: 12,
+  },
+  detailFooter: {
+    alignItems: 'center',
+    borderTopColor: '#e6eef0',
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: 7,
+    marginTop: 18,
+    paddingTop: 14,
+  },
+  detailTime: {
+    color: '#3d9c65',
+    flex: 1,
+    fontFamily: fonts.bold,
+    fontSize: 12,
+  },
 });
 

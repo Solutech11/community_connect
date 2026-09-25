@@ -6,6 +6,7 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import AppSelectSheet from "../../components/ui/app-select-sheet";
+import EventLocationPickerField from "../../components/ui/event-location-picker-field";
 import KeyboardAwareScrollView from "../../components/ui/keyboard-aware-scroll-view";
 import {
   BottomActions,
@@ -23,6 +24,7 @@ import {
 } from "../../data/event-locations";
 import { aiApi } from "../../services/api/ai.api";
 import { ApiError } from "../../services/api/client";
+import type { LocationSearchResult } from "../../services/api/locations.api";
 import { getRegistrationLocation } from "../../services/location/registration-location.service";
 import { createEventDraftStorage } from "../../services/storage/create-event-draft.storage";
 import { colors, fonts } from "../../styles/theme";
@@ -200,12 +202,6 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
     tickets: latestDraft.current.tickets ?? [],
   });
 
-  const chooseLocationOnMap = () => {
-    const draft = buildDraft();
-    void createEventDraftStorage.save(draft);
-    navigation.navigate("CreateEventLocationPicker", { draft });
-  };
-
   const useCurrentLocation = async () => {
     if (locating) return;
     setLocating(true);
@@ -213,7 +209,7 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
       const location = await getRegistrationLocation();
       if (!location) {
         setAlert(
-          "Location access is unavailable. Enter the venue latitude and longitude manually.",
+          "Location access is unavailable. Search for the venue or place the pin on the map.",
         );
         return;
       }
@@ -228,7 +224,7 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
         !Number.isFinite(currentLatitude)
       ) {
         setAlert(
-          "Could not read valid coordinates. Enter the venue latitude and longitude manually.",
+          "Could not read a valid location. Search for the venue or place the pin on the map.",
         );
         return;
       }
@@ -237,11 +233,18 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
       setLongitude(String(currentLongitude));
     } catch {
       setAlert(
-        "Could not get your current location. Enter the venue coordinates manually.",
+        "Could not get your current location. Search for the venue or place the pin on the map.",
       );
     } finally {
       setLocating(false);
     }
+  };
+
+  const selectMapLocation = (result: LocationSearchResult) => {
+    setVenueName(result.name || venueName);
+    setAddress(result.address || result.label || address);
+    if (result.state) setState(result.state);
+    if (result.localArea) setLga(result.localArea);
   };
 
   const dropdownOptions =
@@ -359,7 +362,7 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
     }
     if (!validCoordinates) {
       setAlert(
-        "Enter a valid venue latitude (-90 to 90) and longitude (-180 to 180), or use your current location.",
+        "Search for the venue, place the pin on the map, or use your current location before continuing.",
       );
       return;
     }
@@ -475,12 +478,12 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
           value={address}
         />
 
-        <View style={styles.coordinatesSection}>
+        <View style={styles.locationSection}>
           <View style={styles.coordinatesHeading}>
             <View style={styles.coordinatesCopy}>
-              <Text style={styles.label}>Venue Coordinates</Text>
+              <Text style={styles.label}>Venue Location</Text>
               <Text style={styles.coordinatesHint}>
-                Add the venue location to help attendees find your event.
+                Add the exact map location to help attendees find your event.
               </Text>
             </View>
             <Pressable
@@ -497,26 +500,15 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
               </Text>
             </Pressable>
           </View>
-          <Pressable onPress={chooseLocationOnMap} style={styles.mapButton}>
-            <Ionicons color="#078d45" name="map-outline" size={17} />
-            <Text style={styles.mapButtonText}>Choose on map</Text>
-            <Ionicons color="#078d45" name="arrow-forward" size={16} />
-          </Pressable>
-          <EventField
-            icon="navigate-outline"
-            keyboardType="numbers-and-punctuation"
-            label="Latitude"
-            onChangeText={setLatitude}
-            placeholder="e.g. 6.5244"
-            value={latitude}
-          />
-          <EventField
-            icon="compass-outline"
-            keyboardType="numbers-and-punctuation"
-            label="Longitude"
-            onChangeText={setLongitude}
-            placeholder="e.g. 3.3792"
-            value={longitude}
+          <EventLocationPickerField
+            country={country}
+            latitude={latitude}
+            longitude={longitude}
+            onCoordinateChange={(nextLatitude, nextLongitude) => {
+              setLatitude(nextLatitude);
+              setLongitude(nextLongitude);
+            }}
+            onLocationSelect={selectMapLocation}
           />
         </View>
 
@@ -564,10 +556,7 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
                   ]}
                 >
                   <Text
-                    style={[
-                      styles.toggleText,
-                      selected && styles.toggleTextOn,
-                    ]}
+                    style={[styles.toggleText, selected && styles.toggleTextOn]}
                   >
                     {label}
                   </Text>
@@ -601,7 +590,7 @@ const styles = StyleSheet.create({
   safe: { backgroundColor: colors.paper, flex: 1 },
   content: { gap: 28, padding: 24, paddingBottom: 36 },
   block: { gap: 12 },
-  coordinatesSection: { gap: 16 },
+  locationSection: { gap: 16 },
   coordinatesHeading: {
     alignItems: "center",
     flexDirection: "row",
@@ -628,23 +617,6 @@ const styles = StyleSheet.create({
     color: "#078d45",
     fontFamily: fonts.bold,
     fontSize: 10,
-  },
-  mapButton: {
-    alignItems: "center",
-    alignSelf: "flex-start",
-    backgroundColor: colors.white,
-    borderColor: "#dbece1",
-    borderRadius: 18,
-    borderWidth: 1,
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 13,
-    paddingVertical: 10,
-  },
-  mapButtonText: {
-    color: "#078d45",
-    fontFamily: fonts.bold,
-    fontSize: 11,
   },
   label: {
     color: colors.ink,

@@ -20,6 +20,7 @@ import AppAlertModal from "../../components/ui/app-alert-modal";
 import AppSelectSheet from "../../components/ui/app-select-sheet";
 import KeyboardAwareScrollView from "../../components/ui/keyboard-aware-scroll-view";
 import ProfilePageHeader from "../../components/ui/profile-page-header";
+import { EVENT_AUDIENCES } from "../../data/event-locations";
 import { ApiError } from "../../services/api/client";
 import { eventsApi } from "../../services/api/events.api";
 import { uploadsApi } from "../../services/api/uploads.api";
@@ -51,6 +52,7 @@ type EventModeration = {
   >;
 };
 type Event = Omit<GetEventsIdResponse["data"]["event"], "moderation"> & {
+  targetAudience?: string;
   moderation?: EventModeration;
 };
 type TicketType = GetEventsIdResponse["data"]["ticketTypes"][number];
@@ -122,6 +124,8 @@ export default function ManageCreatedEventConnectedScreen({
   const [capacity, setCapacity] = useState("");
   const [setting, setSetting] = useState<EventSetting>("indoor");
   const [settingPickerOpen, setSettingPickerOpen] = useState(false);
+  const [targetAudience, setTargetAudience] = useState("");
+  const [audiencePickerOpen, setAudiencePickerOpen] = useState(false);
   const [ticketTitle, setTicketTitle] = useState("");
   const [ticketPrice, setTicketPrice] = useState("");
   const [ticketCapacity, setTicketCapacity] = useState("");
@@ -132,9 +136,9 @@ export default function ManageCreatedEventConnectedScreen({
   const [publishing, setPublishing] = useState(false);
   const [savingDetails, setSavingDetails] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
-  const [publishCooldownUntil, setPublishCooldownUntil] = useState<number | null>(
-    null,
-  );
+  const [publishCooldownUntil, setPublishCooldownUntil] = useState<
+    number | null
+  >(null);
   const [publishCooldownSeconds, setPublishCooldownSeconds] = useState(0);
   const [notice, setNotice] = useState<{
     title: string;
@@ -162,7 +166,7 @@ export default function ManageCreatedEventConnectedScreen({
           eventsApi.getForManagement(eventId),
           eventsApi.attendees(eventId),
         ]);
-        const nextEvent = eventResponse.data.event;
+        const nextEvent: Event = eventResponse.data.event;
         setEvent(nextEvent);
         setTicketTypes(eventResponse.data.ticketTypes);
         setAttendees(attendeeResponse.data.attendees);
@@ -172,6 +176,7 @@ export default function ManageCreatedEventConnectedScreen({
         setEndsAt(nextEvent.endsAt);
         setCapacity(String(nextEvent.maxCapacity));
         setSetting(normalizeEventSetting(nextEvent.setting));
+        setTargetAudience(nextEvent.targetAudience ?? "");
       } catch (error) {
         setNotice({
           title: "Management unavailable",
@@ -247,12 +252,7 @@ export default function ManageCreatedEventConnectedScreen({
   };
 
   const submitEvent = async () => {
-    if (
-      !eventId ||
-      submitting ||
-      publishing ||
-      publishCooldownSeconds > 0
-    ) {
+    if (!eventId || submitting || publishing || publishCooldownSeconds > 0) {
       return;
     }
     setPublishCooldownUntil(Date.now() + 60_000);
@@ -303,6 +303,7 @@ export default function ManageCreatedEventConnectedScreen({
             endsAt: parsedEnd.toISOString(),
             maxCapacity,
             setting,
+            targetAudience: targetAudience.trim() || undefined,
           }),
         "Event details saved.",
       );
@@ -488,7 +489,9 @@ export default function ManageCreatedEventConnectedScreen({
                     <Text style={[styles.verdictTitle, styles.pendingTitle]}>
                       Review pending
                     </Text>
-                    <Text style={[styles.verdictMessage, styles.pendingMessage]}>
+                    <Text
+                      style={[styles.verdictMessage, styles.pendingMessage]}
+                    >
                       This event is waiting for moderation. The current API does
                       not allow changes while review is in progress.
                     </Text>
@@ -501,29 +504,35 @@ export default function ManageCreatedEventConnectedScreen({
                 <Stat label="Ticket tiers" value={String(ticketTypes.length)} />
               </View>
               <View style={styles.actions}>
-                <Pressable
-                  accessibilityLabel="Scan event tickets"
-                  accessibilityRole="button"
-                  android_ripple={{ color: "#cdebd8" }}
-                  onPress={() =>
-                    navigation.navigate("TicketScanner", { eventId })
-                  }
-                  style={({ pressed }) => [
-                    styles.action,
-                    styles.scanAction,
-                    pressed && styles.actionPressed,
-                  ]}
-                >
-                  <Ionicons
-                    color="#078d45"
-                    name="qr-code-outline"
-                    size={20}
-                  />
-                  <Text style={[styles.actionText, styles.scanActionText]}>
-                    Scan tickets
-                  </Text>
-                  <Ionicons color="#078d45" name="chevron-forward" size={16} />
-                </Pressable>
+                {event.status === "published" ? (
+                  <Pressable
+                    accessibilityLabel="Scan event tickets"
+                    accessibilityRole="button"
+                    android_ripple={{ color: "#cdebd8" }}
+                    onPress={() =>
+                      navigation.navigate("TicketScanner", { eventId })
+                    }
+                    style={({ pressed }) => [
+                      styles.action,
+                      styles.scanAction,
+                      pressed && styles.actionPressed,
+                    ]}
+                  >
+                    <Ionicons
+                      color="#078d45"
+                      name="qr-code-outline"
+                      size={20}
+                    />
+                    <Text style={[styles.actionText, styles.scanActionText]}>
+                      Scan tickets
+                    </Text>
+                    <Ionicons
+                      color="#078d45"
+                      name="chevron-forward"
+                      size={16}
+                    />
+                  </Pressable>
+                ) : null}
                 {event.status === "draft" || event.status === "rejected" ? (
                   <Pressable
                     accessibilityLabel={
@@ -539,15 +548,11 @@ export default function ManageCreatedEventConnectedScreen({
                     accessibilityState={{
                       busy: publishing,
                       disabled:
-                        submitting ||
-                        publishing ||
-                        publishCooldownSeconds > 0,
+                        submitting || publishing || publishCooldownSeconds > 0,
                     }}
                     android_ripple={{ color: "#9cdfb5" }}
                     disabled={
-                      submitting ||
-                      publishing ||
-                      publishCooldownSeconds > 0
+                      submitting || publishing || publishCooldownSeconds > 0
                     }
                     onPress={() => void submitEvent()}
                     style={({ pressed }) => [
@@ -576,7 +581,11 @@ export default function ManageCreatedEventConnectedScreen({
                           : publishActionLabel}
                     </Text>
                     {!publishing && publishCooldownSeconds === 0 ? (
-                      <Ionicons color={colors.ink} name="arrow-forward" size={16} />
+                      <Ionicons
+                        color={colors.ink}
+                        name="arrow-forward"
+                        size={16}
+                      />
                     ) : null}
                   </Pressable>
                 ) : null}
@@ -681,6 +690,29 @@ export default function ManageCreatedEventConnectedScreen({
                   ]}
                 >
                   <Text style={styles.settingValue}>{setting}</Text>
+                  {canEditEvent ? (
+                    <Ionicons color="#668071" name="chevron-down" size={18} />
+                  ) : null}
+                </Pressable>
+                <Text style={styles.fieldLabel}>Target audience / age</Text>
+                <Pressable
+                  accessibilityLabel="Choose target audience and age group"
+                  accessibilityRole="button"
+                  disabled={!canEditEvent}
+                  onPress={() => setAudiencePickerOpen(true)}
+                  style={[
+                    styles.settingPicker,
+                    !canEditEvent && styles.readOnly,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.settingValue,
+                      !targetAudience && styles.placeholderValue,
+                    ]}
+                  >
+                    {targetAudience || "Choose who can attend"}
+                  </Text>
                   {canEditEvent ? (
                     <Ionicons color="#668071" name="chevron-down" size={18} />
                   ) : null}
@@ -888,11 +920,23 @@ export default function ManageCreatedEventConnectedScreen({
         value={setting}
         visible={settingPickerOpen}
       />
+      <AppSelectSheet
+        onClose={() => setAudiencePickerOpen(false)}
+        onSelect={setTargetAudience}
+        options={[...EVENT_AUDIENCES]}
+        title="Target audience / age"
+        value={targetAudience}
+        visible={audiencePickerOpen}
+      />
     </>
   );
 }
 
-function ModerationVerdictCard({ moderation }: { moderation: EventModeration }) {
+function ModerationVerdictCard({
+  moderation,
+}: {
+  moderation: EventModeration;
+}) {
   const rejected = moderation.verdict === "rejected";
   const failedRules = MODERATION_RULES.flatMap(([key, label]) => {
     const check = moderation.checks?.[key];
@@ -1207,6 +1251,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textTransform: "capitalize",
   },
+  placeholderValue: { color: colors.muted },
   readOnly: { opacity: 0.65 },
   multiline: { minHeight: 90, textAlignVertical: "top" },
   row: { flexDirection: "row", gap: 8 },

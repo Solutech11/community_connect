@@ -20,13 +20,7 @@ import ChatScreen from "../pages/tabs/chat-connected";
 import ProfileScreen from "../pages/tabs/profile";
 import DashboardLayout from "../Layouts/dashboard-layout";
 import { colors, fonts } from "../styles/theme";
-
-type MainTabParamList = {
-  HomeTab: undefined;
-  Community: undefined;
-  Chat: undefined;
-  Profile: undefined;
-};
+import type { MainTabParamList } from "../types/navigation";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 

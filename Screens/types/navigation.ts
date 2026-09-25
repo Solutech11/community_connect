@@ -1,5 +1,10 @@
-import type { RouteProp } from "@react-navigation/native";
+import type {
+  NavigatorScreenParams,
+  RouteProp,
+} from "@react-navigation/native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { CompositeNavigationProp } from "@react-navigation/native";
 import type { EventSetting } from "./events";
 
 export type CheckoutTicketSelection = {
@@ -48,7 +53,7 @@ export type RootStackParamList = {
   InterestsSelection: undefined;
   PersonalizationForm: undefined;
   Preferences: undefined;
-  Home: undefined;
+  Home: NavigatorScreenParams<MainTabParamList> | undefined;
   CommunityJoin: { communityId: string };
   CommunityRoom: { communityId: string };
   CommunityCall: {
@@ -71,7 +76,6 @@ export type RootStackParamList = {
   EditTicketType: { eventId: string; ticketTypeId: string };
   CreateEventIntroduction: undefined;
   CreateEventDetails: { draft?: Partial<CreateEventDraft> } | undefined;
-  CreateEventLocationPicker: { draft: Partial<CreateEventDraft> };
   CreateEventDateTime: { draft: CreateEventDraft };
   CreateEventTickets: { draft: CreateEventDraft };
   CreateEventReview: { draft: CreateEventDraft };
@@ -127,5 +131,15 @@ export type RootStackParamList = {
 };
 export type RootStackNavigationProp =
   NativeStackNavigationProp<RootStackParamList>;
+export type MainTabParamList = {
+  HomeTab: undefined;
+  Community: undefined;
+  Chat: undefined;
+  Profile: undefined;
+};
+export type ProfileNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, "Profile">,
+  RootStackNavigationProp
+>;
 export type RootStackRouteProp<RouteName extends keyof RootStackParamList> =
   RouteProp<RootStackParamList, RouteName>;

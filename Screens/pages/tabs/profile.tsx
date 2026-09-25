@@ -17,7 +17,7 @@ import { lightTap as tapFeedback } from "../../hooks/haptics";
 import { useAuth } from "../../hooks/use-auth";
 import { usersApi } from '../../services/api/users.api';
 import { colors, fonts } from "../../styles/theme";
-import type { RootStackNavigationProp } from "../../types/navigation";
+import type { ProfileNavigationProp } from "../../types/navigation";
 type AlertState = {
   title: string;
   message: string;
@@ -76,7 +76,7 @@ function Section({
   );
 }
 export default function ProfileScreen() {
-  const navigation = useNavigation<RootStackNavigationProp>();
+  const navigation = useNavigation<ProfileNavigationProp>();
   const { user, signOut } = useAuth();
   const [alert, setAlert] = useState<AlertState>(null);
   const [signingOut, setSigningOut] = useState(false);
@@ -177,7 +177,11 @@ export default function ProfileScreen() {
                 label: "My Tickets",
                 onPress: () => navigation.navigate("MyEvents"),
               },
-              { icon: "chatbox-outline", label: "Chat" },
+              {
+                icon: "chatbox-outline",
+                label: "Chat",
+                onPress: () => navigation.navigate("Chat"),
+              },
             ]}
           />
           <Section

@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
+import TicketStatusBadge from "../../components/ui/ticket-status-badge";
 import { useAuth } from "../../hooks/use-auth";
 import { ApiError } from "../../services/api/client";
 import { eventsApi } from "../../services/api/events.api";
@@ -38,10 +39,12 @@ const eventImages = [
 function EventCard({
   event,
   imageIndex = 0,
+  ticketStatus,
   onPress,
 }: {
   event: EventItem;
   imageIndex?: number;
+  ticketStatus?: string;
   onPress: () => void;
 }) {
   const date = new Date(event.startsAt);
@@ -64,6 +67,9 @@ function EventCard({
         <Text style={styles.cardTitle} numberOfLines={1}>
           {event.title}
         </Text>
+        {ticketStatus ? (
+          <TicketStatusBadge compact status={ticketStatus} />
+        ) : null}
         <View style={styles.metaRow}>
           <Ionicons name="location-outline" color="#399760" size={17} />
           <Text style={styles.metaText} numberOfLines={1}>
@@ -238,6 +244,7 @@ export default function HomeScreen() {
                 <EventCard
                   event={ticket.eventId}
                   imageIndex={index}
+                  ticketStatus={ticket.status}
                   onPress={() =>
                     navigation.navigate("MyEventDetails", {
                       orderNumber: ticket.orderNumber,

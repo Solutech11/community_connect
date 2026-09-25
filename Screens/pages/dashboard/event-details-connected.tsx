@@ -19,6 +19,9 @@ import AppAlertModal from "../../components/ui/app-alert-modal";
 import AppReportSheet from "../../components/ui/app-report-sheet";
 import AppShareSheet from "../../components/ui/app-share-sheet";
 import EventTicketSheet from "../../components/ui/event-ticket-sheet";
+import EventLocationMap, {
+  type MapCoordinate,
+} from "../../components/ui/event-location-map";
 import {
   toGeneralReportReason,
   type ReportReason,
@@ -30,9 +33,44 @@ import type { GetEventsIdResponse } from "../../types/api.generated";
 import type { RootStackParamList } from "../../types/navigation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EventDetails">;
-type EventDetails = GetEventsIdResponse["data"];
+type EventRecord = GetEventsIdResponse["data"]["event"] & {
+  coordinates?: {
+    type?: string;
+    coordinates?: number[];
+  };
+};
+type EventDetails = Omit<GetEventsIdResponse["data"], "event"> & {
+  event: EventRecord;
+};
 const fallbackImage =
   "https://images.unsplash.com/photo-1505236858219-8359eb29e329?auto=format&fit=crop&w=1400&q=88";
+
+function getEventMapCoordinate(event: EventRecord): MapCoordinate | null {
+  const coordinates = event.coordinates?.coordinates;
+  if (
+    event.coordinates?.type !== "Point" ||
+    !coordinates ||
+    coordinates.length < 2
+  ) {
+    return null;
+  }
+
+  const [longitude, latitude] = coordinates;
+  if (
+    typeof longitude !== "number" ||
+    typeof latitude !== "number" ||
+    !Number.isFinite(longitude) ||
+    !Number.isFinite(latitude) ||
+    longitude < -180 ||
+    longitude > 180 ||
+    latitude < -90 ||
+    latitude > 90
+  ) {
+    return null;
+  }
+
+  return { longitude, latitude };
+}
 
 function formatMoney(kobo: number) {
   return new Intl.NumberFormat("en-NG", {
@@ -148,6 +186,16 @@ export default function EventDetailsScreen({ navigation, route }: Props) {
   const { event } = details;
   const startsAt = new Date(event.startsAt);
   const endsAt = new Date(event.endsAt);
+  const mapCoordinate = getEventMapCoordinate(event);
+  const venueAddress = [
+    event.venueName,
+    event.address,
+    event.lga,
+    event.state,
+    event.country,
+  ]
+    .filter(Boolean)
+    .join(", ");
   const eventLink = `https://communityconnect.app/events/${event.slug}`;
   const shareMessage = `Check out ${event.title} on Community Connect: ${eventLink}`;
 
@@ -171,6 +219,21 @@ export default function EventDetailsScreen({ navigation, route }: Props) {
       setAlert({
         title: "Unable to share",
         message: "Please try again in a moment.",
+      });
+    }
+  };
+
+  const openDirections = async () => {
+    const destination = mapCoordinate
+      ? `${mapCoordinate.latitude},${mapCoordinate.longitude}`
+      : venueAddress;
+    const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+    try {
+      await Linking.openURL(directionsUrl);
+    } catch {
+      setAlert({
+        title: "Unable to open directions",
+        message: "Please try again or search for the venue in your maps app.",
       });
     }
   };
@@ -304,6 +367,46 @@ export default function EventDetailsScreen({ navigation, route }: Props) {
                 label="STATE"
                 value={event.state}
               />
+            </View>
+
+            <View style={styles.mapCard}>
+              <View style={styles.mapHeader}>
+                <View style={styles.mapHeaderCopy}>
+                  <Text style={styles.mapTitle}>Venue map</Text>
+                  <Text numberOfLines={2} style={styles.mapAddress}>
+                    {venueAddress}
+                  </Text>
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => void openDirections()}
+                  style={styles.directionsButton}
+                >
+                  <Ionicons
+                    name="navigate-outline"
+                    size={17}
+                    color={colors.ink}
+                  />
+                  <Text style={styles.directionsButtonText}>Directions</Text>
+                </Pressable>
+              </View>
+              <View style={styles.mapPreview}>
+                {mapCoordinate ? (
+                  <EventLocationMap
+                    coordinate={mapCoordinate}
+                    country={event.country}
+                    interactive={false}
+                    onCoordinateChange={() => undefined}
+                  />
+                ) : (
+                  <View style={styles.mapUnavailable}>
+                    <Ionicons name="map-outline" size={27} color="#278154" />
+                    <Text style={styles.mapUnavailableText}>
+                      A map pin is not available for this venue.
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -481,6 +584,65 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     marginTop: 6,
+  },
+  mapCard: {
+    backgroundColor: colors.white,
+    borderColor: "#e9f0eb",
+    borderRadius: 28,
+    borderWidth: 1,
+    marginTop: 20,
+    overflow: "hidden",
+    padding: 14,
+  },
+  mapHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 10,
+    justifyContent: "space-between",
+    marginBottom: 13,
+  },
+  mapHeaderCopy: { flex: 1 },
+  mapTitle: { color: colors.ink, fontFamily: fonts.bold, fontSize: 15 },
+  mapAddress: {
+    color: "#687a70",
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 3,
+  },
+  directionsButton: {
+    alignItems: "center",
+    backgroundColor: colors.lime,
+    borderRadius: 19,
+    flexDirection: "row",
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+  },
+  directionsButtonText: {
+    color: colors.ink,
+    fontFamily: fonts.bold,
+    fontSize: 10,
+  },
+  mapPreview: {
+    borderRadius: 20,
+    height: 210,
+    overflow: "hidden",
+    width: "100%",
+  },
+  mapUnavailable: {
+    alignItems: "center",
+    backgroundColor: "#eff8f2",
+    flex: 1,
+    gap: 8,
+    justifyContent: "center",
+    padding: 20,
+  },
+  mapUnavailableText: {
+    color: "#64806f",
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    textAlign: "center",
   },
   bottomBar: {
     backgroundColor: colors.white,

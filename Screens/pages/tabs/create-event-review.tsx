@@ -13,6 +13,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
+import EventSubmissionAnimationModal from "../../components/ui/event-submission-animation-modal";
+import EventLocationMap, {
+  type MapCoordinate,
+} from "../../components/ui/event-location-map";
 import { ApiError } from "../../services/api/client";
 import { eventsApi } from "../../services/api/events.api";
 import { uploadsApi } from "../../services/api/uploads.api";
@@ -28,9 +32,6 @@ import { colors, fonts } from "../../styles/theme";
 import type { RootStackParamList } from "../../types/navigation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CreateEventReview">;
-
-const MAP_IMAGE =
-  "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=1000&q=82";
 
 const MONTH_INDEX: Record<string, number> = {
   Apr: 3,
@@ -105,6 +106,27 @@ function formatTicketPrice(value: string) {
   }).format(amount);
 }
 
+function parseMapCoordinate(latitude: string, longitude: string) {
+  const parsedLatitude = Number(latitude);
+  const parsedLongitude = Number(longitude);
+  if (
+    !latitude.trim() ||
+    !longitude.trim() ||
+    !Number.isFinite(parsedLatitude) ||
+    parsedLatitude < -90 ||
+    parsedLatitude > 90 ||
+    !Number.isFinite(parsedLongitude) ||
+    parsedLongitude < -180 ||
+    parsedLongitude > 180
+  ) {
+    return null;
+  }
+  return {
+    latitude: parsedLatitude,
+    longitude: parsedLongitude,
+  } satisfies MapCoordinate;
+}
+
 export default function CreateEventReviewScreen({ navigation, route }: Props) {
   const { draft } = route.params;
   const { user } = useAuth();
@@ -119,6 +141,7 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
     ? `${user.firstName} ${user.lastName}`.trim()
     : "Community Member";
   const hostEmail = user?.email || "Email unavailable";
+  const mapCoordinate = parseMapCoordinate(draft.latitude, draft.longitude);
 
   const publish = async () => {
     if (publishing) return;
@@ -283,15 +306,14 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
               <Text style={styles.detailSecondary}>{draft.country}</Text>
             </View>
           </View>
-          <ImageBackground
-            imageStyle={styles.mapImage}
-            source={{ uri: MAP_IMAGE }}
-            style={styles.map}
-          >
-            <View style={styles.pin}>
-              <Ionicons color={colors.white} name="location" size={16} />
-            </View>
-          </ImageBackground>
+          <View style={styles.map}>
+            <EventLocationMap
+              coordinate={mapCoordinate}
+              country={draft.country}
+              interactive={false}
+              onCoordinateChange={() => undefined}
+            />
+          </View>
         </InfoCard>
 
         <InfoCard icon="ticket-outline" title="Ticket Tiers">
@@ -355,6 +377,7 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
         </Pressable>
       </SafeAreaView>
 
+      <EventSubmissionAnimationModal visible={publishing} />
       <AppAlertModal
         confirmOnly={Boolean(alert?.viewDrafts)}
         confirmText={
@@ -440,19 +463,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   map: {
-    alignItems: "center",
+    backgroundColor: "#eff8f2",
+    borderRadius: 24,
     height: 150,
-    justifyContent: "center",
     marginTop: 20,
-  },
-  mapImage: { borderRadius: 24 },
-  pin: {
-    alignItems: "center",
-    backgroundColor: "#78bb62",
-    borderRadius: 18,
-    height: 34,
-    justifyContent: "center",
-    width: 34,
+    overflow: "hidden",
   },
   tickets: { gap: 10, marginTop: 18 },
   ticket: {

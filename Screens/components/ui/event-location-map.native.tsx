@@ -3,10 +3,11 @@ import Mapbox from "@rnmapbox/maps";
 import { useEffect, useMemo, useRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
+import { mapboxPublicAccessToken } from "../../services/api/config";
 import { colors, fonts } from "../../styles/theme";
 import type { EventLocationMapProps } from "./event-location-map.types";
 
-const accessToken = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN?.trim();
+const accessToken = mapboxPublicAccessToken.trim();
 if (accessToken) Mapbox.setAccessToken(accessToken);
 
 const COUNTRY_CENTERS: Record<string, [number, number]> = {
@@ -46,6 +47,7 @@ export default function EventLocationMap({
   country,
   coordinate,
   onCoordinateChange,
+  interactive = true,
 }: EventLocationMapProps) {
   const camera = useRef<Mapbox.Camera>(null);
   const center = useMemo<[number, number]>(
@@ -74,8 +76,8 @@ export default function EventLocationMap({
         </View>
         <Text style={styles.title}>Add a Mapbox public access token</Text>
         <Text style={styles.copy}>
-          Set EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN in your local environment, then
-          rebuild the development app.
+          Add the public token to Screens/services/api/config.ts, then restart
+          the Metro server.
         </Text>
       </View>
     );
@@ -93,7 +95,7 @@ export default function EventLocationMap({
 
   return (
     <Mapbox.MapView
-      onPress={handleMapPress}
+      onPress={interactive ? handleMapPress : undefined}
       scaleBarEnabled={false}
       style={styles.map}
       styleURL={Mapbox.StyleURL.Street}
@@ -108,9 +110,9 @@ export default function EventLocationMap({
       {coordinate ? (
         <Mapbox.PointAnnotation
           coordinate={center}
-          draggable
+          draggable={interactive}
           id="event-location-pin"
-          onDragEnd={handleMarkerDrag}
+          onDragEnd={interactive ? handleMarkerDrag : undefined}
         >
           <View style={styles.pin}>
             <Ionicons color="#ffffff" name="location" size={24} />

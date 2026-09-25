@@ -16,8 +16,8 @@ export default function EventLocationMap({ country }: EventLocationMapProps) {
         Map preview is available in the mobile app
       </Text>
       <Text style={styles.copy}>
-        Search for a venue above, or add its coordinates on the previous step.
-        The selected country is {country}.
+        Search for a venue above to select its location. The selected country is
+        {` ${country}`}.
       </Text>
     </View>
   );
