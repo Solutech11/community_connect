@@ -3,6 +3,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   ImageBackground,
   Linking,
   Pressable,
@@ -17,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import AppReportSheet from "../../components/ui/app-report-sheet";
 import AppShareSheet from "../../components/ui/app-share-sheet";
+import EventTicketSheet from "../../components/ui/event-ticket-sheet";
 import {
   toGeneralReportReason,
   type ReportReason,
@@ -69,12 +71,16 @@ export default function EventDetailsScreen({ navigation, route }: Props) {
   const [loading, setLoading] = useState(true);
   const [shareVisible, setShareVisible] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
+  const [ticketSheetVisible, setTicketSheetVisible] = useState(false);
   const [alert, setAlert] = useState<{ title: string; message: string } | null>(
     null,
   );
 
   useEffect(() => {
     const controller = new AbortController();
+    setLoading(true);
+    setDetails(null);
+    setAlert(null);
     eventsApi
       .get(route.params.eventId, controller.signal)
       .then((response) => setDetails(response.data))
@@ -89,7 +95,9 @@ export default function EventDetailsScreen({ navigation, route }: Props) {
               : "Unable to load this event.",
         });
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
     return () => controller.abort();
   }, [route.params.eventId]);
 
@@ -100,12 +108,17 @@ export default function EventDetailsScreen({ navigation, route }: Props) {
         .map((item) => item.priceKobo) ?? [];
     return prices.length ? formatMoney(Math.min(...prices)) : "Free";
   }, [details]);
+  const activeTicketTypes = useMemo(
+    () => details?.ticketTypes.filter((ticket) => ticket.active) ?? [],
+    [details],
+  );
 
   if (loading) {
     return (
       <SafeAreaView style={styles.fallbackSafeArea}>
         <View style={styles.fallbackBody}>
-          <Text style={styles.fallbackTitle}>Loading event...</Text>
+          <ActivityIndicator color="#08b657" size="large" />
+          <Text style={styles.loadingLabel}>Loading event details...</Text>
         </View>
       </SafeAreaView>
     );
@@ -296,14 +309,12 @@ export default function EventDetailsScreen({ navigation, route }: Props) {
         </ScrollView>
         <View style={styles.bottomBar}>
           <Pressable
-            disabled={!details.ticketTypes.some((item) => item.active)}
-            onPress={() =>
-              navigation.navigate("TicketSelection", { eventId: event._id })
-            }
+            disabled={activeTicketTypes.length === 0}
+            onPress={() => setTicketSheetVisible(true)}
             style={styles.ctaButton}
           >
             <Text style={styles.ctaText}>
-              {details.ticketTypes.length
+              {activeTicketTypes.length
                 ? "Select Ticket"
                 : "Tickets unavailable"}
             </Text>
@@ -311,6 +322,17 @@ export default function EventDetailsScreen({ navigation, route }: Props) {
           </Pressable>
         </View>
       </SafeAreaView>
+      <EventTicketSheet
+        eventId={event._id}
+        onCheckout={(selection) => {
+          setTicketSheetVisible(false);
+          navigation.navigate("Checkout", selection);
+        }}
+        onClose={() => setTicketSheetVisible(false)}
+        ticketTypes={activeTicketTypes}
+        title={event.title}
+        visible={ticketSheetVisible}
+      />
       <AppShareSheet
         visible={shareVisible}
         description={`Share "${event.title}"`}
@@ -484,6 +506,12 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontFamily: fonts.extraBold,
     fontSize: 22,
+  },
+  loadingLabel: {
+    color: "#617086",
+    fontFamily: fonts.medium,
+    fontSize: 14,
+    marginTop: 12,
   },
   fallbackButton: {
     backgroundColor: colors.lime,
