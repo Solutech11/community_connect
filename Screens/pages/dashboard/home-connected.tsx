@@ -29,7 +29,37 @@ import type { RootStackParamList } from "../../types/navigation";
 
 type EventItem = GetEventsResponse["data"]["events"][number];
 type TicketOrder = GetTicketsResponse["data"]["tickets"][number];
-type Category = "All" | "Technology" | "Fitness" | "Arts" | "Community";
+const EVENT_PAGE_SIZE = 100;
+
+async function loadEventCategories(signal: AbortSignal) {
+  const firstPage = await eventsApi.list(
+    { page: 1, limit: EVENT_PAGE_SIZE },
+    signal,
+  );
+  const categories = new Set<string>();
+  const addCategories = (items: EventItem[]) => {
+    items.forEach((event) => {
+      const activityType = event.activityType.trim();
+      if (activityType) categories.add(activityType);
+    });
+  };
+  addCategories(firstPage.data.events);
+  const pageCount = Math.ceil(
+    firstPage.data.pagination.total / EVENT_PAGE_SIZE,
+  );
+
+  for (let page = 2; page <= pageCount; page += 1) {
+    const response = await eventsApi.list(
+      { page, limit: EVENT_PAGE_SIZE },
+      signal,
+    );
+    addCategories(response.data.events);
+  }
+
+  return [...categories]
+    .sort((first, second) => first.localeCompare(second));
+}
+
 const eventImages = [
   "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=1200&q=86",
   "https://images.unsplash.com/photo-1505236858219-8359eb29e329?auto=format&fit=crop&w=1200&q=86",
@@ -94,8 +124,9 @@ export default function HomeScreen() {
     "Community member";
   const [events, setEvents] = useState<EventItem[]>([]);
   const [tickets, setTickets] = useState<TicketOrder[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<Category>("All");
+  const [category, setCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -106,12 +137,12 @@ export default function HomeScreen() {
       try {
         const normalizedQuery = query.trim();
         const eventRequest =
-          normalizedQuery || category !== "All"
+          normalizedQuery || category !== null
             ? eventsApi.list({
                 page: 1,
                 limit: 30,
                 ...(normalizedQuery ? { search: normalizedQuery } : {}),
-                ...(category !== "All" ? { activityType: category } : {}),
+                ...(category !== null ? { activityType: category } : {}),
               })
             : eventsApi.recommended({ limit: 30 });
         const [eventResponse, ticketResponse] = await Promise.all([
@@ -133,6 +164,22 @@ export default function HomeScreen() {
     },
     [category, query],
   );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadEventCategories(controller.signal)
+      .then(setCategoryOptions)
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        setErrorMessage(
+          error instanceof ApiError
+            ? error.message
+            : "Unable to load event categories.",
+        );
+      });
+
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -186,17 +233,9 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categories}
           >
-            {(
-              [
-                "All",
-                "Technology",
-                "Fitness",
-                "Arts",
-                "Community",
-              ] as Category[]
-            ).map((item) => (
+            {[null, ...categoryOptions].map((item) => (
               <Pressable
-                key={item}
+                key={item ?? "all"}
                 onPress={() => setCategory(item)}
                 style={[styles.chip, item === category && styles.chipActive]}
               >
@@ -206,7 +245,7 @@ export default function HomeScreen() {
                     item === category && styles.chipTextActive,
                   ]}
                 >
-                  {item}
+                  {item ?? "All"}
                 </Text>
               </Pressable>
             ))}

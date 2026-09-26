@@ -124,6 +124,9 @@ export default function ManageCreatedEventConnectedScreen({
 }: Props) {
   const eventId = route.params?.eventId;
   const [event, setEvent] = useState<Event | null>(null);
+  const [manageTab, setManageTab] = useState<"details" | "attendees">(
+    "details",
+  );
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [attendeeSummary, setAttendeeSummary] = useState<AttendeeSummary>(
@@ -177,16 +180,18 @@ export default function ManageCreatedEventConnectedScreen({
       }
       refresh ? setRefreshing(true) : setLoading(true);
       try {
-        const [eventResponse, attendeeResponse] = await Promise.all([
-          eventsApi.getForManagement(eventId),
-          eventsApi.attendees(eventId),
-        ]);
+        const eventResponse = await eventsApi.getForManagement(eventId);
         const nextEvent: Event = eventResponse.data.event;
+        const wasPublished =
+          nextEvent.status === "published" || Boolean(nextEvent.publishedAt);
+        const attendeeResponse = wasPublished
+          ? await eventsApi.attendees(eventId)
+          : null;
         setEvent(nextEvent);
         setTicketTypes(eventResponse.data.ticketTypes);
-        setAttendees(attendeeResponse.data.attendees);
+        setAttendees(attendeeResponse?.data.attendees ?? []);
         setAttendeeSummary(
-          attendeeResponse.data.summary ?? EMPTY_ATTENDEE_SUMMARY,
+          attendeeResponse?.data.summary ?? EMPTY_ATTENDEE_SUMMARY,
         );
         setTitle(nextEvent.title);
         setDescription(nextEvent.description);
@@ -236,6 +241,7 @@ export default function ManageCreatedEventConnectedScreen({
   useEffect(() => {
     setPublishCooldownUntil(null);
     setPublishCooldownSeconds(0);
+    setManageTab("details");
   }, [eventId]);
 
   const canEditEvent =
@@ -407,12 +413,90 @@ export default function ManageCreatedEventConnectedScreen({
     [attendees, query],
   );
   const totalGuests = attendeeSummary.totalTickets;
+  const totalEarningsKobo = useMemo(
+    () =>
+      attendees.reduce(
+        (total, order) => total + order.organizerProceedsKobo,
+        0,
+      ),
+    [attendees],
+  );
+  const canViewAttendees =
+    event?.status === "published" || Boolean(event?.publishedAt);
+  const activeTab = canViewAttendees ? manageTab : "details";
 
   return (
     <>
       <SafeAreaView edges={[]} style={styles.safe}>
         <ProfilePageHeader title="Manage Event" onBack={navigation.goBack} />
+        {canViewAttendees ? (
+          <View style={styles.manageTabs}>
+            <Pressable
+              accessibilityRole="tab"
+              accessibilityState={{ selected: activeTab === "details" }}
+              onPress={() => setManageTab("details")}
+              style={[
+                styles.manageTab,
+                activeTab === "details" && styles.manageTabActive,
+              ]}
+            >
+              <Ionicons
+                color={activeTab === "details" ? colors.white : "#638071"}
+                name="information-circle-outline"
+                size={17}
+              />
+              <Text
+                style={[
+                  styles.manageTabText,
+                  activeTab === "details" && styles.manageTabTextActive,
+                ]}
+              >
+                Details
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="tab"
+              accessibilityState={{ selected: activeTab === "attendees" }}
+              onPress={() => setManageTab("attendees")}
+              style={[
+                styles.manageTab,
+                activeTab === "attendees" && styles.manageTabActive,
+              ]}
+            >
+              <Ionicons
+                color={activeTab === "attendees" ? colors.white : "#638071"}
+                name="people-outline"
+                size={17}
+              />
+              <Text
+                style={[
+                  styles.manageTabText,
+                  activeTab === "attendees" && styles.manageTabTextActive,
+                ]}
+              >
+                Attendees
+              </Text>
+              <View
+                style={[
+                  styles.manageTabCount,
+                  activeTab === "attendees" && styles.manageTabCountActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.manageTabCountText,
+                    activeTab === "attendees" &&
+                      styles.manageTabCountTextActive,
+                  ]}
+                >
+                  {attendeeSummary.orders}
+                </Text>
+              </View>
+            </Pressable>
+          </View>
+        ) : null}
         <KeyboardAwareScrollView
+          key={`${eventId ?? "missing"}-${activeTab}`}
           contentContainerStyle={styles.content}
           keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
@@ -521,420 +605,476 @@ export default function ManageCreatedEventConnectedScreen({
                 <Stat label="Capacity" value={String(event.maxCapacity)} />
                 <Stat label="Ticket tiers" value={String(ticketTypes.length)} />
               </View>
-              <View style={styles.actions}>
-                {event.status === "published" ? (
-                  <Pressable
-                    accessibilityLabel="Scan event tickets"
-                    accessibilityRole="button"
-                    android_ripple={{ color: "#cdebd8" }}
-                    onPress={() =>
-                      navigation.navigate("TicketScanner", { eventId })
-                    }
-                    style={({ pressed }) => [
-                      styles.action,
-                      styles.scanAction,
-                      pressed && styles.actionPressed,
-                    ]}
-                  >
-                    <Ionicons
-                      color="#078d45"
-                      name="qr-code-outline"
-                      size={20}
-                    />
-                    <Text style={[styles.actionText, styles.scanActionText]}>
-                      Scan tickets
-                    </Text>
-                    <Ionicons
-                      color="#078d45"
-                      name="chevron-forward"
-                      size={16}
-                    />
-                  </Pressable>
-                ) : null}
-                {event.status === "draft" || event.status === "rejected" ? (
-                  <Pressable
-                    accessibilityLabel={
-                      publishing
-                        ? isRepublish
-                          ? "Republishing event"
-                          : "Submitting event"
-                        : isRepublish
-                          ? "Republish event"
-                          : "Submit event for review"
-                    }
-                    accessibilityRole="button"
-                    accessibilityState={{
-                      busy: publishing,
-                      disabled:
-                        submitting || publishing || publishCooldownSeconds > 0,
-                    }}
-                    android_ripple={{ color: "#9cdfb5" }}
-                    disabled={
-                      submitting || publishing || publishCooldownSeconds > 0
-                    }
-                    onPress={() => void submitEvent()}
-                    style={({ pressed }) => [
-                      styles.action,
-                      styles.submitAction,
-                      pressed && !publishing && styles.actionPressed,
-                      submitting && styles.actionDisabled,
-                      publishing && styles.actionDisabled,
-                      publishCooldownSeconds > 0 && styles.actionDisabled,
-                    ]}
-                  >
-                    {publishing ? (
-                      <ActivityIndicator color={colors.ink} size="small" />
-                    ) : (
-                      <Ionicons
-                        color={colors.ink}
-                        name="cloud-upload-outline"
-                        size={20}
-                      />
-                    )}
-                    <Text style={[styles.actionText, styles.submitActionText]}>
-                      {publishing
-                        ? publishingProgressLabel
-                        : publishCooldownSeconds > 0
-                          ? publishCooldownLabel
-                          : publishActionLabel}
-                    </Text>
-                    {!publishing && publishCooldownSeconds === 0 ? (
-                      <Ionicons
-                        color={colors.ink}
-                        name="arrow-forward"
-                        size={16}
-                      />
-                    ) : null}
-                  </Pressable>
-                ) : null}
-                {event.status === "published" ? (
-                  <Pressable
-                    onPress={() =>
-                      setConfirm({
-                        title: "Cancel event?",
-                        message:
-                          "This changes the event status and may affect attendees.",
-                        action: async () => {
-                          await act(
-                            () => eventsApi.cancel(eventId!),
-                            "Event cancelled.",
-                          );
-                        },
-                      })
-                    }
-                    style={styles.action}
-                  >
-                    <Ionicons
-                      color="#a34b4b"
-                      name="close-circle-outline"
-                      size={22}
-                    />
-                    <Text style={styles.actionText}>Cancel</Text>
-                  </Pressable>
-                ) : null}
-                {event.status === "draft" ? (
-                  <Pressable
-                    onPress={() =>
-                      setConfirm({
-                        title: "Delete draft?",
-                        message: "This permanently removes this draft event.",
-                        action: async () => {
-                          await eventsApi.remove(eventId!);
-                          navigation.goBack();
-                        },
-                      })
-                    }
-                    style={styles.action}
-                  >
-                    <Ionicons color="#a34b4b" name="trash-outline" size={22} />
-                    <Text style={styles.actionText}>Delete</Text>
-                  </Pressable>
-                ) : null}
+              <View style={styles.earningsCard}>
+                <View style={styles.earningsIcon}>
+                  <Ionicons
+                    color={colors.lime}
+                    name="wallet-outline"
+                    size={21}
+                  />
+                </View>
+                <View style={styles.earningsCopy}>
+                  <Text style={styles.earningsLabel}>Total earnings</Text>
+                  <Text style={styles.earningsValue}>
+                    {money(totalEarningsKobo)}
+                  </Text>
+                  <Text style={styles.earningsMeta}>
+                    Organizer proceeds from paid ticket orders
+                  </Text>
+                </View>
+                <View style={styles.paidOnlyBadge}>
+                  <View style={styles.paidOnlyDot} />
+                  <Text style={styles.paidOnlyText}>PAID</Text>
+                </View>
               </View>
-
-              <Section title="Event details">
-                <TextInput
-                  editable={canEditEvent}
-                  onChangeText={setTitle}
-                  placeholder="Title"
-                  placeholderTextColor={colors.muted}
-                  style={styles.input}
-                  value={title}
-                />
-                <TextInput
-                  editable={canEditEvent}
-                  multiline
-                  onChangeText={setDescription}
-                  placeholder="Description"
-                  placeholderTextColor={colors.muted}
-                  style={[styles.input, styles.multiline]}
-                  value={description}
-                />
-                <TextInput
-                  autoCapitalize="none"
-                  editable={canEditEvent}
-                  onChangeText={setStartsAt}
-                  placeholder="Start time (ISO 8601)"
-                  placeholderTextColor={colors.muted}
-                  style={styles.input}
-                  value={startsAt}
-                />
-                <TextInput
-                  autoCapitalize="none"
-                  editable={canEditEvent}
-                  onChangeText={setEndsAt}
-                  placeholder="End time (ISO 8601)"
-                  placeholderTextColor={colors.muted}
-                  style={styles.input}
-                  value={endsAt}
-                />
-                <TextInput
-                  editable={canEditEvent}
-                  keyboardType="number-pad"
-                  onChangeText={setCapacity}
-                  placeholder="Capacity"
-                  placeholderTextColor={colors.muted}
-                  style={styles.input}
-                  value={capacity}
-                />
-                <Text style={styles.fieldLabel}>Setting</Text>
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={!canEditEvent}
-                  onPress={() => setSettingPickerOpen(true)}
-                  style={[
-                    styles.settingPicker,
-                    !canEditEvent && styles.readOnly,
-                  ]}
-                >
-                  <Text style={styles.settingValue}>{setting}</Text>
-                  {canEditEvent ? (
-                    <Ionicons color="#668071" name="chevron-down" size={18} />
-                  ) : null}
-                </Pressable>
-                <Text style={styles.fieldLabel}>Target audience / age</Text>
-                <Pressable
-                  accessibilityLabel="Choose target audience and age group"
-                  accessibilityRole="button"
-                  disabled={!canEditEvent}
-                  onPress={() => setAudiencePickerOpen(true)}
-                  style={[
-                    styles.settingPicker,
-                    !canEditEvent && styles.readOnly,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.settingValue,
-                      !targetAudience && styles.placeholderValue,
-                    ]}
-                  >
-                    {targetAudience || "Choose who can attend"}
-                  </Text>
-                  {canEditEvent ? (
-                    <Ionicons color="#668071" name="chevron-down" size={18} />
-                  ) : null}
-                </Pressable>
-                {canEditEvent ? (
-                  <Pressable
-                    accessibilityLabel="Save event details"
-                    accessibilityRole="button"
-                    accessibilityState={{
-                      busy: savingDetails,
-                      disabled: submitting || savingDetails,
-                    }}
-                    disabled={submitting || savingDetails}
-                    onPress={() => void saveDetails()}
-                    style={[
-                      styles.primary,
-                      (submitting || savingDetails) && styles.actionDisabled,
-                    ]}
-                  >
-                    {savingDetails ? (
-                      <ActivityIndicator color={colors.ink} size="small" />
-                    ) : (
-                      <Text style={styles.primaryText}>Save details</Text>
-                    )}
-                  </Pressable>
-                ) : (
-                  <Text style={styles.meta}>
-                    {event.status === "pending_approval"
-                      ? "Events cannot be edited while moderation is in progress."
-                      : "Only draft or rejected events can be edited."}
-                  </Text>
-                )}
-              </Section>
-
-              <Section title="Ticket tiers">
-                {!canEditEvent ? (
-                  <Text style={styles.meta}>
-                    {event.status === "pending_approval"
-                      ? "Ticket tiers cannot be changed while moderation is in progress."
-                      : "Ticket tiers can only be changed on draft or rejected events."}
-                  </Text>
-                ) : null}
-                {ticketTypes.map((ticket) => (
-                  <View key={ticket._id} style={styles.ticket}>
-                    <View style={styles.ticketCopy}>
-                      <Text style={styles.name}>{ticket.title}</Text>
-                      <Text style={styles.meta}>
-                        {money(ticket.priceKobo)} - {ticket.sold}/
-                        {ticket.capacity} sold
-                      </Text>
-                    </View>
-                    <Pressable
-                      accessibilityState={{
-                        disabled: !canEditEvent,
-                      }}
-                      disabled={!canEditEvent}
-                      onPress={() =>
-                        navigation.navigate("EditTicketType", {
-                          eventId: eventId!,
-                          ticketTypeId: ticket._id,
-                        })
-                      }
-                      style={[
-                        styles.editTicket,
-                        !canEditEvent && styles.disabledAction,
-                      ]}
-                    >
-                      <Ionicons
-                        color="#078d45"
-                        name="create-outline"
-                        size={19}
-                      />
-                    </Pressable>
-                    <Pressable
-                      accessibilityState={{
-                        disabled: !canEditEvent,
-                      }}
-                      disabled={!canEditEvent}
-                      onPress={() =>
-                        setConfirm({
-                          title: "Remove ticket tier?",
-                          message:
-                            "The backend will reject removal if this tier can no longer be safely deleted.",
-                          action: async () => {
-                            await act(
-                              () =>
-                                eventsApi.removeTicketType(
-                                  eventId!,
-                                  ticket._id,
-                                ),
-                              "Ticket tier removed.",
-                            );
-                          },
-                        })
-                      }
-                      style={[
-                        styles.delete,
-                        !canEditEvent && styles.disabledAction,
-                      ]}
-                    >
-                      <Ionicons
-                        color="#a34b4b"
-                        name="trash-outline"
-                        size={19}
-                      />
-                    </Pressable>
+              {activeTab === "attendees" ? (
+                <Section title="Attendees">
+                  <View style={styles.attendeeSummaryGrid}>
+                    <AttendeeStat
+                      label="Orders"
+                      value={attendeeSummary.orders}
+                    />
+                    <AttendeeStat
+                      label="Ticket units"
+                      value={attendeeSummary.totalTickets}
+                    />
+                    <AttendeeStat
+                      label="Checked in"
+                      value={attendeeSummary.checkedInTickets}
+                    />
+                    <AttendeeStat
+                      label="Not checked in"
+                      value={attendeeSummary.pendingTickets}
+                    />
                   </View>
-                ))}
-                <TextInput
-                  editable={canEditEvent}
-                  onChangeText={setTicketTitle}
-                  placeholder="Ticket title"
-                  placeholderTextColor={colors.muted}
-                  style={styles.input}
-                  value={ticketTitle}
-                />
-                <View style={styles.row}>
-                  <TextInput
-                    editable={canEditEvent}
-                    keyboardType="decimal-pad"
-                    onChangeText={setTicketPrice}
-                    placeholder="Price NGN"
-                    placeholderTextColor={colors.muted}
-                    style={[styles.input, styles.flex]}
-                    value={ticketPrice}
-                  />
-                  <TextInput
-                    editable={canEditEvent}
-                    keyboardType="number-pad"
-                    onChangeText={setTicketCapacity}
-                    placeholder="Capacity"
-                    placeholderTextColor={colors.muted}
-                    style={[styles.input, styles.flex]}
-                    value={ticketCapacity}
-                  />
-                </View>
-                <Pressable
-                  disabled={submitting || !canEditEvent}
-                  onPress={addTicket}
-                  style={[
-                    styles.secondary,
-                    !canEditEvent && styles.disabledAction,
-                  ]}
-                >
-                  <Text style={styles.secondaryText}>Add ticket tier</Text>
-                </Pressable>
-              </Section>
+                  {attendees.length ? (
+                    <TextInput
+                      accessibilityLabel="Search attendees"
+                      onChangeText={setQuery}
+                      placeholder="Search attendees"
+                      placeholderTextColor={colors.muted}
+                      style={styles.input}
+                      value={query}
+                    />
+                  ) : null}
+                  {visibleAttendees.map((order) => (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`View ${order.buyerId.firstName} ${order.buyerId.lastName} attendee details`}
+                      key={order._id}
+                      onPress={() => setSelectedAttendee(order)}
+                      style={styles.attendee}
+                    >
+                      <Image
+                        source={{ uri: order.buyerId.avatarUrl || AVATAR }}
+                        style={styles.avatar}
+                      />
+                      <View style={styles.ticketCopy}>
+                        <Text style={styles.name}>
+                          {order.buyerId.firstName} {order.buyerId.lastName}
+                        </Text>
+                        <Text style={styles.meta}>{order.buyerId.email}</Text>
+                        <Text style={styles.meta}>
+                          {order.ticketTypeId.title} x{order.quantity} ·{" "}
+                          {order.status}
+                        </Text>
+                      </View>
+                      <Ionicons
+                        color="#7b8a82"
+                        name="chevron-forward"
+                        size={19}
+                      />
+                    </Pressable>
+                  ))}
+                  {!visibleAttendees.length ? (
+                    <Text style={styles.empty}>
+                      {attendees.length
+                        ? "No attendees match your search."
+                        : "Paid attendees will appear here after ticket orders are completed."}
+                    </Text>
+                  ) : null}
+                </Section>
+              ) : (
+                <>
+                  <View style={styles.actions}>
+                    {event.status === "published" ? (
+                      <Pressable
+                        accessibilityLabel="Scan event tickets"
+                        accessibilityRole="button"
+                        android_ripple={{ color: "#cdebd8" }}
+                        onPress={() =>
+                          navigation.navigate("TicketScanner", { eventId })
+                        }
+                        style={({ pressed }) => [
+                          styles.action,
+                          styles.scanAction,
+                          pressed && styles.actionPressed,
+                        ]}
+                      >
+                        <Ionicons
+                          color="#078d45"
+                          name="qr-code-outline"
+                          size={20}
+                        />
+                        <Text
+                          style={[styles.actionText, styles.scanActionText]}
+                        >
+                          Scan tickets
+                        </Text>
+                        <Ionicons
+                          color="#078d45"
+                          name="chevron-forward"
+                          size={16}
+                        />
+                      </Pressable>
+                    ) : null}
+                    {event.status === "draft" || event.status === "rejected" ? (
+                      <Pressable
+                        accessibilityLabel={
+                          publishing
+                            ? isRepublish
+                              ? "Republishing event"
+                              : "Submitting event"
+                            : isRepublish
+                              ? "Republish event"
+                              : "Submit event for review"
+                        }
+                        accessibilityRole="button"
+                        accessibilityState={{
+                          busy: publishing,
+                          disabled:
+                            submitting ||
+                            publishing ||
+                            publishCooldownSeconds > 0,
+                        }}
+                        android_ripple={{ color: "#9cdfb5" }}
+                        disabled={
+                          submitting || publishing || publishCooldownSeconds > 0
+                        }
+                        onPress={() => void submitEvent()}
+                        style={({ pressed }) => [
+                          styles.action,
+                          styles.submitAction,
+                          pressed && !publishing && styles.actionPressed,
+                          submitting && styles.actionDisabled,
+                          publishing && styles.actionDisabled,
+                          publishCooldownSeconds > 0 && styles.actionDisabled,
+                        ]}
+                      >
+                        {publishing ? (
+                          <ActivityIndicator color={colors.ink} size="small" />
+                        ) : (
+                          <Ionicons
+                            color={colors.ink}
+                            name="cloud-upload-outline"
+                            size={20}
+                          />
+                        )}
+                        <Text
+                          style={[styles.actionText, styles.submitActionText]}
+                        >
+                          {publishing
+                            ? publishingProgressLabel
+                            : publishCooldownSeconds > 0
+                              ? publishCooldownLabel
+                              : publishActionLabel}
+                        </Text>
+                        {!publishing && publishCooldownSeconds === 0 ? (
+                          <Ionicons
+                            color={colors.ink}
+                            name="arrow-forward"
+                            size={16}
+                          />
+                        ) : null}
+                      </Pressable>
+                    ) : null}
+                    {event.status === "published" ? (
+                      <Pressable
+                        onPress={() =>
+                          setConfirm({
+                            title: "Cancel event?",
+                            message:
+                              "This changes the event status and may affect attendees.",
+                            action: async () => {
+                              await act(
+                                () => eventsApi.cancel(eventId!),
+                                "Event cancelled.",
+                              );
+                            },
+                          })
+                        }
+                        style={styles.action}
+                      >
+                        <Ionicons
+                          color="#a34b4b"
+                          name="close-circle-outline"
+                          size={22}
+                        />
+                        <Text style={styles.actionText}>Cancel</Text>
+                      </Pressable>
+                    ) : null}
+                    {event.status === "draft" ? (
+                      <Pressable
+                        onPress={() =>
+                          setConfirm({
+                            title: "Delete draft?",
+                            message:
+                              "This permanently removes this draft event.",
+                            action: async () => {
+                              await eventsApi.remove(eventId!);
+                              navigation.goBack();
+                            },
+                          })
+                        }
+                        style={styles.action}
+                      >
+                        <Ionicons
+                          color="#a34b4b"
+                          name="trash-outline"
+                          size={22}
+                        />
+                        <Text style={styles.actionText}>Delete</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
 
-              <Section title="Attendees">
-                <View style={styles.attendeeSummaryGrid}>
-                  <AttendeeStat label="Orders" value={attendeeSummary.orders} />
-                  <AttendeeStat
-                    label="Ticket units"
-                    value={attendeeSummary.totalTickets}
-                  />
-                  <AttendeeStat
-                    label="Checked in"
-                    value={attendeeSummary.checkedInTickets}
-                  />
-                  <AttendeeStat
-                    label="Not checked in"
-                    value={attendeeSummary.pendingTickets}
-                  />
-                </View>
-                <TextInput
-                  onChangeText={setQuery}
-                  placeholder="Search attendees"
-                  placeholderTextColor={colors.muted}
-                  style={styles.input}
-                  value={query}
-                />
-                {visibleAttendees.map((order) => (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`View ${order.buyerId.firstName} ${order.buyerId.lastName} attendee details`}
-                    key={order._id}
-                    onPress={() => setSelectedAttendee(order)}
-                    style={styles.attendee}
-                  >
-                    <Image
-                      source={{ uri: order.buyerId.avatarUrl || AVATAR }}
-                      style={styles.avatar}
+                  <Section title="Event details">
+                    <TextInput
+                      editable={canEditEvent}
+                      onChangeText={setTitle}
+                      placeholder="Title"
+                      placeholderTextColor={colors.muted}
+                      style={styles.input}
+                      value={title}
                     />
-                    <View style={styles.ticketCopy}>
-                      <Text style={styles.name}>
-                        {order.buyerId.firstName} {order.buyerId.lastName}
+                    <TextInput
+                      editable={canEditEvent}
+                      multiline
+                      onChangeText={setDescription}
+                      placeholder="Description"
+                      placeholderTextColor={colors.muted}
+                      style={[styles.input, styles.multiline]}
+                      value={description}
+                    />
+                    <TextInput
+                      autoCapitalize="none"
+                      editable={canEditEvent}
+                      onChangeText={setStartsAt}
+                      placeholder="Start time (ISO 8601)"
+                      placeholderTextColor={colors.muted}
+                      style={styles.input}
+                      value={startsAt}
+                    />
+                    <TextInput
+                      autoCapitalize="none"
+                      editable={canEditEvent}
+                      onChangeText={setEndsAt}
+                      placeholder="End time (ISO 8601)"
+                      placeholderTextColor={colors.muted}
+                      style={styles.input}
+                      value={endsAt}
+                    />
+                    <TextInput
+                      editable={canEditEvent}
+                      keyboardType="number-pad"
+                      onChangeText={setCapacity}
+                      placeholder="Capacity"
+                      placeholderTextColor={colors.muted}
+                      style={styles.input}
+                      value={capacity}
+                    />
+                    <Text style={styles.fieldLabel}>Setting</Text>
+                    <Pressable
+                      accessibilityRole="button"
+                      disabled={!canEditEvent}
+                      onPress={() => setSettingPickerOpen(true)}
+                      style={[
+                        styles.settingPicker,
+                        !canEditEvent && styles.readOnly,
+                      ]}
+                    >
+                      <Text style={styles.settingValue}>{setting}</Text>
+                      {canEditEvent ? (
+                        <Ionicons
+                          color="#668071"
+                          name="chevron-down"
+                          size={18}
+                        />
+                      ) : null}
+                    </Pressable>
+                    <Text style={styles.fieldLabel}>Target audience / age</Text>
+                    <Pressable
+                      accessibilityLabel="Choose target audience and age group"
+                      accessibilityRole="button"
+                      disabled={!canEditEvent}
+                      onPress={() => setAudiencePickerOpen(true)}
+                      style={[
+                        styles.settingPicker,
+                        !canEditEvent && styles.readOnly,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.settingValue,
+                          !targetAudience && styles.placeholderValue,
+                        ]}
+                      >
+                        {targetAudience || "Choose who can attend"}
                       </Text>
-                      <Text style={styles.meta}>{order.buyerId.email}</Text>
+                      {canEditEvent ? (
+                        <Ionicons
+                          color="#668071"
+                          name="chevron-down"
+                          size={18}
+                        />
+                      ) : null}
+                    </Pressable>
+                    {canEditEvent ? (
+                      <Pressable
+                        accessibilityLabel="Save event details"
+                        accessibilityRole="button"
+                        accessibilityState={{
+                          busy: savingDetails,
+                          disabled: submitting || savingDetails,
+                        }}
+                        disabled={submitting || savingDetails}
+                        onPress={() => void saveDetails()}
+                        style={[
+                          styles.primary,
+                          (submitting || savingDetails) &&
+                            styles.actionDisabled,
+                        ]}
+                      >
+                        {savingDetails ? (
+                          <ActivityIndicator color={colors.ink} size="small" />
+                        ) : (
+                          <Text style={styles.primaryText}>Save details</Text>
+                        )}
+                      </Pressable>
+                    ) : (
                       <Text style={styles.meta}>
-                        {order.ticketTypeId.title} x{order.quantity} ·{" "}
-                        {order.status}
+                        {event.status === "pending_approval"
+                          ? "Events cannot be edited while moderation is in progress."
+                          : "Only draft or rejected events can be edited."}
                       </Text>
-                    </View>
-                    <Ionicons
-                      color="#7b8a82"
-                      name="chevron-forward"
-                      size={19}
+                    )}
+                  </Section>
+
+                  <Section title="Ticket tiers">
+                    {!canEditEvent ? (
+                      <Text style={styles.meta}>
+                        {event.status === "pending_approval"
+                          ? "Ticket tiers cannot be changed while moderation is in progress."
+                          : "Ticket tiers can only be changed on draft or rejected events."}
+                      </Text>
+                    ) : null}
+                    {ticketTypes.map((ticket) => (
+                      <View key={ticket._id} style={styles.ticket}>
+                        <View style={styles.ticketCopy}>
+                          <Text style={styles.name}>{ticket.title}</Text>
+                          <Text style={styles.meta}>
+                            {money(ticket.priceKobo)} - {ticket.sold}/
+                            {ticket.capacity} sold
+                          </Text>
+                        </View>
+                        <Pressable
+                          accessibilityState={{
+                            disabled: !canEditEvent,
+                          }}
+                          disabled={!canEditEvent}
+                          onPress={() =>
+                            navigation.navigate("EditTicketType", {
+                              eventId: eventId!,
+                              ticketTypeId: ticket._id,
+                            })
+                          }
+                          style={[
+                            styles.editTicket,
+                            !canEditEvent && styles.disabledAction,
+                          ]}
+                        >
+                          <Ionicons
+                            color="#078d45"
+                            name="create-outline"
+                            size={19}
+                          />
+                        </Pressable>
+                        <Pressable
+                          accessibilityState={{
+                            disabled: !canEditEvent,
+                          }}
+                          disabled={!canEditEvent}
+                          onPress={() =>
+                            setConfirm({
+                              title: "Remove ticket tier?",
+                              message:
+                                "The backend will reject removal if this tier can no longer be safely deleted.",
+                              action: async () => {
+                                await act(
+                                  () =>
+                                    eventsApi.removeTicketType(
+                                      eventId!,
+                                      ticket._id,
+                                    ),
+                                  "Ticket tier removed.",
+                                );
+                              },
+                            })
+                          }
+                          style={[
+                            styles.delete,
+                            !canEditEvent && styles.disabledAction,
+                          ]}
+                        >
+                          <Ionicons
+                            color="#a34b4b"
+                            name="trash-outline"
+                            size={19}
+                          />
+                        </Pressable>
+                      </View>
+                    ))}
+                    <TextInput
+                      editable={canEditEvent}
+                      onChangeText={setTicketTitle}
+                      placeholder="Ticket title"
+                      placeholderTextColor={colors.muted}
+                      style={styles.input}
+                      value={ticketTitle}
                     />
-                  </Pressable>
-                ))}
-                {!visibleAttendees.length ? (
-                  <Text style={styles.empty}>No matching attendees.</Text>
-                ) : null}
-              </Section>
+                    <View style={styles.row}>
+                      <TextInput
+                        editable={canEditEvent}
+                        keyboardType="decimal-pad"
+                        onChangeText={setTicketPrice}
+                        placeholder="Price NGN"
+                        placeholderTextColor={colors.muted}
+                        style={[styles.input, styles.flex]}
+                        value={ticketPrice}
+                      />
+                      <TextInput
+                        editable={canEditEvent}
+                        keyboardType="number-pad"
+                        onChangeText={setTicketCapacity}
+                        placeholder="Capacity"
+                        placeholderTextColor={colors.muted}
+                        style={[styles.input, styles.flex]}
+                        value={ticketCapacity}
+                      />
+                    </View>
+                    <Pressable
+                      disabled={submitting || !canEditEvent}
+                      onPress={addTicket}
+                      style={[
+                        styles.secondary,
+                        !canEditEvent && styles.disabledAction,
+                      ]}
+                    >
+                      <Text style={styles.secondaryText}>Add ticket tier</Text>
+                    </Pressable>
+                  </Section>
+                </>
+              )}
             </>
           ) : null}
         </KeyboardAwareScrollView>
@@ -1234,6 +1374,44 @@ const styles = StyleSheet.create({
   ruleItem: { gap: 3 },
   ruleName: { fontFamily: fonts.bold, fontSize: 11 },
   ruleReason: { fontFamily: fonts.medium, fontSize: 11, lineHeight: 16 },
+  manageTabs: {
+    backgroundColor: "#e9f2ed",
+    borderRadius: 20,
+    flexDirection: "row",
+    gap: 6,
+    marginHorizontal: 18,
+    marginTop: 4,
+    padding: 5,
+  },
+  manageTab: {
+    alignItems: "center",
+    borderRadius: 15,
+    flex: 1,
+    flexDirection: "row",
+    gap: 7,
+    justifyContent: "center",
+    minHeight: 44,
+    paddingHorizontal: 10,
+  },
+  manageTabActive: { backgroundColor: colors.forest },
+  manageTabText: { color: "#557264", fontFamily: fonts.bold, fontSize: 12 },
+  manageTabTextActive: { color: colors.white },
+  manageTabCount: {
+    alignItems: "center",
+    backgroundColor: "#d8e9df",
+    borderRadius: 10,
+    height: 20,
+    justifyContent: "center",
+    minWidth: 20,
+    paddingHorizontal: 5,
+  },
+  manageTabCountActive: { backgroundColor: "#315845" },
+  manageTabCountText: {
+    color: "#47705a",
+    fontFamily: fonts.bold,
+    fontSize: 9,
+  },
+  manageTabCountTextActive: { color: colors.white },
   stats: { flexDirection: "row", gap: 10, marginTop: 12 },
   stat: {
     alignItems: "center",
@@ -1243,6 +1421,58 @@ const styles = StyleSheet.create({
     padding: 15,
   },
   statValue: { color: colors.ink, fontFamily: fonts.extraBold, fontSize: 18 },
+  earningsCard: {
+    alignItems: "center",
+    backgroundColor: colors.forest,
+    borderRadius: 22,
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 12,
+    padding: 16,
+  },
+  earningsIcon: {
+    alignItems: "center",
+    backgroundColor: "rgba(20, 232, 111, 0.14)",
+    borderRadius: 22,
+    height: 44,
+    justifyContent: "center",
+    width: 44,
+  },
+  earningsCopy: { flex: 1 },
+  earningsLabel: { color: "#afd0bc", fontFamily: fonts.bold, fontSize: 10 },
+  earningsValue: {
+    color: colors.white,
+    fontFamily: fonts.extraBold,
+    fontSize: 21,
+    marginTop: 3,
+  },
+  earningsMeta: {
+    color: "#b9d3c3",
+    fontFamily: fonts.medium,
+    fontSize: 9,
+    marginTop: 3,
+  },
+  paidOnlyBadge: {
+    alignItems: "center",
+    backgroundColor: "#194333",
+    borderRadius: 13,
+    flexDirection: "row",
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+  },
+  paidOnlyDot: {
+    backgroundColor: colors.lime,
+    borderRadius: 4,
+    height: 7,
+    width: 7,
+  },
+  paidOnlyText: {
+    color: "#cef1dc",
+    fontFamily: fonts.extraBold,
+    fontSize: 8,
+    letterSpacing: 0.4,
+  },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: 9, marginTop: 13 },
   action: {
     alignItems: "center",

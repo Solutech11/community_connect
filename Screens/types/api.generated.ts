@@ -2325,6 +2325,7 @@ export type GetEventsIdAttendeesResponse = {
         "ticketSubtotalKobo": number;
         "platformFeeKobo": number;
         "totalKobo": number;
+        "organizerProceedsKobo": number;
         "status": string;
         "createdAt": string;
         "buyerId": {
