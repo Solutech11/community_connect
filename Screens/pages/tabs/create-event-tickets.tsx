@@ -337,7 +337,7 @@ function TicketInput({
 
 const styles = StyleSheet.create({
   safe: { backgroundColor: colors.paper, flex: 1 },
-  content: { padding: 24, paddingBottom: 38 },
+  content: { padding: 24, paddingBottom: 100 },
   title: {
     color: colors.ink,
     fontFamily: fonts.extraBold,

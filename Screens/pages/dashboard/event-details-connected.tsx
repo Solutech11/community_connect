@@ -467,7 +467,7 @@ export default function EventDetailsScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.paper },
-  content: { paddingBottom: 150 },
+  content: { paddingBottom: 110 },
   heroImage: { height: 402, justifyContent: "space-between" },
   heroButtons: {
     flexDirection: "row",
@@ -646,9 +646,10 @@ const styles = StyleSheet.create({
   },
   bottomBar: {
     backgroundColor: colors.white,
-    bottom: 0,
+    bottom: -1,
     left: 0,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 12,
     position: "absolute",
     right: 0,
   },

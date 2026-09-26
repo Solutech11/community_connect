@@ -45,7 +45,7 @@ function GuidelineCard({ icon, title, body }: { icon: keyof typeof Ionicons.glyp
 }
 
 export default function CommunityJoinScreen({ navigation, route }: Props) {
-  const community = getCommunityById(route.params.communityId);
+  const community = getCommunityById(route.params.communityId ?? "");
 
   if (!community) {
     return (

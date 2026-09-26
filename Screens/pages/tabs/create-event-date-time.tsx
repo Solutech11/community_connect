@@ -289,7 +289,7 @@ function ScheduleButton({
 
 const styles = StyleSheet.create({
   safe: { backgroundColor: colors.paper, flex: 1 },
-  content: { gap: 22, padding: 24, paddingBottom: 38 },
+  content: { gap: 22, padding: 24, paddingBottom: 100 },
   title: {
     color: colors.ink,
     fontFamily: fonts.extraBold,

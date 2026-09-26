@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
+import * as Crypto from "expo-crypto";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -38,6 +40,10 @@ type Notice = {
   createdId?: string;
 };
 
+function generateAccessCode() {
+  return Crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
+}
+
 export default function CreateCommunityConnectedScreen({ navigation }: Props) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -46,18 +52,22 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
   const [lga, setLga] = useState("");
   const [locationDropdown, setLocationDropdown] =
     useState<LocationDropdown>(null);
-  const [visibility, setVisibility] =
-    useState<CommunityVisibility>("public");
+  const [visibility, setVisibility] = useState<CommunityVisibility>("public");
   const [membershipType, setMembershipType] =
     useState<CommunityMembershipType>("free");
   const [price, setPrice] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [accessCode, setAccessCode] = useState(generateAccessCode);
+  const [codeModalVisible, setCodeModalVisible] = useState(false);
+  const [createdId, setCreatedId] = useState<string | null>(null);
+  const [setupFailed, setSetupFailed] = useState(false);
 
   const lgaOptions = useMemo(() => [...getNigerianLgas(state)], [state]);
 
-  const pickImage = async () => {
+  const pickImage = async (kind: "cover" | "avatar") => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       setNotice({
@@ -71,10 +81,11 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
       mediaTypes: ["images"],
       quality: 0.82,
       allowsEditing: true,
-      aspect: [16, 9],
+      aspect: kind === "cover" ? [16, 9] : [1, 1],
     });
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      if (kind === "cover") setImageUri(result.assets[0].uri);
+      else setAvatarUri(result.assets[0].uri);
     }
   };
 
@@ -90,19 +101,19 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
     }
   };
 
-  const submit = async () => {
+  const submit = () => {
     const priceNaira = Number(price || 0);
     if (
-      !name.trim() ||
-      description.trim().length < 10 ||
-      !category.trim() ||
+      name.trim().length < 3 ||
+      description.trim().length < 20 ||
+      category.trim().length < 2 ||
       !state ||
       !lga
     ) {
       setNotice({
         title: "Complete the form",
         message:
-          "Name, category, state, LGA, and a description of at least 10 characters are required.",
+          "Enter a name (3+ characters), category (2+), state, LGA, and description (20+).",
       });
       return;
     }
@@ -116,8 +127,25 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
       });
       return;
     }
+    if (visibility === "private" && membershipType === "premium") {
+      setNotice({
+        title: "Paid private communities unavailable",
+        message:
+          "The membership checkout currently supports public communities only. Choose free or public.",
+      });
+      return;
+    }
     if (submitting) return;
 
+    if (visibility === "private") {
+      setCodeModalVisible(true);
+      return;
+    }
+    void createCommunity();
+  };
+
+  const createCommunity = async () => {
+    const priceNaira = Number(price || 0);
     setSubmitting(true);
     try {
       let imageUrl: string | undefined;
@@ -132,12 +160,27 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
         );
         imageUrl = upload.data.url;
       }
+      let avatarImageUrl: string | undefined;
+      if (avatarUri) {
+        const upload = await uploadsApi.image(
+          {
+            uri: avatarUri,
+            name: `community-avatar-${Date.now()}.jpg`,
+            type: "image/jpeg",
+          },
+          "communities",
+        );
+        avatarImageUrl = upload.data.url;
+      }
 
       const response = await communitiesApi.create({
         name: name.trim(),
         description: description.trim(),
         category: category.trim(),
         imageUrl,
+        coverImageUrl: imageUrl,
+        avatarImageUrl,
+        ...(visibility === "private" ? { accessCode } : {}),
         state,
         lga,
         visibility,
@@ -145,6 +188,18 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
         membershipPriceKobo:
           membershipType === "premium" ? Math.round(priceNaira * 100) : 0,
       });
+      if (visibility === "private") {
+        setCreatedId(response.data.community._id);
+        try {
+          await communitiesApi.updateSettings(response.data.community._id, {
+            joinPolicy: "access_code",
+          });
+          setSetupFailed(false);
+        } catch {
+          setSetupFailed(true);
+        }
+        return;
+      }
       setNotice({
         title: "Community created",
         message: "Your community is ready.",
@@ -157,6 +212,27 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
           error instanceof ApiError
             ? error.message
             : "Unable to create this community.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const retryPrivateSetup = async () => {
+    if (!createdId || submitting) return;
+    setSubmitting(true);
+    try {
+      await communitiesApi.updateSettings(createdId, {
+        joinPolicy: "access_code",
+      });
+      setSetupFailed(false);
+    } catch (error) {
+      setNotice({
+        title: "Setup failed",
+        message:
+          error instanceof ApiError
+            ? error.message
+            : "Try again before sharing the code.",
       });
     } finally {
       setSubmitting(false);
@@ -187,7 +263,7 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
           keyboardShouldPersistTaps="handled"
         >
           <Pressable
-            onPress={() => void pickImage()}
+            onPress={() => void pickImage("cover")}
             style={styles.imagePicker}
           >
             {imageUri ? (
@@ -198,6 +274,21 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
                 <Text style={styles.imageText}>Add cover image</Text>
               </>
             )}
+          </Pressable>
+          <Pressable
+            onPress={() => void pickImage("avatar")}
+            style={styles.avatarPicker}
+          >
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+            ) : (
+              <Ionicons
+                color="#078d45"
+                name="person-circle-outline"
+                size={34}
+              />
+            )}
+            <Text style={styles.avatarText}>Add community avatar</Text>
           </Pressable>
 
           <Field
@@ -268,9 +359,22 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
             />
           ) : null}
 
+          {visibility === "private" ? (
+            <View style={styles.codePreview}>
+              <Text style={styles.codeTitle}>Private access code</Text>
+              <Text style={styles.codeValue}>{accessCode}</Text>
+              <Text style={styles.codeHelp}>
+                Save this code. It cannot be retrieved after creation.
+              </Text>
+              <Pressable onPress={() => setAccessCode(generateAccessCode())}>
+                <Text style={styles.regenerate}>Generate another code</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
           <Pressable
             disabled={submitting}
-            onPress={() => void submit()}
+            onPress={submit}
             style={[styles.primary, submitting && styles.disabled]}
           >
             {submitting ? (
@@ -281,6 +385,82 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
           </Pressable>
         </ScrollView>
       </SafeAreaView>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={codeModalVisible}
+        onRequestClose={() => {
+          if (!submitting && !createdId) setCodeModalVisible(false);
+        }}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>
+              {createdId
+                ? "Private community created"
+                : "Save your access code"}
+            </Text>
+            <Text style={styles.modalText}>
+              {createdId
+                ? setupFailed
+                  ? "The community was created, but code-only joining is not active yet. Retry setup before sharing."
+                  : "Share the community ID and code with people you want to invite. The code will not appear again."
+                : "People need both the community ID and this code to join. Save the code before creating the community."}
+            </Text>
+            {createdId ? (
+              <Text selectable style={styles.modalId}>
+                Community ID: {createdId}
+              </Text>
+            ) : null}
+            <Text selectable style={styles.modalCode}>
+              {accessCode}
+            </Text>
+            {setupFailed ? (
+              <Pressable
+                disabled={submitting}
+                onPress={() => void retryPrivateSetup()}
+                style={styles.primary}
+              >
+                <Text style={styles.primaryText}>
+                  {submitting ? "Retrying..." : "Retry code setup"}
+                </Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                disabled={submitting}
+                onPress={() => {
+                  if (createdId) {
+                    setCodeModalVisible(false);
+                    navigation.replace("CommunityProfile", {
+                      communityId: createdId,
+                    });
+                  } else {
+                    void createCommunity();
+                  }
+                }}
+                style={[styles.primary, submitting && styles.disabled]}
+              >
+                <Text style={styles.primaryText}>
+                  {submitting
+                    ? "Creating..."
+                    : createdId
+                      ? "Done"
+                      : "Create community"}
+                </Text>
+              </Pressable>
+            )}
+            {!createdId && !submitting ? (
+              <Pressable
+                onPress={() => setCodeModalVisible(false)}
+                style={styles.modalCancel}
+              >
+                <Text style={styles.regenerate}>Back to form</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
 
       <AppSelectSheet
         visible={locationDropdown !== null}
@@ -395,6 +575,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 8,
   },
+  avatarPicker: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 15,
+  },
+  avatarImage: { borderRadius: 22, height: 44, width: 44 },
+  avatarText: { color: "#078d45", fontFamily: fonts.bold, fontSize: 12 },
   label: {
     color: colors.ink,
     fontFamily: fonts.bold,
@@ -457,4 +646,65 @@ const styles = StyleSheet.create({
   },
   primaryText: { color: colors.ink, fontFamily: fonts.bold },
   disabled: { opacity: 0.55 },
+  codePreview: {
+    backgroundColor: "#e9f8f0",
+    borderRadius: 18,
+    marginTop: 20,
+    padding: 17,
+  },
+  codeTitle: { color: colors.ink, fontFamily: fonts.bold, fontSize: 14 },
+  codeValue: {
+    color: "#087b42",
+    fontFamily: fonts.extraBold,
+    fontSize: 26,
+    letterSpacing: 3,
+    marginTop: 8,
+  },
+  codeHelp: {
+    color: "#53665a",
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    marginTop: 5,
+  },
+  regenerate: {
+    color: "#087b42",
+    fontFamily: fonts.bold,
+    fontSize: 13,
+    marginTop: 12,
+  },
+  modalBackdrop: {
+    alignItems: "center",
+    backgroundColor: "#0008",
+    flex: 1,
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: colors.white,
+    borderRadius: 24,
+    padding: 24,
+    width: "100%",
+  },
+  modalTitle: { color: colors.ink, fontFamily: fonts.extraBold, fontSize: 20 },
+  modalText: {
+    color: "#53665a",
+    fontFamily: fonts.medium,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 10,
+  },
+  modalId: {
+    color: colors.ink,
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    marginTop: 18,
+  },
+  modalCode: {
+    color: "#087b42",
+    fontFamily: fonts.extraBold,
+    fontSize: 29,
+    letterSpacing: 3,
+    marginTop: 12,
+  },
+  modalCancel: { alignItems: "center", padding: 8 },
 });

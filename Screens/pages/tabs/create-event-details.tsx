@@ -588,7 +588,7 @@ export default function CreateEventDetailsScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   safe: { backgroundColor: colors.paper, flex: 1 },
-  content: { gap: 28, padding: 24, paddingBottom: 36 },
+  content: { gap: 28, padding: 24, paddingBottom: 100 },
   block: { gap: 12 },
   locationSection: { gap: 16 },
   coordinatesHeading: {

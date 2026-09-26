@@ -94,7 +94,6 @@ const DashboardTicketScanner = withDashboardLayout(TicketScannerScreen);
 const DashboardNotifications = withDashboardLayout(NotificationsScreen);
 const DashboardFriends = withDashboardLayout(FriendsScreen);
 const DashboardChatThread = withDashboardLayout(ChatThreadScreen);
-const DashboardAIChat = withDashboardLayout(AIChatScreen);
 const DashboardAISessions = withDashboardLayout(AISessionsScreen);
 const DashboardSettings = withDashboardLayout(SettingsScreen);
 const DashboardChangePassword = withDashboardLayout(ChangePasswordScreen);
@@ -293,7 +292,7 @@ export default function RootStackNavigator({
           />
           <Stack.Screen
             name="AIChat"
-            component={DashboardAIChat}
+            component={AIChatScreen}
             options={{ animation: "slide_from_bottom" }}
           />
           <Stack.Screen

@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -22,6 +22,9 @@ import {
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import AppReportSheet from "../../components/ui/app-report-sheet";
 import AppShareSheet from "../../components/ui/app-share-sheet";
+import PaystackCheckoutModal, {
+  type PaystackVerificationResult,
+} from "../../components/ui/paystack-checkout-modal";
 import {
   toGeneralReportReason,
   type ReportReason,
@@ -175,8 +178,13 @@ export default function MyEventDetailsConnectedScreen({
   const [eventDetails, setEventDetails] = useState<EventDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkingPayment, setCheckingPayment] = useState(false);
+  const [resumingCheckout, setResumingCheckout] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [alert, setAlert] = useState<AlertContent | null>(null);
+  const [retryNoticeVisible, setRetryNoticeVisible] = useState(false);
+  const [checkoutVisible, setCheckoutVisible] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const paymentActionRef = useRef(false);
   const [shareVisible, setShareVisible] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
   const [reload, setReload] = useState(0);
@@ -303,7 +311,8 @@ export default function MyEventDetailsConnectedScreen({
   };
 
   const checkPayment = async () => {
-    if (checkingPayment) return;
+    if (paymentActionRef.current || checkingPayment || resumingCheckout) return;
+    paymentActionRef.current = true;
     setCheckingPayment(true);
     try {
       const response = await ticketsApi.verifyPayment(order.orderNumber);
@@ -332,7 +341,67 @@ export default function MyEventDetailsConnectedScreen({
         });
       }
     } finally {
+      paymentActionRef.current = false;
       setCheckingPayment(false);
+    }
+  };
+
+  const resumeCheckout = async () => {
+    if (paymentActionRef.current || checkingPayment || resumingCheckout) return;
+    paymentActionRef.current = true;
+    setResumingCheckout(true);
+    try {
+      const response = await ticketsApi.resumeCheckout(order.orderNumber);
+      if (response.data.outcome === "already_paid") {
+        setAlert({
+          title: "Payment confirmed",
+          message: "Your payment was already confirmed. Refreshing your ticket.",
+        });
+        setReload((current) => current + 1);
+        return;
+      }
+
+      setCheckoutUrl(response.data.checkoutUrl);
+      setCheckoutVisible(true);
+    } catch (requestError) {
+      const paymentStillProcessing =
+        requestError instanceof ApiError &&
+        requestError.code === "PAYMENT_STILL_PROCESSING";
+      setAlert({
+        title: paymentStillProcessing
+          ? "Payment is still being checked"
+          : "Unable to reopen checkout",
+        message:
+          paymentStillProcessing && requestError instanceof ApiError
+            ? `${requestError.message} Please wait and check payment status before trying again.`
+            : requestError instanceof ApiError
+              ? requestError.message
+              : "Please try again in a moment.",
+      });
+    } finally {
+      paymentActionRef.current = false;
+      setResumingCheckout(false);
+    }
+  };
+
+  const verifyCheckoutPayment = async (): Promise<PaystackVerificationResult> => {
+    try {
+      const response = await ticketsApi.verifyPayment(order.orderNumber);
+      setDetails(response.data);
+      return response.data.order.status === "paid"
+        ? { verified: true }
+        : {
+            verified: false,
+            message: "Payment is not confirmed yet. Check again in a moment.",
+          };
+    } catch (requestError) {
+      return {
+        verified: false,
+        message:
+          requestError instanceof ApiError
+            ? requestError.message
+            : "Unable to verify this payment right now.",
+      };
     }
   };
 
@@ -476,30 +545,60 @@ export default function MyEventDetailsConnectedScreen({
                       : status.detailMessage}
                 </Text>
                 {status.tone === "pending" ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    disabled={checkingPayment}
-                    onPress={() => void checkPayment()}
-                    style={[
-                      styles.checkPaymentButton,
-                      checkingPayment && styles.checkPaymentButtonDisabled,
-                    ]}
-                  >
-                    {checkingPayment ? (
-                      <ActivityIndicator color={colors.white} size="small" />
-                    ) : (
-                      <Ionicons
-                        name="refresh-outline"
-                        size={17}
-                        color={colors.white}
-                      />
-                    )}
-                    <Text style={styles.checkPaymentText}>
-                      {checkingPayment
-                        ? "Checking payment..."
-                        : "Check payment status"}
-                    </Text>
-                  </Pressable>
+                  <>
+                    <Pressable
+                      accessibilityRole="button"
+                      disabled={checkingPayment || resumingCheckout}
+                      onPress={() => void checkPayment()}
+                      style={[
+                        styles.checkPaymentButton,
+                        (checkingPayment || resumingCheckout) &&
+                          styles.checkPaymentButtonDisabled,
+                      ]}
+                    >
+                      {checkingPayment ? (
+                        <ActivityIndicator color={colors.white} size="small" />
+                      ) : (
+                        <Ionicons
+                          name="refresh-outline"
+                          size={17}
+                          color={colors.white}
+                        />
+                      )}
+                      <Text style={styles.checkPaymentText}>
+                        {checkingPayment
+                          ? "Checking payment..."
+                          : "Check payment status"}
+                      </Text>
+                    </Pressable>
+                    {!eventHasPassed ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        disabled={checkingPayment || resumingCheckout}
+                        onPress={() => setRetryNoticeVisible(true)}
+                        style={[
+                          styles.payAgainButton,
+                          (checkingPayment || resumingCheckout) &&
+                            styles.checkPaymentButtonDisabled,
+                        ]}
+                      >
+                        {resumingCheckout ? (
+                          <ActivityIndicator color={colors.ink} size="small" />
+                        ) : (
+                          <Ionicons
+                            name="card-outline"
+                            size={17}
+                            color={colors.ink}
+                          />
+                        )}
+                        <Text style={styles.payAgainText}>
+                          {resumingCheckout
+                            ? "Preparing checkout..."
+                            : "Pay again"}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                  </>
                 ) : null}
               </View>
             )}
@@ -659,6 +758,28 @@ export default function MyEventDetailsConnectedScreen({
         message={alert?.message ?? ""}
         onClose={() => setAlert(null)}
       />
+      <AppAlertModal
+        visible={retryNoticeVisible}
+        title="Before you pay again"
+        message="Only continue if you did not complete the earlier checkout. If you may have paid, check payment status first. We will verify your existing payment before reopening checkout to help prevent a duplicate charge."
+        confirmText="Pay again"
+        cancelText="Cancel"
+        onConfirm={() => {
+          setRetryNoticeVisible(false);
+          void resumeCheckout();
+        }}
+        onClose={() => setRetryNoticeVisible(false)}
+      />
+      <PaystackCheckoutModal
+        visible={checkoutVisible}
+        url={checkoutUrl}
+        title="Event Ticket Payment"
+        onClose={() => {
+          setCheckoutVisible(false);
+          setCheckoutUrl(null);
+        }}
+        onVerify={verifyCheckoutPayment}
+      />
     </View>
   );
 }
@@ -813,6 +934,22 @@ const styles = StyleSheet.create({
     marginTop: 15,
     paddingHorizontal: 17,
     paddingVertical: 10,
+  },
+  payAgainButton: {
+    alignItems: "center",
+    backgroundColor: colors.lime,
+    borderRadius: 20,
+    flexDirection: "row",
+    gap: 7,
+    justifyContent: "center",
+    marginTop: 10,
+    paddingHorizontal: 17,
+    paddingVertical: 10,
+  },
+  payAgainText: {
+    color: colors.ink,
+    fontFamily: fonts.bold,
+    fontSize: 11,
   },
   checkPaymentButtonDisabled: { opacity: 0.65 },
   checkPaymentText: {

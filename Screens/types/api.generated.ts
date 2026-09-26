@@ -538,7 +538,7 @@ export type GetUsersMeCommunitiesResponse = {
           "role": string;
           "status": string;
           "joinedAt": string;
-          "muted": false;
+          "muted": boolean;
         };
         "unreadCount": number;
         "lastActivityAt": string;
@@ -654,11 +654,11 @@ export type GetCommunitiesIdSettingsResponse = {
   "message": string;
   "data": {
     "settings": {
-      "joinPolicy": string;
-      "messagePermission": string;
-      "membersCanCreatePosts": true;
-      "membersCanInvite": false;
-      "showMemberList": true;
+      "joinPolicy": "open" | "approval" | "invite_only" | "access_code";
+      "messagePermission": "everyone" | "moderators";
+      "membersCanCreatePosts": boolean;
+      "membersCanInvite": boolean;
+      "showMemberList": boolean;
     };
   };
 };
@@ -685,11 +685,11 @@ export type PatchCommunitiesIdSettingsResponse = {
   "message": string;
   "data": {
     "settings": {
-      "joinPolicy": string;
-      "messagePermission": string;
-      "membersCanCreatePosts": true;
-      "membersCanInvite": false;
-      "showMemberList": true;
+      "joinPolicy": "open" | "approval" | "invite_only" | "access_code";
+      "messagePermission": "everyone" | "moderators";
+      "membersCanCreatePosts": boolean;
+      "membersCanInvite": boolean;
+      "showMemberList": boolean;
     };
   };
 };
@@ -799,6 +799,8 @@ export type DeleteCommunitiesIdBansUserIdResponse = {
 
 export type PostCommunitiesIdJoinRequestsBody = {
   "message"?: string;
+  "accessCode"?: string;
+  "inviteToken"?: string;
 };
 export type PostCommunitiesIdJoinRequestsQuery = {
 
@@ -813,7 +815,13 @@ export type PostCommunitiesIdJoinRequestsResponse = {
   "success": true;
   "message": string;
   "data": {
-    "joinRequest": {
+    "membership"?: {
+      "role": "owner" | "moderator" | "member";
+      "status": string;
+      "joinedAt": string;
+      "muted": boolean;
+    };
+    "joinRequest"?: {
       "_id": string;
       "communityId": string;
       "requesterId": {
@@ -2557,6 +2565,9 @@ export type PostCommunitiesBody = {
   "name": string;
   "description": string;
   "imageUrl"?: string;
+  "coverImageUrl"?: string;
+  "avatarImageUrl"?: string;
+  "accessCode"?: string;
   "category": string;
   "state"?: string;
   "lga"?: string;
@@ -2612,17 +2623,20 @@ export type GetCommunitiesIdResponse = {
   "data": {
     "community": {
       "_id": string;
-      "ownerId": string;
+      "ownerId": string | { "_id": string; "firstName"?: string; "lastName"?: string; "avatarUrl"?: string };
       "name": string;
       "slug": string;
       "description": string;
       "imageUrl": string;
+      "coverImageUrl"?: string;
+      "avatarImageUrl"?: string;
       "category": string;
       "state": string;
       "lga": string;
       "visibility": string;
       "membershipType": string;
       "membershipPriceKobo": number;
+      "joinPolicy": "open" | "approval" | "invite_only" | "access_code";
       "members": Array<string>;
       "createdAt": string;
     };
@@ -2630,7 +2644,15 @@ export type GetCommunitiesIdResponse = {
 };
 
 export type PatchCommunitiesIdBody = {
+  "name"?: string;
   "description"?: string;
+  "imageUrl"?: string;
+  "coverImageUrl"?: string;
+  "avatarImageUrl"?: string;
+  "accessCode"?: string;
+  "category"?: string;
+  "state"?: string;
+  "lga"?: string;
   "membershipType"?: "free" | "premium";
   "membershipPriceKobo"?: number;
   "visibility"?: "public" | "private";
@@ -2700,6 +2722,7 @@ export type GetCommunitiesIdMembersResponse = {
   "success": true;
   "message": string;
   "data": {
+    "pagination"?: { "page": number; "limit": number; "total": number; "totalPages": number };
     "members": Array<{
         "_id": string;
         "firstName": string;
@@ -2987,6 +3010,7 @@ export type GetCommunitiesIdMessagesResponse = {
   "success": true;
   "message": string;
   "data": {
+    "pageInfo"?: { "nextCursor": string | null; "hasMore": boolean };
     "messages": Array<{
         "_id": string;
         "communityId": string;
@@ -3909,6 +3933,39 @@ export type GetTicketsOrderNumberResponse = {
     };
     "qrToken": string;
   };
+};
+
+export type PostTicketsOrderNumberCheckoutBody = never;
+export type PostTicketsOrderNumberCheckoutQuery = {
+
+};
+export type PostTicketsOrderNumberCheckoutPath = {
+  "orderNumber": string;
+};
+export type PostTicketsOrderNumberCheckoutHeaders = {
+  "Idempotency-Key": string;
+};
+export type PostTicketsOrderNumberCheckoutResponse = {
+  "success": true;
+  "message": string;
+  "data":
+    | {
+        "outcome": "checkout_ready";
+        "order": {
+          "orderNumber": string;
+          "status": "pending";
+          "totalKobo": number;
+        };
+        "checkoutUrl": string;
+      }
+    | {
+        "outcome": "already_paid";
+        "order": {
+          "orderNumber": string;
+          "status": "paid";
+          "totalKobo": number;
+        };
+      };
 };
 
 export type GetTicketsOrderNumberVerifyBody = never;
@@ -5763,6 +5820,16 @@ export interface ApiOperationMap {
     pathParams: GetTicketsOrderNumberPath;
     headers: GetTicketsOrderNumberHeaders;
     response: GetTicketsOrderNumberResponse;
+  };
+  "post__tickets_orderNumber_checkout": {
+    method: "POST";
+    path: "/tickets/{orderNumber}/checkout";
+    authenticated: true;
+    body: PostTicketsOrderNumberCheckoutBody;
+    query: PostTicketsOrderNumberCheckoutQuery;
+    pathParams: PostTicketsOrderNumberCheckoutPath;
+    headers: PostTicketsOrderNumberCheckoutHeaders;
+    response: PostTicketsOrderNumberCheckoutResponse;
   };
   "get__tickets_orderNumber_verify": {
     method: "GET";

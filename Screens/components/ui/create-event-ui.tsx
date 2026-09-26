@@ -137,7 +137,7 @@ export function BottomActions({
   nextLabel?: string;
 }) {
   return (
-    <SafeAreaView edges={["bottom"]} style={styles.actionsSafe}>
+    <View style={styles.actionsSafe}>
       <View style={styles.actions}>
         {onBack ? (
           <Pressable onPress={onBack} style={styles.backButton}>
@@ -154,7 +154,7 @@ export function BottomActions({
           <Ionicons color={colors.ink} name="arrow-forward" size={22} />
         </Pressable>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -281,6 +281,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderTopColor: "#e7efeb",
     borderTopWidth: StyleSheet.hairlineWidth,
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    zIndex: 20,
   },
   actions: {
     flexDirection: "row",

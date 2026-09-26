@@ -10,8 +10,6 @@ import {
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import EventSubmissionAnimationModal from "../../components/ui/event-submission-animation-modal";
 import EventLocationMap, {
@@ -358,7 +356,7 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
         </InfoCard>
       </ScrollView>
 
-      <SafeAreaView edges={["bottom"]} style={styles.footer}>
+      <View style={styles.footer}>
         <Pressable
           disabled={publishing}
           onPress={publish}
@@ -375,7 +373,7 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
         >
           <Text style={styles.editText}>Back to Edits</Text>
         </Pressable>
-      </SafeAreaView>
+      </View>
 
       <EventSubmissionAnimationModal visible={publishing} />
       <AppAlertModal
@@ -400,7 +398,7 @@ export default function CreateEventReviewScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   safe: { backgroundColor: colors.paper, flex: 1 },
-  content: { gap: 20, padding: 24, paddingBottom: 38 },
+  content: { gap: 20, padding: 24, paddingBottom: 162 },
   eventCard: {
     backgroundColor: colors.white,
     borderRadius: 30,
@@ -537,9 +535,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
+    bottom: 0,
     gap: 12,
+    left: 0,
     paddingHorizontal: 24,
     paddingTop: 18,
+    position: "absolute",
+    right: 0,
+    zIndex: 20,
   },
   publish: {
     alignItems: "center",

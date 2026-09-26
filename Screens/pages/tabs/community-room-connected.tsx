@@ -21,6 +21,9 @@ import AppAlertModal from "../../components/ui/app-alert-modal";
 import AppReportSheet from "../../components/ui/app-report-sheet";
 import { communityImage, initials } from "../../data/community-presentation";
 import {
+  communityMessageReportReasons,
+  communityReportReasons,
+  toCommunityMessageReportReason,
   toCommunityReportReason,
   type ReportReason,
 } from "../../data/report-options";
@@ -66,6 +69,7 @@ type RoomMessage = {
   text: string;
   attachments: RoomAttachment[];
   clientMessageId: string;
+  replyToMessageId: string | null;
   createdAt: string;
   editedAt: string | null;
   pinnedAt: string | null;
@@ -130,6 +134,7 @@ function mapRoomMessage(value: unknown): RoomMessage | null {
     text: asString(item.text),
     attachments,
     clientMessageId: asString(item.clientMessageId),
+    replyToMessageId: asString(item.replyToMessageId) || null,
     createdAt: asString(item.createdAt),
     editedAt: typeof item.editedAt === "string" ? item.editedAt : null,
     pinnedAt: typeof item.pinnedAt === "string" ? item.pinnedAt : null,
@@ -198,6 +203,9 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [community, setCommunity] = useState<Community | null>(null);
   const [messages, setMessages] = useState<RoomMessage[]>([]);
+  const [olderCursor, setOlderCursor] = useState<string | null>(null);
+  const [hasOlderMessages, setHasOlderMessages] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const [membershipRole, setMembershipRole] = useState<CommunityRole>(null);
   const [messagePermission, setMessagePermission] = useState("everyone");
   const [activeCall, setActiveCall] = useState<CommunityCall | null>(null);
@@ -216,11 +224,13 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
     null,
   );
+  const [replyTarget, setReplyTarget] = useState<RoomMessage | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RoomMessage | null>(null);
-  const [notificationLevel, setNotificationLevel] = useState<"all" | "muted">(
-    "all",
-  );
+  const [notificationLevel, setNotificationLevel] = useState<
+    "all" | "announcements" | "mentions" | "muted" | "unknown"
+  >("unknown");
+  const [notificationMenuVisible, setNotificationMenuVisible] = useState(false);
   const [alert, setAlert] = useState<{ title: string; message: string } | null>(
     null,
   );
@@ -254,19 +264,21 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
         communitiesApi.get(communityId, signal),
         communitiesApi.messages(communityId, { limit: 50 }, signal),
         communitiesApi.settings(communityId, signal),
-        communitiesApi.myCommunities({ page: 1, limit: 50 }, signal),
+        communitiesApi.allMyCommunities(signal),
         communitiesApi.activeCall(communityId, signal),
       ]);
       const parsed = messageResponse.data.messages
         .map(mapRoomMessage)
         .filter((message): message is RoomMessage => message !== null);
-      const viewer = mineResponse.data.communities.find(
+      const viewer = mineResponse.find(
         (item) => item._id === communityId,
       )?.viewerMembership;
       setCommunity(detail.data.community);
       setMessages(parsed);
+      setOlderCursor(messageResponse.data.pageInfo?.nextCursor ?? null);
+      setHasOlderMessages(messageResponse.data.pageInfo?.hasMore ?? false);
       setMembershipRole((viewer?.role as CommunityRole | undefined) ?? null);
-      setNotificationLevel(viewer?.muted ? "muted" : "all");
+      setNotificationLevel(viewer?.muted ? "muted" : "unknown");
       setMessagePermission(settingsResponse.data.settings.messagePermission);
       setActiveCall(mapCommunityCall(callResponse.data.call));
       const latest = parsed.at(-1);
@@ -401,6 +413,37 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
     }
   };
 
+  const loadOlderMessages = async () => {
+    if (!olderCursor || loadingOlder) return;
+    setLoadingOlder(true);
+    try {
+      const response = await communitiesApi.messages(communityId, {
+        limit: 50,
+        before: olderCursor,
+      });
+      const older = response.data.messages
+        .map(mapRoomMessage)
+        .filter((message): message is RoomMessage => message !== null);
+      setMessages((current) => {
+        const existing = new Set(current.map((message) => message._id));
+        return [
+          ...older.filter((message) => !existing.has(message._id)),
+          ...current,
+        ];
+      });
+      setOlderCursor(response.data.pageInfo?.nextCursor ?? null);
+      setHasOlderMessages(response.data.pageInfo?.hasMore ?? false);
+    } catch (error) {
+      setAlert({
+        title: "Unable to load older messages",
+        message:
+          error instanceof ApiError ? error.message : "Please try again.",
+      });
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
+
   const changeDraft = (value: string) => {
     setDraft(value);
     if (!canSendMessages) return;
@@ -476,11 +519,13 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
         clientMessageId: createIdempotencyKey(),
         ...(text ? { text } : {}),
         ...(attachmentIds.length ? { attachmentIds } : {}),
+        ...(replyTarget ? { replyToMessageId: replyTarget._id } : {}),
       });
       const message = mapRoomMessage(response.data.message);
       if (message) upsertMessage(message);
       setDraft("");
       setPickedImage(null);
+      setReplyTarget(null);
       chatSocket.setCommunityTyping(communityId, false);
       requestAnimationFrame(() =>
         scrollRef.current?.scrollToEnd({ animated: true }),
@@ -571,7 +616,7 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
         communityId,
         messageReportTarget._id,
         {
-          reason: toCommunityReportReason(reason),
+          reason: toCommunityMessageReportReason(reason),
           ...(details ? { details } : {}),
         },
       );
@@ -585,8 +630,9 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
     }
   };
 
-  const toggleNotifications = async () => {
-    const nextLevel = notificationLevel === "muted" ? "all" : "muted";
+  const changeNotifications = async (
+    nextLevel: "all" | "announcements" | "mentions" | "muted",
+  ) => {
     try {
       const response = await communitiesApi.updateNotificationPreference(
         communityId,
@@ -594,11 +640,9 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
       );
       setNotificationLevel(nextLevel);
       setMenuVisible(false);
+      setNotificationMenuVisible(false);
       setAlert({
-        title:
-          nextLevel === "muted"
-            ? "Notifications muted"
-            : "Notifications enabled",
+        title: "Notification preference saved",
         message: response.message,
       });
     } catch (error) {
@@ -801,26 +845,50 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
                   </Pressable>
                 ) : null}
                 <Pressable
-                  onPress={() => {
-                    void toggleNotifications();
-                  }}
+                  onPress={() =>
+                    setNotificationMenuVisible((visible) => !visible)
+                  }
                   style={styles.menuItem}
                 >
                   <Ionicons
-                    name={
-                      notificationLevel === "muted"
-                        ? "notifications-outline"
-                        : "notifications-off-outline"
-                    }
+                    name="notifications-outline"
                     size={19}
                     color={colors.ink}
                   />
                   <Text style={styles.menuText}>
-                    {notificationLevel === "muted"
-                      ? "Enable notifications"
-                      : "Mute notifications"}
+                    Notifications:{" "}
+                    {notificationLevel === "unknown"
+                      ? "choose"
+                      : notificationLevel}
                   </Text>
                 </Pressable>
+                {notificationMenuVisible
+                  ? (
+                      [
+                        ["all", "All activity"],
+                        ["announcements", "Announcements"],
+                        ["mentions", "Mentions"],
+                        ["muted", "Muted"],
+                      ] as const
+                    ).map(([level, label]) => (
+                      <Pressable
+                        key={level}
+                        onPress={() => void changeNotifications(level)}
+                        style={styles.menuItem}
+                      >
+                        <Ionicons
+                          name={
+                            notificationLevel === level
+                              ? "radio-button-on"
+                              : "radio-button-off"
+                          }
+                          size={17}
+                          color="#078d45"
+                        />
+                        <Text style={styles.menuText}>{label}</Text>
+                      </Pressable>
+                    ))
+                  : null}
                 <Pressable
                   onPress={() => {
                     setMenuVisible(false);
@@ -852,6 +920,17 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
               }
               showsVerticalScrollIndicator={false}
             >
+              {hasOlderMessages ? (
+                <Pressable
+                  onPress={() => void loadOlderMessages()}
+                  disabled={loadingOlder}
+                  style={styles.olderButton}
+                >
+                  <Text style={styles.olderText}>
+                    {loadingOlder ? "Loading..." : "Load older messages"}
+                  </Text>
+                </Pressable>
+              ) : null}
               <View style={styles.datePill}>
                 <Text style={styles.dateText}>Today</Text>
               </View>
@@ -974,6 +1053,14 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
                             <Text style={styles.pinnedText}>PINNED</Text>
                           </View>
                         ) : null}
+                        {message.replyToMessageId ? (
+                          <Text style={styles.replyPreview} numberOfLines={1}>
+                            Reply to:{" "}
+                            {messages.find(
+                              (item) => item._id === message.replyToMessageId,
+                            )?.text || "earlier message"}
+                          </Text>
+                        ) : null}
                         {image ? (
                           <Image
                             source={{ uri: image.url }}
@@ -1048,6 +1135,19 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
                       </View>
                       {selectedMessageId === message._id ? (
                         <View style={styles.messageActions}>
+                          {canSendMessages ? (
+                            <Pressable
+                              onPress={() => {
+                                setReplyTarget(message);
+                                setSelectedMessageId(null);
+                              }}
+                              style={styles.messageAction}
+                            >
+                              <Text style={styles.messageActionText}>
+                                Reply
+                              </Text>
+                            </Pressable>
+                          ) : null}
                           <Pressable
                             onPress={() => {
                               void toggleReaction(message, "Like");
@@ -1113,6 +1213,16 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
           )}
           {canSendMessages ? (
             <View style={styles.composerWrap}>
+              {replyTarget ? (
+                <View style={styles.editingBanner}>
+                  <Text numberOfLines={1} style={styles.editingText}>
+                    Replying to {replyTarget.text || "attachment"}
+                  </Text>
+                  <Pressable onPress={() => setReplyTarget(null)}>
+                    <Text style={styles.editingCancel}>Cancel</Text>
+                  </Pressable>
+                </View>
+              ) : null}
               {typingLabel ? (
                 <Text style={styles.typingLabel}>{typingLabel}</Text>
               ) : null}
@@ -1202,6 +1312,7 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
         </KeyboardAvoidingView>
       </SafeAreaView>
       <AppReportSheet
+        reasons={communityReportReasons}
         minimumDetailsLength={10}
         visible={reportVisible}
         title="Report Community"
@@ -1210,6 +1321,7 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
         onSubmit={submitReport}
       />
       <AppReportSheet
+        reasons={communityMessageReportReasons}
         visible={Boolean(messageReportTarget)}
         title="Report Message"
         description="Tell us why this message should be reviewed. Your report is confidential."
@@ -1324,6 +1436,17 @@ const styles = StyleSheet.create({
   },
   menuItem: { alignItems: "center", flexDirection: "row", gap: 9, padding: 12 },
   menuText: { color: colors.ink, fontFamily: fonts.semiBold, fontSize: 12 },
+  olderButton: { alignItems: "center", paddingVertical: 12 },
+  olderText: { color: "#087b42", fontFamily: fonts.bold, fontSize: 12 },
+  replyPreview: {
+    borderLeftColor: "#08b657",
+    borderLeftWidth: 3,
+    color: "#52677c",
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    marginBottom: 7,
+    paddingLeft: 7,
+  },
   menuDanger: { color: "#cf3c3c", fontFamily: fonts.semiBold, fontSize: 12 },
   loading: { alignItems: "center", flex: 1, justifyContent: "center" },
   loadingText: {

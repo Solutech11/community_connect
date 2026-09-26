@@ -25,6 +25,7 @@ import {
   initials,
 } from "../../data/community-presentation";
 import {
+  communityReportReasons,
   toCommunityReportReason,
   type ReportReason,
 } from "../../data/report-options";
@@ -104,6 +105,9 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
   const communityId = route.params.communityId;
   const [community, setCommunity] = useState<Community | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  const [memberPage, setMemberPage] = useState(1);
+  const [moreMembers, setMoreMembers] = useState(false);
+  const [loadingMembers, setLoadingMembers] = useState(false);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [communityRules, setCommunityRules] = useState<CommunityRules | null>(
     null,
@@ -111,6 +115,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
   const [viewerMembership, setViewerMembership] =
     useState<ViewerMembership | null>(null);
   const [messagePermission, setMessagePermission] = useState("everyone");
+  const [memberListVisible, setMemberListVisible] = useState(true);
   const [activeTab, setActiveTab] = useState<ProfileTab>("About");
   const [memberSearch, setMemberSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -132,41 +137,61 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
       const [detailResponse, rulesResponse, mineResponse] = await Promise.all([
         communitiesApi.get(communityId, signal),
         communitiesApi.rules(communityId, signal),
-        communitiesApi.myCommunities({ page: 1, limit: 50 }, signal),
+        communitiesApi.allMyCommunities(signal),
       ]);
       const nextCommunity = detailResponse.data.community;
       const membership =
-        mineResponse.data.communities.find((item) => item._id === communityId)
+        mineResponse.find((item) => item._id === communityId)
           ?.viewerMembership ?? null;
       setCommunity(nextCommunity);
       setCommunityRules(rulesResponse.data.rules);
       setViewerMembership(membership);
-      setJoinRequestPending(membership?.status === "pending");
+      setJoinRequestPending(
+        (previous) => previous || membership?.status === "pending",
+      );
 
       if (membership?.status === "active") {
-        const [memberResponse, announcementResponse, settingsResponse] =
-          await Promise.all([
-            communitiesApi.members(
-              communityId,
-              { page: 1, limit: 100 },
-              signal,
-            ),
-            communitiesApi.announcements(
-              communityId,
-              { page: 1, limit: 5 },
-              signal,
-            ),
-            communitiesApi.settings(communityId, signal),
-          ]);
-        setMembers(
-          (memberResponse.data.members as unknown[])
-            .map(mapMember)
-            .filter((item): item is Member => item !== null),
-        );
+        const [announcementResponse, settingsResponse] = await Promise.all([
+          communitiesApi.announcements(
+            communityId,
+            { page: 1, limit: 5 },
+            signal,
+          ),
+          communitiesApi.settings(communityId, signal),
+        ]);
+        const canListMembers =
+          settingsResponse.data.settings.showMemberList ||
+          membership.role === "owner" ||
+          membership.role === "moderator";
+        setMemberListVisible(canListMembers);
+        if (canListMembers) {
+          const memberResponse = await communitiesApi.members(
+            communityId,
+            { page: 1, limit: 100 },
+            signal,
+          );
+          setMembers(
+            (memberResponse.data.members as unknown[])
+              .map(mapMember)
+              .filter((item): item is Member => item !== null),
+          );
+          setMemberPage(1);
+          setMoreMembers(
+            (memberResponse.data.pagination?.total ??
+              memberResponse.data.members.length) >
+              memberResponse.data.members.length,
+          );
+        } else {
+          setMembers([]);
+          setMoreMembers(false);
+          setActiveTab("About");
+        }
         setAnnouncements(announcementResponse.data.announcements);
         setMessagePermission(settingsResponse.data.settings.messagePermission);
       } else {
         setMembers([]);
+        setMemberListVisible(false);
+        setMoreMembers(false);
         setAnnouncements([]);
         setMessagePermission("everyone");
       }
@@ -194,9 +219,12 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
   }, [load]);
 
   const joined = viewerMembership?.status === "active";
+  const ownerId =
+    typeof community?.ownerId === "string"
+      ? community.ownerId
+      : community?.ownerId?._id;
   const isOwner =
-    viewerMembership?.role === "owner" ||
-    Boolean(user && community?.ownerId === user._id);
+    viewerMembership?.role === "owner" || Boolean(user && ownerId === user._id);
   const canModerate = isOwner || viewerMembership?.role === "moderator";
   const activeRules = communityRules?.rules?.length
     ? communityRules.rules
@@ -210,6 +238,38 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
         .includes(search),
     );
   }, [memberSearch, members]);
+
+  const loadMoreMembers = async () => {
+    if (!moreMembers || loadingMembers) return;
+    setLoadingMembers(true);
+    try {
+      const nextPage = memberPage + 1;
+      const response = await communitiesApi.members(communityId, {
+        page: nextPage,
+        limit: 100,
+      });
+      const nextMembers = (response.data.members as unknown[])
+        .map(mapMember)
+        .filter((item): item is Member => item !== null);
+      setMembers((current) => {
+        const ids = new Set(current.map((member) => member.user._id));
+        return [
+          ...current,
+          ...nextMembers.filter((member) => !ids.has(member.user._id)),
+        ];
+      });
+      setMemberPage(nextPage);
+      setMoreMembers(nextPage * 100 < (response.data.pagination?.total ?? 0));
+    } catch (error) {
+      setAlert({
+        title: "Unable to load members",
+        message:
+          error instanceof ApiError ? error.message : "Please try again.",
+      });
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
 
   const verifyMembershipPayment =
     async (): Promise<PaystackVerificationResult> => {
@@ -272,13 +332,27 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
     }
     setSubmitting(true);
     try {
-      if (community.visibility === "private") {
+      if (
+        community.visibility === "private" ||
+        community.joinPolicy === "access_code" ||
+        community.joinPolicy === "invite_only"
+      ) {
+        navigation.navigate("CommunityJoin", { communityId: community._id });
+      } else if (
+        community.joinPolicy === "approval" &&
+        community.membershipType === "free"
+      ) {
         const response = await communitiesApi.createJoinRequest(
           community._id,
           {},
         );
-        setJoinRequestPending(true);
-        setAlert({ title: "Request sent", message: response.message });
+        if ("membership" in response.data) {
+          await load();
+          setAlert({ title: "Joined community", message: response.message });
+        } else {
+          setJoinRequestPending(true);
+          setAlert({ title: "Request sent", message: response.message });
+        }
       } else if (community.membershipType === "free") {
         const response = await communitiesApi.join(community._id);
         await load();
@@ -502,11 +576,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
             <Image source={{ uri: avatar }} style={styles.communityAvatar} />
             <Text style={styles.name}>{community.name}</Text>
             <Text style={styles.memberMeta}>
-              {(joined
-                ? members.length
-                : community.members.length
-              ).toLocaleString()}{" "}
-              Members -{" "}
+              {community.members.length.toLocaleString()} Members -{" "}
               {community.visibility === "private"
                 ? "Private Group"
                 : "Public Group"}
@@ -547,11 +617,16 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
                     ? "Continue Membership Payment"
                     : joinRequestPending
                       ? "Cancel Join Request"
-                      : community.visibility === "private"
-                        ? "Request to Join"
-                        : community.membershipType === "free"
-                          ? "Join Community"
-                          : `Join for NGN ${Math.round(community.membershipPriceKobo / 100).toLocaleString()}`}
+                      : community.visibility === "private" ||
+                          community.joinPolicy === "access_code" ||
+                          community.joinPolicy === "invite_only"
+                        ? "Enter Access Code"
+                        : community.joinPolicy === "approval" &&
+                            community.membershipType === "free"
+                          ? "Request to Join"
+                          : community.membershipType === "free"
+                            ? "Join Community"
+                            : `Join for NGN ${Math.round(community.membershipPriceKobo / 100).toLocaleString()}`}
                 </Text>
               </Pressable>
             )}
@@ -559,7 +634,11 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
 
           <View style={styles.tabs}>
             {(
-              ["About", ...(joined ? ["Members"] : []), "Rules"] as ProfileTab[]
+              [
+                "About",
+                ...(joined && memberListVisible ? ["Members"] : []),
+                "Rules",
+              ] as ProfileTab[]
             ).map((tab) => (
               <Pressable
                 key={tab}
@@ -682,7 +761,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
                     const memberUser = member.user;
                     const owner =
                       member.communityRole === "owner" ||
-                      memberUser._id === community.ownerId;
+                      memberUser._id === ownerId;
                     const moderator = member.communityRole === "moderator";
                     return (
                       <View key={memberUser._id} style={styles.memberRow}>
@@ -727,6 +806,17 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
                     <Text style={styles.noMembers}>
                       No members match your search.
                     </Text>
+                  ) : null}
+                  {moreMembers ? (
+                    <Pressable
+                      disabled={loadingMembers}
+                      onPress={() => void loadMoreMembers()}
+                      style={styles.moreMembersButton}
+                    >
+                      <Text style={styles.moreMembersText}>
+                        {loadingMembers ? "Loading..." : "Load more members"}
+                      </Text>
+                    </Pressable>
                   ) : null}
                 </View>
               </>
@@ -780,6 +870,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
         onVerify={verifyMembershipPayment}
       />
       <AppReportSheet
+        reasons={communityReportReasons}
         visible={reportVisible}
         minimumDetailsLength={10}
         title="Report Community"
@@ -1024,6 +1115,8 @@ const styles = StyleSheet.create({
     marginTop: 18,
     overflow: "hidden",
   },
+  moreMembersButton: { alignItems: "center", padding: 16 },
+  moreMembersText: { color: "#087b42", fontFamily: fonts.bold, fontSize: 12 },
   memberRow: {
     alignItems: "center",
     borderBottomColor: "#edf1f4",

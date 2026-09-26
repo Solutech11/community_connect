@@ -20,6 +20,7 @@ type AppReportSheetProps = {
   title?: string;
   description?: string;
   minimumDetailsLength?: number;
+  reasons?: readonly ReportReason[];
   onClose: () => void;
   onSubmit?: (reason: ReportReason, details: string) => void | Promise<void>;
 };
@@ -29,6 +30,7 @@ export default function AppReportSheet({
   title = "Report Event",
   description = "Please select a reason for reporting this event. Your report is anonymous and helps keep our community safe.",
   minimumDetailsLength = 0,
+  reasons = reportReasons,
   onClose,
   onSubmit,
 }: AppReportSheetProps) {
@@ -92,7 +94,7 @@ export default function AppReportSheet({
             <Text style={styles.description}>{description}</Text>
 
             <View style={styles.reasonsWrap}>
-              {reportReasons.map((reason) => {
+              {reasons.map((reason) => {
                 const active = selectedReason === reason;
                 return (
                   <Pressable

@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import * as Crypto from "expo-crypto";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -48,14 +50,19 @@ const JOIN_POLICIES = [
   "invite_only",
   "access_code",
 ] as const satisfies readonly JoinPolicy[];
-const MESSAGE_PERMISSIONS = ["everyone", "moderators"] as const satisfies readonly MessagePermission[];
+const MESSAGE_PERMISSIONS = [
+  "everyone",
+  "moderators",
+] as const satisfies readonly MessagePermission[];
 
 function parseJoinPolicy(value: string): JoinPolicy {
   return JOIN_POLICIES.find((policy) => policy === value) ?? "open";
 }
 
 function parseMessagePermission(value: string): MessagePermission {
-  return MESSAGE_PERMISSIONS.find((permission) => permission === value) ?? "everyone";
+  return (
+    MESSAGE_PERMISSIONS.find((permission) => permission === value) ?? "everyone"
+  );
 }
 type Rule = GetCommunitiesIdRulesResponse["data"]["rules"]["rules"][number];
 type Post = GetCommunitiesIdPostsResponse["data"]["posts"][number];
@@ -64,6 +71,8 @@ type Announcement =
     pinnedAt?: string | null;
   };
 type ContentKind = "post" | "announcement";
+type PagedSection =
+  "requests" | "members" | "banned" | "posts" | "announcements";
 type ManagedMember = {
   user: {
     _id: string;
@@ -156,7 +165,14 @@ export default function CommunityManagementScreen({
   const communityId = route.params.communityId;
   const [tab, setTab] = useState<Tab>("People");
   const [viewerRole, setViewerRole] = useState<Role | null>(null);
+  const [premiumCommunity, setPremiumCommunity] = useState(false);
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [savedJoinPolicy, setSavedJoinPolicy] = useState<JoinPolicy>("open");
+  const [secret, setSecret] = useState<{
+    title: string;
+    value: string;
+    detail: string;
+  } | null>(null);
   const [members, setMembers] = useState<ManagedMember[]>([]);
   const [bannedMembers, setBannedMembers] = useState<ManagedMember[]>([]);
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
@@ -165,11 +181,29 @@ export default function CommunityManagementScreen({
   const [consequences, setConsequences] = useState("");
   const [posts, setPosts] = useState<Post[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [pages, setPages] = useState<Record<PagedSection, number>>({
+    requests: 1,
+    members: 1,
+    banned: 1,
+    posts: 1,
+    announcements: 1,
+  });
+  const [totals, setTotals] = useState<Record<PagedSection, number>>({
+    requests: 0,
+    members: 0,
+    banned: 0,
+    posts: 0,
+    announcements: 0,
+  });
   const [contentKind, setContentKind] = useState<ContentKind>("post");
   const [contentText, setContentText] = useState("");
   const [contentImageUrl, setContentImageUrl] = useState("");
   const [editingContentId, setEditingContentId] = useState<string | null>(null);
   const [banReason, setBanReason] = useState("Community policy violation");
+  const [banDays, setBanDays] = useState("");
+  const [reviewNote, setReviewNote] = useState("");
+  const [inviteDays, setInviteDays] = useState("7");
+  const [inviteMaxUses, setInviteMaxUses] = useState("1");
   const [newOwnerId, setNewOwnerId] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [loading, setLoading] = useState(true);
@@ -189,10 +223,9 @@ export default function CommunityManagementScreen({
     async (refresh = false) => {
       refresh ? setRefreshing(true) : setLoading(true);
       try {
-        const mine = await communitiesApi.myCommunities({ page: 1, limit: 50 });
-        const role = mine.data.communities.find(
-          (item) => item._id === communityId,
-        )?.viewerMembership?.role;
+        const mine = await communitiesApi.allMyCommunities();
+        const role = mine.find((item) => item._id === communityId)
+          ?.viewerMembership?.role;
         if (role !== "owner" && role !== "moderator") {
           setViewerRole(null);
           setNotice({
@@ -211,6 +244,7 @@ export default function CommunityManagementScreen({
           requestsResponse,
           postsResponse,
           announcementsResponse,
+          detailResponse,
         ] = await Promise.all([
           communitiesApi.settings(communityId),
           communitiesApi.rules(communityId),
@@ -231,15 +265,24 @@ export default function CommunityManagementScreen({
           }),
           communitiesApi.posts(communityId, { page: 1, limit: 100 }),
           communitiesApi.announcements(communityId, { page: 1, limit: 100 }),
+          communitiesApi.get(communityId),
         ]);
+        setPremiumCommunity(
+          detailResponse.data.community.membershipType === "premium",
+        );
         setSettings({
           ...settingsResponse.data.settings,
-          joinPolicy: parseJoinPolicy(settingsResponse.data.settings.joinPolicy),
+          joinPolicy: parseJoinPolicy(
+            settingsResponse.data.settings.joinPolicy,
+          ),
           messagePermission: parseMessagePermission(
             settingsResponse.data.settings.messagePermission,
           ),
           accessCode: "",
         });
+        setSavedJoinPolicy(
+          parseJoinPolicy(settingsResponse.data.settings.joinPolicy),
+        );
         const ruleDocument = rulesResponse.data.rules;
         setRulesIntro(ruleDocument.introduction);
         setRuleDrafts(
@@ -269,6 +312,24 @@ export default function CommunityManagementScreen({
         setAnnouncements(
           announcementsResponse.data.announcements as Announcement[],
         );
+        setPages({
+          requests: 1,
+          members: 1,
+          banned: 1,
+          posts: 1,
+          announcements: 1,
+        });
+        setTotals({
+          requests: requestsResponse.data.pagination.total,
+          members:
+            membersResponse.data.pagination?.total ??
+            membersResponse.data.members.length,
+          banned:
+            bannedResponse.data.pagination?.total ??
+            bannedResponse.data.members.length,
+          posts: postsResponse.data.pagination.total,
+          announcements: announcementsResponse.data.pagination.total,
+        });
       } catch (error) {
         setNotice({
           title: "Management unavailable",
@@ -289,6 +350,97 @@ export default function CommunityManagementScreen({
     void load();
   }, [load]);
 
+  const hasMore = (section: PagedSection) =>
+    pages[section] * 100 < totals[section];
+
+  const loadMore = async (section: PagedSection) => {
+    if (busyKey || !hasMore(section)) return;
+    setBusyKey(`more-${section}`);
+    const page = pages[section] + 1;
+    try {
+      if (section === "members" || section === "banned") {
+        const response = await communitiesApi.members(communityId, {
+          page,
+          limit: 100,
+          status: section === "members" ? "active" : "banned",
+        });
+        const next = (response.data.members as unknown[])
+          .map(mapMember)
+          .filter((item): item is ManagedMember => item !== null);
+        const append = (current: ManagedMember[]) => {
+          const ids = new Set(current.map((item) => item.user._id));
+          return [
+            ...current,
+            ...next.filter((item) => !ids.has(item.user._id)),
+          ];
+        };
+        if (section === "members") setMembers(append);
+        else setBannedMembers(append);
+      } else if (section === "requests") {
+        const response = await communitiesApi.joinRequests(communityId, {
+          page,
+          limit: 100,
+          status: "pending",
+        });
+        const next = (response.data.joinRequests as unknown[])
+          .map(mapJoinRequest)
+          .filter((item): item is JoinRequest => item !== null);
+        setJoinRequests((current) => {
+          const ids = new Set(current.map((item) => item._id));
+          return [...current, ...next.filter((item) => !ids.has(item._id))];
+        });
+      } else if (section === "posts") {
+        const response = await communitiesApi.posts(communityId, {
+          page,
+          limit: 100,
+        });
+        setPosts((current) => {
+          const ids = new Set(current.map((item) => item._id));
+          return [
+            ...current,
+            ...response.data.posts.filter((item) => !ids.has(item._id)),
+          ];
+        });
+      } else {
+        const response = await communitiesApi.announcements(communityId, {
+          page,
+          limit: 100,
+        });
+        setAnnouncements((current) => {
+          const ids = new Set(current.map((item) => item._id));
+          return [
+            ...current,
+            ...(response.data.announcements as Announcement[]).filter(
+              (item) => !ids.has(item._id),
+            ),
+          ];
+        });
+      }
+      setPages((current) => ({ ...current, [section]: page }));
+    } catch (error) {
+      setNotice({
+        title: "Unable to load more",
+        message:
+          error instanceof ApiError ? error.message : "Please try again.",
+      });
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const moreButton = (section: PagedSection) =>
+    hasMore(section) ? (
+      <Pressable
+        disabled={Boolean(busyKey)}
+        onPress={() => void loadMore(section)}
+        style={styles.secondary}
+      >
+        <Text style={styles.secondaryText}>
+          {busyKey === `more-${section}` ? "Loading..." : "Load more"}
+        </Text>
+      </Pressable>
+    ) : null;
+
   const run = async (
     key: string,
     action: () => Promise<unknown>,
@@ -298,6 +450,8 @@ export default function CommunityManagementScreen({
     setBusyKey(key);
     try {
       await action();
+      if (key.startsWith("approve-") || key.startsWith("reject-"))
+        setReviewNote("");
       setNotice({ title: "Done", message: success });
       await load(true);
     } catch (error) {
@@ -312,22 +466,61 @@ export default function CommunityManagementScreen({
   };
 
   const saveSettings = async () => {
-    if (!settings) return;
-    await run(
-      "settings",
-      () =>
-        communitiesApi.updateSettings(communityId, {
-          joinPolicy: settings.joinPolicy,
-          ...(settings.joinPolicy === "access_code" && settings.accessCode.trim()
-            ? { accessCode: settings.accessCode.trim() }
-            : {}),
-          messagePermission: settings.messagePermission,
-          membersCanCreatePosts: settings.membersCanCreatePosts,
-          membersCanInvite: settings.membersCanInvite,
-          showMemberList: settings.showMemberList,
-        }),
-      "Community settings saved.",
-    );
+    if (!settings || busyKey) return;
+    if (premiumCommunity && settings.joinPolicy !== "open") {
+      setNotice({
+        title: "Paid membership rule",
+        message:
+          "Paid communities must use open joining until the backend can enforce payment for approval and invite flows.",
+      });
+      return;
+    }
+    const accessCode = settings.accessCode.trim();
+    if (
+      settings.joinPolicy === "access_code" &&
+      savedJoinPolicy !== "access_code" &&
+      accessCode.length < 4
+    ) {
+      setNotice({
+        title: "Access code needed",
+        message: "Generate a code before enabling code-only joining.",
+      });
+      return;
+    }
+    setBusyKey("settings");
+    try {
+      await communitiesApi.updateSettings(communityId, {
+        joinPolicy: settings.joinPolicy,
+        ...(settings.joinPolicy === "access_code" && accessCode
+          ? { accessCode }
+          : {}),
+        messagePermission: settings.messagePermission,
+        membersCanCreatePosts: settings.membersCanCreatePosts,
+        membersCanInvite: settings.membersCanInvite,
+        showMemberList: settings.showMemberList,
+      });
+      await load(true);
+      if (accessCode && settings.joinPolicy === "access_code") {
+        setSecret({
+          title: "Save the new access code",
+          value: accessCode,
+          detail: "This code will not be returned by the API again.",
+        });
+      } else {
+        setNotice({
+          title: "Settings saved",
+          message: "Community settings were updated.",
+        });
+      }
+    } catch (error) {
+      setNotice({
+        title: "Settings not saved",
+        message:
+          error instanceof ApiError ? error.message : "Please try again.",
+      });
+    } finally {
+      setBusyKey(null);
+    }
   };
 
   const saveRules = async () => {
@@ -365,19 +558,36 @@ export default function CommunityManagementScreen({
   };
 
   const createInvite = async () => {
+    const days = Number(inviteDays);
+    const maxUses = Number(inviteMaxUses);
+    if (
+      !Number.isInteger(days) ||
+      days < 1 ||
+      days > 3650 ||
+      !Number.isInteger(maxUses) ||
+      maxUses < 1 ||
+      maxUses > 10000
+    ) {
+      setNotice({
+        title: "Check invite limits",
+        message: "Enter 1–3650 days and 1–10000 uses.",
+      });
+      return;
+    }
     const expiresAt = new Date(
-      Date.now() + 7 * 24 * 60 * 60 * 1000,
+      Date.now() + days * 24 * 60 * 60 * 1000,
     ).toISOString();
     if (busyKey) return;
     setBusyKey("invite");
     try {
       const response = await communitiesApi.createInvite(communityId, {
         expiresAt,
-        maxUses: 1,
+        maxUses,
       });
-      setNotice({
+      setSecret({
         title: "Invite created",
-        message: `Share this one-use invite token:\n\n${response.data.invite.token}\n\nExpires ${new Date(response.data.invite.expiresAt).toLocaleString("en-NG")}.`,
+        value: response.data.invite.token,
+        detail: `${response.data.invite.maxUses} use(s). Expires ${new Date(response.data.invite.expiresAt).toLocaleString("en-NG")}. Share this token and the community ID.`,
       });
     } catch (error) {
       setNotice({
@@ -512,6 +722,14 @@ export default function CommunityManagementScreen({
             {tab === "People" ? (
               <>
                 <Section title="Pending requests">
+                  <TextInput
+                    maxLength={500}
+                    onChangeText={setReviewNote}
+                    placeholder="Optional response note for approval or rejection"
+                    placeholderTextColor="#718078"
+                    style={styles.input}
+                    value={reviewNote}
+                  />
                   {joinRequests.map((request) => (
                     <View key={request._id} style={styles.row}>
                       <View style={styles.copy}>
@@ -532,7 +750,12 @@ export default function CommunityManagementScreen({
                               communitiesApi.reviewJoinRequest(
                                 communityId,
                                 request._id,
-                                { status: "approved" },
+                                {
+                                  status: "approved",
+                                  ...(reviewNote.trim()
+                                    ? { note: reviewNote.trim() }
+                                    : {}),
+                                },
                               ),
                             "Join request approved.",
                           );
@@ -548,7 +771,12 @@ export default function CommunityManagementScreen({
                               communitiesApi.reviewJoinRequest(
                                 communityId,
                                 request._id,
-                                { status: "rejected" },
+                                {
+                                  status: "rejected",
+                                  ...(reviewNote.trim()
+                                    ? { note: reviewNote.trim() }
+                                    : {}),
+                                },
                               ),
                             "Join request rejected.",
                           );
@@ -559,17 +787,36 @@ export default function CommunityManagementScreen({
                   {!joinRequests.length ? (
                     <Text style={styles.muted}>No pending requests.</Text>
                   ) : null}
-                  <Pressable
-                    disabled={Boolean(busyKey)}
-                    onPress={() => {
-                      void createInvite();
-                    }}
-                    style={styles.secondary}
-                  >
-                    <Text style={styles.secondaryText}>
-                      Create 7-day invite
-                    </Text>
-                  </Pressable>
+                  {moreButton("requests")}
+                  {settings?.joinPolicy === "invite_only" ? (
+                    <>
+                      <TextInput
+                        keyboardType="number-pad"
+                        onChangeText={setInviteDays}
+                        placeholder="Invite valid for days"
+                        placeholderTextColor="#718078"
+                        style={styles.input}
+                        value={inviteDays}
+                      />
+                      <TextInput
+                        keyboardType="number-pad"
+                        onChangeText={setInviteMaxUses}
+                        placeholder="Maximum uses"
+                        placeholderTextColor="#718078"
+                        style={styles.input}
+                        value={inviteMaxUses}
+                      />
+                      <Pressable
+                        disabled={Boolean(busyKey)}
+                        onPress={() => {
+                          void createInvite();
+                        }}
+                        style={styles.secondary}
+                      >
+                        <Text style={styles.secondaryText}>Create invite</Text>
+                      </Pressable>
+                    </>
+                  ) : null}
                 </Section>
 
                 <Section title="Active members">
@@ -579,6 +826,14 @@ export default function CommunityManagementScreen({
                     placeholderTextColor="#718078"
                     style={styles.input}
                     value={banReason}
+                  />
+                  <TextInput
+                    keyboardType="number-pad"
+                    onChangeText={setBanDays}
+                    placeholder="Ban duration in days (blank for permanent)"
+                    placeholderTextColor="#718078"
+                    style={styles.input}
+                    value={banDays}
                   />
                   {members.map((member) => (
                     <View key={member.user._id} style={styles.memberCard}>
@@ -644,6 +899,19 @@ export default function CommunityManagementScreen({
                             danger
                             icon="ban-outline"
                             onPress={() => {
+                              if (
+                                banDays.trim() &&
+                                (!Number.isInteger(Number(banDays)) ||
+                                  Number(banDays) < 1 ||
+                                  Number(banDays) > 3650)
+                              ) {
+                                setNotice({
+                                  title: "Check ban duration",
+                                  message:
+                                    "Enter 1–3650 days or leave it blank for a permanent ban.",
+                                });
+                                return;
+                              }
                               void run(
                                 `ban-${member.user._id}`,
                                 () =>
@@ -654,6 +922,19 @@ export default function CommunityManagementScreen({
                                       reason:
                                         banReason.trim() ||
                                         "Community policy violation",
+                                      ...(Number.isInteger(Number(banDays)) &&
+                                      Number(banDays) > 0
+                                        ? {
+                                            expiresAt: new Date(
+                                              Date.now() +
+                                                Number(banDays) *
+                                                  24 *
+                                                  60 *
+                                                  60 *
+                                                  1000,
+                                            ).toISOString(),
+                                          }
+                                        : {}),
                                     },
                                   ),
                                 "Member banned.",
@@ -664,6 +945,7 @@ export default function CommunityManagementScreen({
                       ) : null}
                     </View>
                   ))}
+                  {moreButton("members")}
                 </Section>
 
                 {bannedMembers.length ? (
@@ -692,6 +974,7 @@ export default function CommunityManagementScreen({
                         </Pressable>
                       </View>
                     ))}
+                    {moreButton("banned")}
                   </Section>
                 ) : null}
 
@@ -749,15 +1032,29 @@ export default function CommunityManagementScreen({
               <>
                 <Section title="Joining">
                   <ChoiceRow
-                    values={[...JOIN_POLICIES]}
+                    values={premiumCommunity ? ["open"] : [...JOIN_POLICIES]}
                     value={settings.joinPolicy}
                     onChange={(joinPolicy) =>
                       setSettings({
                         ...settings,
                         joinPolicy: parseJoinPolicy(joinPolicy),
+                        accessCode:
+                          joinPolicy === "access_code" &&
+                          savedJoinPolicy !== "access_code"
+                            ? Crypto.randomUUID()
+                                .replace(/-/g, "")
+                                .slice(0, 8)
+                                .toUpperCase()
+                            : settings.accessCode,
                       })
                     }
                   />
+                  {premiumCommunity ? (
+                    <Text style={styles.meta}>
+                      Paid communities currently require open joining and
+                      backend checkout.
+                    </Text>
+                  ) : null}
                   {settings.joinPolicy === "access_code" ? (
                     <>
                       <TextInput
@@ -770,8 +1067,26 @@ export default function CommunityManagementScreen({
                         style={styles.input}
                         value={settings.accessCode}
                       />
+                      <Pressable
+                        onPress={() =>
+                          setSettings({
+                            ...settings,
+                            accessCode: Crypto.randomUUID()
+                              .replace(/-/g, "")
+                              .slice(0, 8)
+                              .toUpperCase(),
+                          })
+                        }
+                        style={styles.secondary}
+                      >
+                        <Text style={styles.secondaryText}>
+                          Generate new code
+                        </Text>
+                      </Pressable>
                       <Text style={styles.meta}>
-                        Leave blank to keep the current code.
+                        {savedJoinPolicy === "access_code"
+                          ? "Leave blank to keep the current code."
+                          : "Save this new code before sharing it."}
                       </Text>
                     </>
                   ) : null}
@@ -977,6 +1292,7 @@ export default function CommunityManagementScreen({
                   {!posts.length ? (
                     <Text style={styles.muted}>No posts yet.</Text>
                   ) : null}
+                  {moreButton("posts")}
                 </Section>
                 <Section title="Announcements">
                   {announcements.map((item) => (
@@ -1004,6 +1320,7 @@ export default function CommunityManagementScreen({
                   {!announcements.length ? (
                     <Text style={styles.muted}>No announcements yet.</Text>
                   ) : null}
+                  {moreButton("announcements")}
                 </Section>
               </>
             ) : null}
@@ -1016,6 +1333,28 @@ export default function CommunityManagementScreen({
         title={notice?.title ?? ""}
         visible={Boolean(notice)}
       />
+      <Modal
+        transparent
+        animationType="fade"
+        visible={Boolean(secret)}
+        onRequestClose={() => setSecret(null)}
+      >
+        <View style={styles.secretBackdrop}>
+          <View style={styles.secretCard}>
+            <Text style={styles.secretTitle}>{secret?.title}</Text>
+            <Text style={styles.meta}>{secret?.detail}</Text>
+            <Text selectable style={styles.secretValue}>
+              {secret?.value}
+            </Text>
+            <Text selectable style={styles.meta}>
+              Community ID: {communityId}
+            </Text>
+            <Pressable onPress={() => setSecret(null)} style={styles.primary}>
+              <Text style={styles.primaryText}>Done</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
       <AppAlertModal
         cancelText="Cancel"
         confirmText="Continue"
@@ -1303,5 +1642,25 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     fontSize: 11,
     lineHeight: 17,
+  },
+  secretBackdrop: {
+    alignItems: "center",
+    backgroundColor: "#0008",
+    flex: 1,
+    justifyContent: "center",
+    padding: 24,
+  },
+  secretCard: {
+    backgroundColor: colors.white,
+    borderRadius: 24,
+    padding: 24,
+    width: "100%",
+  },
+  secretTitle: { color: colors.ink, fontFamily: fonts.extraBold, fontSize: 20 },
+  secretValue: {
+    color: "#087b42",
+    fontFamily: fonts.extraBold,
+    fontSize: 20,
+    marginTop: 15,
   },
 });

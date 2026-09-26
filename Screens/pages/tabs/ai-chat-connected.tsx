@@ -143,6 +143,7 @@ export default function AIChatConnectedScreen({ navigation, route }: Props) {
             scrollRef.current?.scrollToEnd({ animated: true })
           }
           ref={scrollRef}
+          style={styles.messageList}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.contextCard}>
@@ -303,6 +304,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   poweredText: { color: "#078d45", fontFamily: fonts.extraBold, fontSize: 10 },
+  messageList: { flex: 1 },
   messages: { flexGrow: 1, padding: 20, paddingBottom: 30 },
   contextCard: {
     alignItems: "center",

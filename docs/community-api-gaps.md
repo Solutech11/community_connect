@@ -1,53 +1,71 @@
-# Community API integration status
+# Community API audit
 
-Contract reviewed against the running local OpenAPI document at
-`http://localhost:5000/api/docs.json` on 2026-09-06 and, where the generated
-schema was ambiguous, the corresponding backend route, schema, controller, and
-model files in `Communty_connect_api`.
+Reviewed the running local OpenAPI document at `http://localhost:5000/api/docs.json`
+on 2026-09-27, then checked backend routes, controllers, and models where the
+document or generated TypeScript did not match runtime behavior. The backend
+health endpoint and public community list returned HTTP 200. Protected requests
+returned HTTP 401 without a token, as expected.
 
-## Integrated capabilities
+## Mobile coverage
 
-- Community discovery, detail, creation, editing, membership lists, and the
-  authenticated "my communities" view.
-- Free, approval-based, invitation-based, and paid membership flows, including
-  join-request cancellation and backend payment verification.
-- Rules and settings management.
-- Join-request review, invitations, member role changes, removal, bans, unbans,
-  and ownership transfer.
-- Posts and announcements, including create, edit, delete, and announcement
-  pinning.
-- Community messages, images/files, edit/delete, reactions, pinning, reporting,
-  read state, typing state, and notification preferences.
-- Community calls and community reports.
+All 47 documented `/communities` operations have service methods in
+`Screens/services/api/communities.api.ts`. The related
+`GET /users/me/communities` operation is also integrated. The screens expose
+discovery, creation/editing, free and paid joining, access codes, invitation
+tokens, join requests, moderation, rules/settings, content, messages,
+notifications, calls, and reporting.
 
-## Remaining backend contract gaps
+The mobile app now generates an eight-character access code for a private
+community before submission, sends it with `POST /communities`, and sets
+`joinPolicy: access_code` through `PATCH /communities/{id}/settings`. It shows
+the code and community ID in a persistent modal. A separate join screen sends
+the community ID with an access code, invite token, or approval request to
+`POST /communities/{id}/join-requests` and handles either a direct membership
+or a pending request. Code rotation and invite creation also show their
+write-only values in persistent modals.
 
-1. **Friend profile hydration**
-   - Friend-list and request responses expose relationship/user IDs but no safe
-     compact user profile, and there is no documented `GET /users/{id}` endpoint.
-   - The Friends screen therefore cannot reliably show another user's real name
-     and avatar from the documented contract alone.
+## Backend work needed
 
-2. **Access-code community settings are absent from OpenAPI**
-   - The backend validation source accepts an `accessCode` when the join policy
-     is `access_code`, but the running OpenAPI settings request does not document
-     that field.
-   - The management screen intentionally exposes only documented join policies:
-     `open`, `approval`, and `invite_only`.
+1. **Code-only private lookup:** Public listing excludes private communities,
+   and `GET /communities/{id}` returns 404 to nonmembers. Joining requires the
+   community ID plus code or token. There is no documented endpoint that
+   resolves a short code to a private community, so the mobile app cannot
+   support code-only discovery.
+2. **Paid joining enforcement:** Membership checkout looks up public premium
+   communities only. Approval of a premium join request directly activates
+   membership without payment verification. The app blocks creation/editing of
+   private premium communities and non-open policies for premium communities,
+   but the backend must enforce payment in every activation path.
+3. **Pending request read:** `GET /users/me/communities` returns membership
+   records, not pending join requests. There is no read operation for a user's
+   pending request. The app can show a request it just sent and can cancel it,
+   but cannot restore that state reliably after restart.
+4. **Notification preference read:** The write operation accepts `all`,
+   `announcements`, `mentions`, and `muted`, but membership responses expose
+   only `muted`. After a fresh load the app cannot distinguish `all` from
+   `announcements` or `mentions`.
+5. **Atomic private creation:** `POST /communities` accepts `accessCode` but
+   not `joinPolicy`; `PATCH /communities/{id}/settings` sets the policy. These
+   two calls can partially succeed. The app retains the new community ID and
+   provides a setup retry, but the backend should accept both in one creation
+   transaction if this must be atomic.
 
-3. **Several generated community response schemas are stale or too weak**
-   - The running members schema/example still describes a flat user list, while
-     the controller returns membership records containing `user`,
-     `communityRole`, `status`, and `joinedAt`.
-   - Settings examples generate literal boolean types (`true` or `false`) instead
-     of editable booleans.
-   - Some join-request and content response fields are emitted as `unknown`.
-   - The frontend uses defensive mapping for these responses, but the OpenAPI
-     schemas should be corrected so generated clients can model them directly.
+## OpenAPI schema corrections needed
 
-## Coverage result
+- `POST /communities/{id}/join-requests` documents only `data.joinRequest`,
+  but direct joins return `data.membership`.
+- `GET /communities/{id}/messages` documents `pagination`, while the
+  controller returns cursor based `pageInfo.nextCursor` and `pageInfo.hasMore`.
+- `GET /communities/{id}/members` documents a flat user list, while the
+  controller returns membership records with a nested user and pagination.
+- `GET /communities/{id}` documents `ownerId` as a string; the controller
+  populates it with a user object.
+- Several generated response examples produce literal boolean types or omit
+  fields used by the running backend. The community fields needed by the
+  mobile client were corrected locally in `Screens/types/api.generated.ts`.
+  `scripts/generate-api-types.mjs` still derives responses from examples, so
+  rerunning it will require revisiting these overrides until the OpenAPI
+  response schemas and generator are corrected.
 
-The frontend coverage audit reports 123 documented operations: 122 mobile-facing
-operations have a generated client entry and domain service wrapper. The only
-intentional exclusion is `POST /webhooks/paystack`, which must never be called by
-the mobile app.
+Authenticated join, payment, expiry/refresh, and failure flows still require
+device testing with an account. No backend files were changed in this audit.

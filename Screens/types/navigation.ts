@@ -54,7 +54,7 @@ export type RootStackParamList = {
   PersonalizationForm: undefined;
   Preferences: undefined;
   Home: NavigatorScreenParams<MainTabParamList> | undefined;
-  CommunityJoin: { communityId: string };
+  CommunityJoin: { communityId?: string };
   CommunityRoom: { communityId: string };
   CommunityCall: {
     communityId: string;

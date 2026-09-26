@@ -133,7 +133,7 @@ export default function CreateEventIntroductionScreen({ navigation }: Props) {
         ))}
       </ScrollView>
 
-      <SafeAreaView edges={["bottom"]} style={styles.footer}>
+      <View style={styles.footer}>
         <Pressable
           disabled={checkingDraft}
           onPress={continueToDetails}
@@ -157,7 +157,7 @@ export default function CreateEventIntroductionScreen({ navigation }: Props) {
             <Text style={styles.clearDraftText}>Clear saved draft</Text>
           </Pressable>
         ) : null}
-      </SafeAreaView>
+      </View>
       <AppAlertModal
         cancelText={prompt === "resume" ? "Keep draft" : "Cancel"}
         confirmText={prompt === "resume" ? "Resume draft" : "Clear draft"}
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.extraBold,
     fontSize: 25,
   },
-  content: { padding: 24, paddingBottom: 28 },
+  content: { padding: 24, paddingBottom: 140 },
   hero: {
     height: 285,
     justifyContent: "flex-end",
@@ -266,7 +266,15 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     marginTop: 6,
   },
-  footer: { backgroundColor: colors.paper, paddingHorizontal: 24 },
+  footer: {
+    backgroundColor: colors.paper,
+    bottom: 0,
+    left: 0,
+    paddingHorizontal: 24,
+    position: "absolute",
+    right: 0,
+    zIndex: 20,
+  },
   disabled: { opacity: 0.55 },
   continueButton: {
     alignItems: "center",

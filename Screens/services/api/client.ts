@@ -629,6 +629,11 @@ const operations: Record<
     path: "/tickets/{orderNumber}",
     authenticated: true,
   },
+  post__tickets_orderNumber_checkout: {
+    method: "POST",
+    path: "/tickets/{orderNumber}/checkout",
+    authenticated: true,
+  },
   get__tickets_orderNumber_verify: {
     method: "GET",
     path: "/tickets/{orderNumber}/verify",
