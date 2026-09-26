@@ -103,6 +103,12 @@ export const eventsApi = {
       pathParams: { id },
       signal,
     }),
+  verifyCheckIn: (eventId: string, qrToken: string, signal?: AbortSignal) =>
+    apiClient.request("post__events_eventId_check_ins_verify", {
+      pathParams: { eventId },
+      body: { qrToken },
+      signal,
+    }),
   checkIn: (id: string, qrToken: string, signal?: AbortSignal) =>
     apiClient.request("post__events_id_check_ins", {
       pathParams: { id },

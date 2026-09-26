@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import type { BarcodeScanningResult } from "expo-camera";
+import { Image } from "expo-image";
 import {
+  ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
@@ -8,27 +9,116 @@ import {
   Text,
   View,
 } from "react-native";
-
+import { SafeAreaView } from "react-native-safe-area-context";
+import type { PostEventsEventIdCheckInsVerifyResponse } from "../../types/api.generated";
 import { colors, fonts } from "../../styles/theme";
 
-type ScannedTicketDetailsSheetProps = {
-  checkedIn: boolean;
+export type TicketScanPhase =
+  | "verifying"
+  | "verified"
+  | "checking-in"
+  | "checked-in"
+  | "verification-error"
+  | "check-in-error";
+
+type CheckInPreview = PostEventsEventIdCheckInsVerifyResponse["data"];
+
+type Props = {
+  errorMessage: string | null;
   onCheckIn: () => void;
   onClose: () => void;
-  result: BarcodeScanningResult | null;
+  onRetry: () => void;
+  onScanNext: () => void;
+  phase: TicketScanPhase;
+  preview: CheckInPreview | null;
   visible: boolean;
 };
 
-type DetailRowProps = {
-  label: string;
-  value: string;
-};
+function initials(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+}
 
-function DetailRow({ label, value }: DetailRowProps) {
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "Time unavailable"
+    : date.toLocaleString();
+}
+
+function getStatus(phase: TicketScanPhase, preview: CheckInPreview | null) {
+  if (phase === "checked-in") {
+    return {
+      label: "CHECK-IN COMPLETE",
+      tone: "green" as const,
+      icon: "checkmark-circle" as const,
+    };
+  }
+  if (phase === "verifying") {
+    return {
+      label: "VERIFYING TICKET",
+      tone: "neutral" as const,
+      icon: "scan-outline" as const,
+    };
+  }
+  if (phase === "checking-in") {
+    return {
+      label: "CHECKING IN",
+      tone: "neutral" as const,
+      icon: "log-in-outline" as const,
+    };
+  }
+  if (phase === "check-in-error") {
+    return {
+      label: "CHECK-IN NEEDS REVIEW",
+      tone: "red" as const,
+      icon: "alert-circle-outline" as const,
+    };
+  }
+  if (phase === "verification-error") {
+    return {
+      label: "NOT VERIFIED",
+      tone: "red" as const,
+      icon: "close-circle" as const,
+    };
+  }
+  if (preview?.checkedInAt) {
+    return {
+      label: "ALREADY CHECKED IN",
+      tone: "amber" as const,
+      icon: "time-outline" as const,
+    };
+  }
+  if (preview?.canCheckIn) {
+    return {
+      label: "READY FOR CHECK-IN",
+      tone: "green" as const,
+      icon: "shield-checkmark" as const,
+    };
+  }
+  if (preview) {
+    return {
+      label: "TICKET VERIFIED",
+      tone: "amber" as const,
+      icon: "time-outline" as const,
+    };
+  }
+  return {
+    label: "TICKET SCANNED",
+    tone: "neutral" as const,
+    icon: "qr-code-outline" as const,
+  };
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.detailRow}>
       <Text style={styles.detailLabel}>{label}</Text>
-      <Text numberOfLines={2} style={styles.detailValue}>
+      <Text selectable style={styles.detailValue}>
         {value}
       </Text>
     </View>
@@ -36,306 +126,531 @@ function DetailRow({ label, value }: DetailRowProps) {
 }
 
 export default function ScannedTicketDetailsSheet({
-  checkedIn,
+  errorMessage,
   onCheckIn,
   onClose,
-  result,
+  onRetry,
+  onScanNext,
+  phase,
+  preview,
   visible,
-}: ScannedTicketDetailsSheetProps) {
-  if (!result) {
-    return null;
-  }
+}: Props) {
+  const status = getStatus(phase, preview);
+  const isBusy = phase === "verifying" || phase === "checking-in";
+  const canCheckIn = phase === "verified" && preview?.canCheckIn === true;
+  const retryVerification =
+    phase === "verification-error" || phase === "check-in-error";
 
-  const scannedAt = new Date().toLocaleString();
+  let primaryLabel = "Scan another ticket";
+  let primaryAction = onScanNext;
+  if (phase === "verifying") primaryLabel = "Verifying ticket…";
+  else if (phase === "checking-in") primaryLabel = "Checking in…";
+  else if (canCheckIn) {
+    primaryLabel = "Confirm check-in";
+    primaryAction = onCheckIn;
+  } else if (retryVerification) {
+    primaryLabel =
+      phase === "check-in-error"
+        ? "Refresh ticket status"
+        : "Try verification again";
+    primaryAction = onRetry;
+  }
 
   return (
     <Modal
       animationType="slide"
       onRequestClose={onClose}
+      statusBarTranslucent
       transparent
       visible={visible}
     >
-      <View style={styles.overlay}>
-        <Pressable onPress={onClose} style={StyleSheet.absoluteFillObject} />
-
-        <View style={styles.sheet}>
+      <View style={styles.backdrop}>
+        <Pressable
+          accessibilityLabel="Close ticket details"
+          accessibilityRole="button"
+          onPress={onClose}
+          style={StyleSheet.absoluteFill}
+        />
+        <SafeAreaView edges={["bottom"]} style={styles.sheet}>
           <View style={styles.handle} />
-
           <ScrollView
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
           >
-            <View
-              style={[styles.resultIcon, checkedIn && styles.resultIconChecked]}
-            >
+            <View style={[styles.statusPill, styles[`${status.tone}Pill`]]}>
               <Ionicons
-                color="#08b657"
-                name={checkedIn ? "checkmark-circle" : "shield-checkmark"}
-                size={36}
+                color={styles[`${status.tone}Text`].color}
+                name={status.icon}
+                size={16}
               />
+              <Text style={[styles.statusText, styles[`${status.tone}Text`]]}>
+                {status.label}
+              </Text>
             </View>
 
-            <Text style={styles.title}>
-              {checkedIn ? "Ticket Checked In" : "Valid Ticket Found"}
-            </Text>
-            <Text style={styles.subtitle}>
-              Full ticket and scan verification information
-            </Text>
-
-            <View style={styles.holderCard}>
-              <View style={styles.initials}>
-                <Text style={styles.initialsText}>ER</Text>
-              </View>
-
-              <View style={styles.holderCopy}>
-                <Text style={styles.holderName}>Elena Rodriguez</Text>
-                <Text style={styles.holderEmail}>
-                  elena.rodriguez@example.com
+            {phase === "verifying" ? (
+              <View style={styles.loadingCard}>
+                <ActivityIndicator color={colors.lime} size="large" />
+                <Text style={styles.loadingTitle}>Verifying this ticket</Text>
+                <Text style={styles.loadingCopy}>
+                  Checking event access and matching the ticket to its attendee.
                 </Text>
               </View>
-
-              <View style={styles.validBadge}>
-                <Text style={styles.validBadgeText}>VALID</Text>
-              </View>
-            </View>
-
-            <Text style={styles.sectionTitle}>TICKET INFORMATION</Text>
-            <View style={styles.detailsCard}>
-              <DetailRow
-                label="Event"
-                value="Urban Echo: Neon Garden Festival"
-              />
-              <DetailRow label="Ticket type" value="VIP Access" />
-              <DetailRow label="Ticket ID" value="CC-ER-84920" />
-              <DetailRow label="Order number" value="#CC-2023-18492" />
-              <DetailRow label="Quantity" value="1 Ticket" />
-              <DetailRow label="Amount paid" value="$75.00" />
-              <DetailRow label="Purchased" value="Oct 20, 2023 at 10:15 AM" />
-              <DetailRow label="Entry access" value="VIP Gate • All Areas" />
-            </View>
-
-            <Text style={styles.sectionTitle}>SCAN INFORMATION</Text>
-            <View style={styles.detailsCard}>
-              <DetailRow label="QR format" value={result.type.toUpperCase()} />
-              <DetailRow label="Scanned at" value={scannedAt} />
-              <DetailRow label="Check-in terminal" value="Main Entrance #01" />
-              <DetailRow
-                label="Previous scans"
-                value={checkedIn ? "1 successful scan" : "No previous scans"}
-              />
-              <DetailRow label="Raw QR data" value={result.data} />
-            </View>
-
-            <View
-              style={[styles.statusCard, checkedIn && styles.statusCardChecked]}
-            >
-              <Ionicons
-                color={checkedIn ? "#08b657" : "#d48a12"}
-                name={checkedIn ? "checkmark-circle" : "information-circle"}
-                size={22}
-              />
-              <View style={styles.statusCopy}>
-                <Text style={styles.statusTitle}>
-                  {checkedIn ? "Check-in successful" : "Ready for check-in"}
+            ) : phase === "verification-error" ? (
+              <View style={styles.errorCard}>
+                <View style={styles.errorIcon}>
+                  <Ionicons name="qr-code-outline" size={27} color="#b42332" />
+                </View>
+                <Text style={styles.sectionHeading}>
+                  Couldn’t verify ticket
                 </Text>
-                <Text style={styles.statusMessage}>
-                  {checkedIn
-                    ? "This ticket has been admitted and cannot be checked in again."
-                    : "Ticket ownership and event access have been verified."}
+                <Text style={styles.errorCopy}>
+                  {errorMessage ??
+                    "We couldn’t find a paid ticket for this event. Check the QR code and try again."}
                 </Text>
               </View>
-            </View>
+            ) : preview ? (
+              <>
+                <View style={styles.attendeeCard}>
+                  {preview.attendee.avatarUrl ? (
+                    <Image
+                      contentFit="cover"
+                      source={{ uri: preview.attendee.avatarUrl }}
+                      style={styles.avatar}
+                    />
+                  ) : (
+                    <View style={[styles.avatar, styles.avatarFallback]}>
+                      <Text style={styles.avatarInitials}>
+                        {initials(preview.attendee.name) || "?"}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.attendeeCopy}>
+                    <Text style={styles.attendeeName}>
+                      {preview.attendee.name}
+                    </Text>
+                    <Text selectable style={styles.attendeeEmail}>
+                      {preview.attendee.email}
+                    </Text>
+                  </View>
+                  <Ionicons color="#16a05b" name="checkmark-circle" size={22} />
+                </View>
+
+                <View style={styles.eventCard}>
+                  <View style={styles.eventIcon}>
+                    <Ionicons
+                      color={colors.forest}
+                      name="calendar-outline"
+                      size={19}
+                    />
+                  </View>
+                  <View style={styles.eventCopy}>
+                    <Text style={styles.eyebrow}>EVENT</Text>
+                    <Text style={styles.eventTitle}>{preview.event.title}</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.sectionHeading}>Ticket details</Text>
+                <View style={styles.detailsCard}>
+                  <DetailRow
+                    label="Ticket type"
+                    value={preview.ticket.ticketType}
+                  />
+                  <DetailRow
+                    label="Order number"
+                    value={preview.ticket.orderNumber}
+                  />
+                  <DetailRow
+                    label="Quantity"
+                    value={`${preview.ticket.quantity} ${preview.ticket.quantity === 1 ? "ticket" : "tickets"}`}
+                  />
+                  <DetailRow
+                    label="Payment"
+                    value={preview.ticket.paymentStatus.replaceAll("_", " ")}
+                  />
+                </View>
+
+                {phase === "checked-in" ? (
+                  <View style={[styles.messageCard, styles.successCard]}>
+                    <Ionicons
+                      color="#11834a"
+                      name="checkmark-circle"
+                      size={21}
+                    />
+                    <View style={styles.messageCopy}>
+                      <Text style={styles.successTitle}>Guest checked in</Text>
+                      <Text style={styles.successCopy}>
+                        This ticket has been admitted successfully.
+                      </Text>
+                    </View>
+                  </View>
+                ) : phase === "checking-in" ? (
+                  <View style={[styles.messageCard, styles.progressCard]}>
+                    <ActivityIndicator color={colors.forest} size="small" />
+                    <View style={styles.messageCopy}>
+                      <Text style={styles.progressTitle}>
+                        Check-in in progress
+                      </Text>
+                      <Text style={styles.progressCopy}>
+                        Saving this attendee’s entry to the event.
+                      </Text>
+                    </View>
+                  </View>
+                ) : phase === "check-in-error" ? (
+                  <View style={[styles.messageCard, styles.warningCard]}>
+                    <Ionicons
+                      color="#986400"
+                      name="refresh-circle-outline"
+                      size={21}
+                    />
+                    <View style={styles.messageCopy}>
+                      <Text style={styles.warningTitle}>
+                        Check-in needs confirmation
+                      </Text>
+                      <Text style={styles.warningCopy}>
+                        Refresh the ticket status before taking another action.
+                      </Text>
+                    </View>
+                  </View>
+                ) : preview.checkedInAt ? (
+                  <View style={[styles.messageCard, styles.warningCard]}>
+                    <Ionicons color="#986400" name="time-outline" size={21} />
+                    <View style={styles.messageCopy}>
+                      <Text style={styles.warningTitle}>
+                        Already checked in
+                      </Text>
+                      <Text style={styles.warningCopy}>
+                        Checked in {formatDateTime(preview.checkedInAt)}
+                      </Text>
+                    </View>
+                  </View>
+                ) : preview.canCheckIn && phase === "verified" ? (
+                  <View style={[styles.messageCard, styles.successCard]}>
+                    <Ionicons
+                      color="#11834a"
+                      name="shield-checkmark"
+                      size={21}
+                    />
+                    <View style={styles.messageCopy}>
+                      <Text style={styles.successTitle}>Ticket verified</Text>
+                      <Text style={styles.successCopy}>
+                        Confirm below to check in this attendee.
+                      </Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={[styles.messageCard, styles.warningCard]}>
+                    <Ionicons color="#986400" name="time-outline" size={21} />
+                    <View style={styles.messageCopy}>
+                      <Text style={styles.warningTitle}>
+                        Check-in unavailable
+                      </Text>
+                      <Text style={styles.warningCopy}>
+                        Check-in opens two hours before the event and closes
+                        when it ends.
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {phase === "check-in-error" && errorMessage ? (
+                  <View style={[styles.messageCard, styles.errorInline]}>
+                    <Ionicons
+                      color="#b42332"
+                      name="alert-circle-outline"
+                      size={20}
+                    />
+                    <Text style={styles.errorInlineText}>{errorMessage}</Text>
+                  </View>
+                ) : null}
+              </>
+            ) : null}
           </ScrollView>
 
-          {!checkedIn ? (
-            <Pressable onPress={onCheckIn} style={styles.primaryButton}>
-              <Ionicons color="#fff" name="log-in-outline" size={21} />
-              <Text style={styles.primaryButtonText}>Check In Guest</Text>
+          <View style={styles.actions}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={isBusy}
+              onPress={primaryAction}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                isBusy && styles.disabledButton,
+                pressed && !isBusy && styles.pressedButton,
+              ]}
+            >
+              {isBusy ? (
+                <ActivityIndicator color={colors.forest} size="small" />
+              ) : (
+                <Ionicons
+                  color={colors.forest}
+                  name={
+                    canCheckIn
+                      ? "log-in-outline"
+                      : retryVerification
+                        ? "refresh"
+                        : "scan-outline"
+                  }
+                  size={19}
+                />
+              )}
+              <Text style={styles.primaryButtonText}>{primaryLabel}</Text>
             </Pressable>
-          ) : (
-            <Pressable onPress={onClose} style={styles.primaryButton}>
-              <Text style={styles.primaryButtonText}>Done</Text>
+            <Pressable
+              accessibilityRole="button"
+              disabled={isBusy}
+              onPress={onClose}
+              style={styles.closeButton}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
             </Pressable>
-          )}
-        </View>
+          </View>
+        </SafeAreaView>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    backgroundColor: "rgba(3, 14, 9, 0.5)",
+  backdrop: {
+    backgroundColor: "rgba(7, 19, 13, 0.56)",
     flex: 1,
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 38,
-    borderTopRightRadius: 38,
+    backgroundColor: colors.paper,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     maxHeight: "92%",
-    paddingBottom: 22,
     paddingHorizontal: 22,
     paddingTop: 12,
   },
   handle: {
     alignSelf: "center",
-    backgroundColor: "#d6e0db",
-    borderRadius: 8,
-    height: 6,
-    width: 72,
+    backgroundColor: "#cbd5d1",
+    borderRadius: 3,
+    height: 5,
+    marginBottom: 18,
+    width: 44,
   },
-  content: {
-    paddingBottom: 16,
-  },
-  resultIcon: {
-    alignItems: "center",
+  content: { paddingBottom: 18 },
+  statusPill: {
     alignSelf: "center",
-    backgroundColor: "#e8f8ef",
-    borderRadius: 36,
-    height: 68,
-    justifyContent: "center",
-    marginTop: 20,
-    width: 68,
-  },
-  resultIconChecked: {
-    backgroundColor: "#dcf8e7",
-  },
-  title: {
-    color: colors.ink,
-    fontFamily: fonts.extraBold,
-    fontSize: 24,
-    marginTop: 12,
-    textAlign: "center",
-  },
-  subtitle: {
-    color: "#6a8075",
-    fontFamily: fonts.medium,
-    fontSize: 13,
-    marginTop: 5,
-    textAlign: "center",
-  },
-  holderCard: {
     alignItems: "center",
-    backgroundColor: "#f4faf7",
-    borderRadius: 26,
+    borderRadius: 20,
     flexDirection: "row",
-    marginTop: 22,
-    padding: 15,
+    gap: 7,
+    marginBottom: 17,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
   },
-  initials: {
+  statusText: { fontFamily: fonts.bold, fontSize: 10, letterSpacing: 0.5 },
+  greenPill: { backgroundColor: "#ddf8e9" },
+  greenText: { color: "#12834a" },
+  amberPill: { backgroundColor: "#fff2d8" },
+  amberText: { color: "#986400" },
+  redPill: { backgroundColor: "#ffe5e7" },
+  redText: { color: "#b42332" },
+  neutralPill: { backgroundColor: "#e9eef0" },
+  neutralText: { color: "#52645c" },
+  loadingCard: {
     alignItems: "center",
-    backgroundColor: "#083120",
-    borderRadius: 26,
-    height: 52,
-    justifyContent: "center",
-    width: 52,
+    backgroundColor: colors.white,
+    borderRadius: 24,
+    marginTop: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 36,
   },
-  initialsText: {
-    color: colors.white,
+  loadingTitle: {
+    color: colors.ink,
     fontFamily: fonts.extraBold,
     fontSize: 17,
+    marginTop: 18,
   },
-  holderCopy: {
-    flex: 1,
-    marginLeft: 13,
+  loadingCopy: {
+    color: colors.muted,
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    lineHeight: 19,
+    marginTop: 7,
+    textAlign: "center",
   },
-  holderName: {
+  errorCard: {
+    alignItems: "center",
+    backgroundColor: colors.white,
+    borderRadius: 24,
+    padding: 26,
+  },
+  errorIcon: {
+    alignItems: "center",
+    backgroundColor: "#ffe5e7",
+    borderRadius: 28,
+    height: 56,
+    justifyContent: "center",
+    width: 56,
+  },
+  sectionHeading: {
     color: colors.ink,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.extraBold,
+    fontSize: 15,
+    marginBottom: 10,
+    marginTop: 20,
+  },
+  errorCopy: {
+    color: colors.muted,
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    lineHeight: 19,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  attendeeCard: {
+    alignItems: "center",
+    backgroundColor: colors.white,
+    borderRadius: 22,
+    flexDirection: "row",
+    padding: 15,
+  },
+  avatar: { borderRadius: 28, height: 56, width: 56 },
+  avatarFallback: {
+    alignItems: "center",
+    backgroundColor: colors.forest,
+    justifyContent: "center",
+  },
+  avatarInitials: {
+    color: colors.white,
+    fontFamily: fonts.extraBold,
     fontSize: 16,
   },
-  holderEmail: {
-    color: "#6a8075",
+  attendeeCopy: { flex: 1, marginLeft: 13, marginRight: 8 },
+  attendeeName: {
+    color: colors.ink,
+    fontFamily: fonts.extraBold,
+    fontSize: 16,
+  },
+  attendeeEmail: {
+    color: colors.muted,
     fontFamily: fonts.medium,
     fontSize: 11,
+    marginTop: 4,
+  },
+  eventCard: {
+    alignItems: "center",
+    backgroundColor: "#e8f8ef",
+    borderRadius: 19,
+    flexDirection: "row",
+    marginTop: 13,
+    padding: 14,
+  },
+  eventIcon: {
+    alignItems: "center",
+    backgroundColor: colors.white,
+    borderRadius: 22,
+    height: 42,
+    justifyContent: "center",
+    width: 42,
+  },
+  eventCopy: { flex: 1, marginLeft: 11 },
+  eyebrow: {
+    color: "#28804d",
+    fontFamily: fonts.bold,
+    fontSize: 9,
+    letterSpacing: 0.7,
+  },
+  eventTitle: {
+    color: colors.ink,
+    fontFamily: fonts.bold,
+    fontSize: 13,
     marginTop: 3,
   },
-  validBadge: {
-    backgroundColor: "#dcf8e7",
-    borderRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  validBadgeText: {
-    color: "#08a64f",
-    fontFamily: fonts.extraBold,
-    fontSize: 10,
-  },
-  sectionTitle: {
-    color: "#3d9863",
-    fontFamily: fonts.bold,
-    fontSize: 12,
-    letterSpacing: 0.7,
-    marginBottom: 9,
-    marginTop: 22,
-  },
   detailsCard: {
-    backgroundColor: "#f7faf8",
-    borderRadius: 24,
-    paddingHorizontal: 17,
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    paddingHorizontal: 15,
   },
   detailRow: {
     alignItems: "center",
-    borderBottomColor: "#e3ece7",
+    borderBottomColor: "#edf1ef",
     borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
-    minHeight: 50,
+    justifyContent: "space-between",
+    minHeight: 45,
     paddingVertical: 8,
   },
-  detailLabel: {
-    color: "#71847b",
-    flex: 0.42,
-    fontFamily: fonts.medium,
-    fontSize: 12,
-  },
+  detailLabel: { color: colors.muted, fontFamily: fonts.medium, fontSize: 11 },
   detailValue: {
     color: colors.ink,
-    flex: 0.58,
+    flexShrink: 1,
     fontFamily: fonts.bold,
-    fontSize: 12,
+    fontSize: 11,
+    marginLeft: 16,
     textAlign: "right",
+    textTransform: "capitalize",
   },
-  statusCard: {
+  messageCard: {
     alignItems: "flex-start",
-    backgroundColor: "#fff7e8",
-    borderRadius: 22,
+    borderRadius: 17,
     flexDirection: "row",
     gap: 10,
-    marginTop: 18,
-    padding: 15,
+    marginTop: 15,
+    padding: 14,
   },
-  statusCardChecked: {
-    backgroundColor: "#e7f9ef",
+  successCard: { backgroundColor: "#e8f8ef" },
+  warningCard: { backgroundColor: "#fff4df" },
+  progressCard: { backgroundColor: "#edf4f0" },
+  messageCopy: { flex: 1 },
+  successTitle: { color: "#17693e", fontFamily: fonts.bold, fontSize: 12 },
+  successCopy: {
+    color: "#47725a",
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 3,
   },
-  statusCopy: {
+  progressTitle: { color: colors.forest, fontFamily: fonts.bold, fontSize: 12 },
+  progressCopy: {
+    color: "#52645c",
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 3,
+  },
+  warningTitle: { color: "#805514", fontFamily: fonts.bold, fontSize: 12 },
+  warningCopy: {
+    color: "#805f2b",
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 3,
+  },
+  errorInline: { backgroundColor: "#fff0f1" },
+  errorInlineText: {
+    color: "#a51f2c",
     flex: 1,
-  },
-  statusTitle: {
-    color: colors.ink,
-    fontFamily: fonts.bold,
-    fontSize: 13,
-  },
-  statusMessage: {
-    color: "#687b72",
     fontFamily: fonts.medium,
     fontSize: 11,
     lineHeight: 17,
-    marginTop: 3,
   },
+  actions: { paddingBottom: 8, paddingTop: 10 },
   primaryButton: {
     alignItems: "center",
-    backgroundColor: "#08b657",
+    backgroundColor: colors.lime,
     borderRadius: 28,
     flexDirection: "row",
     gap: 9,
-    height: 56,
     justifyContent: "center",
-    marginTop: 8,
+    minHeight: 54,
   },
+  disabledButton: { opacity: 0.72 },
+  pressedButton: { opacity: 0.82, transform: [{ scale: 0.99 }] },
   primaryButtonText: {
-    color: colors.white,
+    color: colors.forest,
     fontFamily: fonts.extraBold,
-    fontSize: 16,
+    fontSize: 13,
+  },
+  closeButton: { alignItems: "center", paddingVertical: 13 },
+  closeButtonText: {
+    color: colors.muted,
+    fontFamily: fonts.semiBold,
+    fontSize: 12,
   },
 });

@@ -491,6 +491,11 @@ const operations: Record<
     path: "/events/{id}/attendees",
     authenticated: true,
   },
+  post__events_eventId_check_ins_verify: {
+    method: "POST",
+    path: "/events/{eventId}/check-ins/verify",
+    authenticated: true,
+  },
   post__events_id_check_ins: {
     method: "POST",
     path: "/events/{id}/check-ins",

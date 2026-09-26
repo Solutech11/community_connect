@@ -29,7 +29,7 @@ const OMITTED = "[OMITTED]";
 const EMPTY_VALUE = "<none>";
 
 const sensitiveKeyPattern =
-  /authorization|password|passcode|otp|one.?time|access.?token|refresh.?token|push.?token|secret|api.?key|paystack|pin|cvv|account.?number|routing.?number/i;
+  /authorization|password|passcode|otp|one.?time|access.?token|refresh.?token|push.?token|qr.?token|ticket.?token|secret|api.?key|paystack|pin|cvv|account.?number|routing.?number/i;
 const personallyIdentifiableKeyPattern = /email|phone|date.?of.?birth/i;
 
 function isLoggingEnabled() {

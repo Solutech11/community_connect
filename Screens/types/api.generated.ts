@@ -2352,6 +2352,45 @@ export type GetEventsIdAttendeesResponse = {
   };
 };
 
+export type PostEventsEventIdCheckInsVerifyBody = {
+  "qrToken": string;
+};
+export type PostEventsEventIdCheckInsVerifyQuery = {
+
+};
+export type PostEventsEventIdCheckInsVerifyPath = {
+  "eventId": string;
+};
+export type PostEventsEventIdCheckInsVerifyHeaders = {
+
+};
+export type PostEventsEventIdCheckInsVerifyResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "status": "valid";
+    "canCheckIn": boolean;
+    "checkedInAt": string | null;
+    "event": {
+      "id": string;
+      "title": string;
+    };
+    "attendee": {
+      "id": string;
+      "name": string;
+      "email": string;
+      "avatarUrl": string | null;
+    };
+    "ticket": {
+      "orderId": string;
+      "orderNumber": string;
+      "ticketType": string;
+      "quantity": number;
+      "paymentStatus": "paid";
+    };
+  };
+};
+
 export type PostEventsIdCheckInsBody = {
   "qrToken": string;
 };
@@ -5333,6 +5372,16 @@ export interface ApiOperationMap {
     pathParams: GetEventsIdAttendeesPath;
     headers: GetEventsIdAttendeesHeaders;
     response: GetEventsIdAttendeesResponse;
+  };
+  "post__events_eventId_check_ins_verify": {
+    method: "POST";
+    path: "/events/{eventId}/check-ins/verify";
+    authenticated: true;
+    body: PostEventsEventIdCheckInsVerifyBody;
+    query: PostEventsEventIdCheckInsVerifyQuery;
+    pathParams: PostEventsEventIdCheckInsVerifyPath;
+    headers: PostEventsEventIdCheckInsVerifyHeaders;
+    response: PostEventsEventIdCheckInsVerifyResponse;
   };
   "post__events_id_check_ins": {
     method: "POST";

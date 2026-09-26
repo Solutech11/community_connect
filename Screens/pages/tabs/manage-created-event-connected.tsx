@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
+import EventAttendeeDetailsSheet from "../../components/ui/event-attendee-details-sheet";
 import AppSelectSheet from "../../components/ui/app-select-sheet";
 import KeyboardAwareScrollView from "../../components/ui/keyboard-aware-scroll-view";
 import ProfilePageHeader from "../../components/ui/profile-page-header";
@@ -57,6 +58,14 @@ type Event = Omit<GetEventsIdResponse["data"]["event"], "moderation"> & {
 };
 type TicketType = GetEventsIdResponse["data"]["ticketTypes"][number];
 type Attendee = GetEventsIdAttendeesResponse["data"]["attendees"][number];
+type AttendeeSummary = GetEventsIdAttendeesResponse["data"]["summary"];
+
+const EMPTY_ATTENDEE_SUMMARY: AttendeeSummary = {
+  orders: 0,
+  totalTickets: 0,
+  checkedInTickets: 0,
+  pendingTickets: 0,
+};
 
 const AVATAR =
   "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&q=85";
@@ -117,6 +126,12 @@ export default function ManageCreatedEventConnectedScreen({
   const [event, setEvent] = useState<Event | null>(null);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
   const [attendees, setAttendees] = useState<Attendee[]>([]);
+  const [attendeeSummary, setAttendeeSummary] = useState<AttendeeSummary>(
+    EMPTY_ATTENDEE_SUMMARY,
+  );
+  const [selectedAttendee, setSelectedAttendee] = useState<Attendee | null>(
+    null,
+  );
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [startsAt, setStartsAt] = useState("");
@@ -170,6 +185,9 @@ export default function ManageCreatedEventConnectedScreen({
         setEvent(nextEvent);
         setTicketTypes(eventResponse.data.ticketTypes);
         setAttendees(attendeeResponse.data.attendees);
+        setAttendeeSummary(
+          attendeeResponse.data.summary ?? EMPTY_ATTENDEE_SUMMARY,
+        );
         setTitle(nextEvent.title);
         setDescription(nextEvent.description);
         setStartsAt(nextEvent.startsAt);
@@ -388,7 +406,7 @@ export default function ManageCreatedEventConnectedScreen({
       ),
     [attendees, query],
   );
-  const totalGuests = attendees.reduce((sum, order) => sum + order.quantity, 0);
+  const totalGuests = attendeeSummary.totalTickets;
 
   return (
     <>
@@ -862,6 +880,21 @@ export default function ManageCreatedEventConnectedScreen({
               </Section>
 
               <Section title="Attendees">
+                <View style={styles.attendeeSummaryGrid}>
+                  <AttendeeStat label="Orders" value={attendeeSummary.orders} />
+                  <AttendeeStat
+                    label="Ticket units"
+                    value={attendeeSummary.totalTickets}
+                  />
+                  <AttendeeStat
+                    label="Checked in"
+                    value={attendeeSummary.checkedInTickets}
+                  />
+                  <AttendeeStat
+                    label="Not checked in"
+                    value={attendeeSummary.pendingTickets}
+                  />
+                </View>
                 <TextInput
                   onChangeText={setQuery}
                   placeholder="Search attendees"
@@ -870,18 +903,33 @@ export default function ManageCreatedEventConnectedScreen({
                   value={query}
                 />
                 {visibleAttendees.map((order) => (
-                  <View key={order._id} style={styles.attendee}>
-                    <Image source={{ uri: AVATAR }} style={styles.avatar} />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`View ${order.buyerId.firstName} ${order.buyerId.lastName} attendee details`}
+                    key={order._id}
+                    onPress={() => setSelectedAttendee(order)}
+                    style={styles.attendee}
+                  >
+                    <Image
+                      source={{ uri: order.buyerId.avatarUrl || AVATAR }}
+                      style={styles.avatar}
+                    />
                     <View style={styles.ticketCopy}>
                       <Text style={styles.name}>
                         {order.buyerId.firstName} {order.buyerId.lastName}
                       </Text>
+                      <Text style={styles.meta}>{order.buyerId.email}</Text>
                       <Text style={styles.meta}>
-                        {order.ticketTypeId.title} x{order.quantity} -{" "}
+                        {order.ticketTypeId.title} x{order.quantity} ·{" "}
                         {order.status}
                       </Text>
                     </View>
-                  </View>
+                    <Ionicons
+                      color="#7b8a82"
+                      name="chevron-forward"
+                      size={19}
+                    />
+                  </Pressable>
                 ))}
                 {!visibleAttendees.length ? (
                   <Text style={styles.empty}>No matching attendees.</Text>
@@ -896,6 +944,12 @@ export default function ManageCreatedEventConnectedScreen({
         title={notice?.title ?? ""}
         message={notice?.message ?? ""}
         onClose={() => setNotice(null)}
+      />
+      <EventAttendeeDetailsSheet
+        attendee={selectedAttendee}
+        summary={attendeeSummary}
+        visible={Boolean(selectedAttendee)}
+        onClose={() => setSelectedAttendee(null)}
       />
       <AppAlertModal
         visible={Boolean(confirm)}
@@ -1053,6 +1107,16 @@ function Stat({ label, value }: { label: string; value: string }) {
     </View>
   );
 }
+
+function AttendeeStat({ label, value }: { label: string; value: number }) {
+  return (
+    <View style={styles.attendeeSummaryStat}>
+      <Text style={styles.attendeeSummaryValue}>{value}</Text>
+      <Text style={styles.attendeeSummaryLabel}>{label}</Text>
+    </View>
+  );
+}
+
 function Section({
   children,
   title,
@@ -1311,9 +1375,35 @@ const styles = StyleSheet.create({
     borderBottomColor: "#e7eeea",
     borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
+    gap: 10,
     paddingVertical: 11,
   },
   avatar: { borderRadius: 21, height: 42, marginRight: 10, width: 42 },
+  attendeeSummaryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 10,
+  },
+  attendeeSummaryStat: {
+    backgroundColor: "#eef8f2",
+    borderRadius: 17,
+    flexBasis: "48%",
+    flexGrow: 1,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+  },
+  attendeeSummaryValue: {
+    color: "#087b3d",
+    fontFamily: fonts.extraBold,
+    fontSize: 17,
+  },
+  attendeeSummaryLabel: {
+    color: "#67776e",
+    fontFamily: fonts.medium,
+    fontSize: 10,
+    marginTop: 3,
+  },
   empty: {
     color: "#718078",
     fontFamily: fonts.medium,
