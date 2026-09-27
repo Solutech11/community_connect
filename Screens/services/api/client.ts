@@ -511,6 +511,11 @@ const operations: Record<
     path: "/communities",
     authenticated: true,
   },
+  post__communities_resolve_code: {
+    method: "POST",
+    path: "/communities/resolve-code",
+    authenticated: true,
+  },
   get__communities_id_: {
     method: "GET",
     path: "/communities/{id}",
@@ -785,6 +790,11 @@ const operations: Record<
   get__users_me_communities: {
     method: "GET",
     path: "/users/me/communities",
+    authenticated: true,
+  },
+  get__users_me_community_join_requests: {
+    method: "GET",
+    path: "/users/me/community-join-requests",
     authenticated: true,
   },
   get__communities_id_rules: {

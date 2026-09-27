@@ -148,7 +148,7 @@ export default function EditCommunityScreen({ navigation, route }: Props) {
     if (visibility === "private" && membershipType === "premium") {
       setNotice({
         title: "Paid private communities unavailable",
-        message: "The backend checkout supports public communities only.",
+        message: "Paid communities must be public with open joining.",
       });
       return;
     }

@@ -63,7 +63,6 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
   const [accessCode, setAccessCode] = useState(generateAccessCode);
   const [codeModalVisible, setCodeModalVisible] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
-  const [setupFailed, setSetupFailed] = useState(false);
 
   const lgaOptions = useMemo(() => [...getNigerianLgas(state)], [state]);
 
@@ -131,7 +130,7 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
       setNotice({
         title: "Paid private communities unavailable",
         message:
-          "The membership checkout currently supports public communities only. Choose free or public.",
+          "Paid communities must be public with open joining. Choose free or public.",
       });
       return;
     }
@@ -181,6 +180,7 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
         coverImageUrl: imageUrl,
         avatarImageUrl,
         ...(visibility === "private" ? { accessCode } : {}),
+        joinPolicy: visibility === "private" ? "access_code" : "open",
         state,
         lga,
         visibility,
@@ -190,14 +190,6 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
       });
       if (visibility === "private") {
         setCreatedId(response.data.community._id);
-        try {
-          await communitiesApi.updateSettings(response.data.community._id, {
-            joinPolicy: "access_code",
-          });
-          setSetupFailed(false);
-        } catch {
-          setSetupFailed(true);
-        }
         return;
       }
       setNotice({
@@ -212,27 +204,6 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
           error instanceof ApiError
             ? error.message
             : "Unable to create this community.",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const retryPrivateSetup = async () => {
-    if (!createdId || submitting) return;
-    setSubmitting(true);
-    try {
-      await communitiesApi.updateSettings(createdId, {
-        joinPolicy: "access_code",
-      });
-      setSetupFailed(false);
-    } catch (error) {
-      setNotice({
-        title: "Setup failed",
-        message:
-          error instanceof ApiError
-            ? error.message
-            : "Try again before sharing the code.",
       });
     } finally {
       setSubmitting(false);
@@ -403,10 +374,8 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
             </Text>
             <Text style={styles.modalText}>
               {createdId
-                ? setupFailed
-                  ? "The community was created, but code-only joining is not active yet. Retry setup before sharing."
-                  : "Share the community ID and code with people you want to invite. The code will not appear again."
-                : "People need both the community ID and this code to join. Save the code before creating the community."}
+                ? "Share this code with people you want to invite. The code will not appear again."
+                : "People can use this code to find and join your private community. Save it before creating the community."}
             </Text>
             {createdId ? (
               <Text selectable style={styles.modalId}>
@@ -416,40 +385,28 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
             <Text selectable style={styles.modalCode}>
               {accessCode}
             </Text>
-            {setupFailed ? (
-              <Pressable
-                disabled={submitting}
-                onPress={() => void retryPrivateSetup()}
-                style={styles.primary}
-              >
-                <Text style={styles.primaryText}>
-                  {submitting ? "Retrying..." : "Retry code setup"}
-                </Text>
-              </Pressable>
-            ) : (
-              <Pressable
-                disabled={submitting}
-                onPress={() => {
-                  if (createdId) {
-                    setCodeModalVisible(false);
-                    navigation.replace("CommunityProfile", {
-                      communityId: createdId,
-                    });
-                  } else {
-                    void createCommunity();
-                  }
-                }}
-                style={[styles.primary, submitting && styles.disabled]}
-              >
-                <Text style={styles.primaryText}>
-                  {submitting
-                    ? "Creating..."
-                    : createdId
-                      ? "Done"
-                      : "Create community"}
-                </Text>
-              </Pressable>
-            )}
+            <Pressable
+              disabled={submitting}
+              onPress={() => {
+                if (createdId) {
+                  setCodeModalVisible(false);
+                  navigation.replace("CommunityProfile", {
+                    communityId: createdId,
+                  });
+                } else {
+                  void createCommunity();
+                }
+              }}
+              style={[styles.primary, submitting && styles.disabled]}
+            >
+              <Text style={styles.primaryText}>
+                {submitting
+                  ? "Creating..."
+                  : createdId
+                    ? "Done"
+                    : "Create community"}
+              </Text>
+            </Pressable>
             {!createdId && !submitting ? (
               <Pressable
                 onPress={() => setCodeModalVisible(false)}

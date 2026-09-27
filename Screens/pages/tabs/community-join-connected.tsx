@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,14 +14,25 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
+import PaystackCheckoutModal, {
+  type PaystackVerificationResult,
+} from "../../components/ui/paystack-checkout-modal";
 import ProfilePageHeader from "../../components/ui/profile-page-header";
-import { ApiError } from "../../services/api/client";
+import { ApiError, createIdempotencyKey } from "../../services/api/client";
 import { communitiesApi } from "../../services/api/communities.api";
 import { colors, fonts } from "../../styles/theme";
+import type {
+  GetUsersMeCommunityJoinRequestsResponse,
+  PostCommunitiesResolveCodeResponse,
+} from "../../types/api.generated";
 import type { RootStackParamList } from "../../types/navigation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CommunityJoin">;
 type JoinMethod = "accessCode" | "inviteToken" | "request";
+type PendingRequest =
+  GetUsersMeCommunityJoinRequestsResponse["data"]["joinRequests"][number];
+type ResolvedCommunity =
+  PostCommunitiesResolveCodeResponse["data"]["community"];
 
 function extractCommunityId(input: string) {
   return (
@@ -41,15 +53,113 @@ export default function CommunityJoinConnectedScreen({
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
+  const [loadingPending, setLoadingPending] = useState(false);
+  const [pendingError, setPendingError] = useState(false);
+  const [resolvedCommunity, setResolvedCommunity] =
+    useState<ResolvedCommunity | null>(null);
+  const [checkoutVisible, setCheckoutVisible] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  const [paymentCommunityId, setPaymentCommunityId] = useState<string | null>(
+    null,
+  );
+  const paymentKey = useRef(createIdempotencyKey());
   const [notice, setNotice] = useState<{
     title: string;
     message: string;
   } | null>(null);
 
+  const loadPending = useCallback(async (signal?: AbortSignal) => {
+    setLoadingPending(true);
+    try {
+      const requests = await communitiesApi.allMyJoinRequests(signal);
+      setPendingRequests(requests);
+      setPendingError(false);
+    } catch (error) {
+      if (error instanceof ApiError && error.code === "REQUEST_CANCELLED")
+        return;
+      setPendingError(true);
+      setNotice({
+        title: "Requests unavailable",
+        message:
+          error instanceof ApiError
+            ? error.message
+            : "Unable to load your join requests.",
+      });
+    } finally {
+      setLoadingPending(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadPending(controller.signal);
+    return () => controller.abort();
+  }, [loadPending]);
+
+  useEffect(() => {
+    const id = extractCommunityId(communityInput);
+    setPendingId(
+      id && pendingRequests.some((item) => item.communityId?._id === id)
+        ? id
+        : null,
+    );
+  }, [communityInput, pendingRequests]);
+
+  const startCheckout = async (id: string) => {
+    const response = await communitiesApi.createMembershipOrder(
+      id,
+      paymentKey.current,
+    );
+    setPaymentCommunityId(id);
+    setOrderNumber(response.data.order.orderNumber);
+    setCheckoutUrl(response.data.checkoutUrl);
+    setCheckoutVisible(true);
+  };
+
+  const verifyMembershipPayment =
+    async (): Promise<PaystackVerificationResult> => {
+      if (!paymentCommunityId || !orderNumber) {
+        return {
+          verified: false,
+          message: "No membership payment is ready to verify.",
+        };
+      }
+      try {
+        const response =
+          await communitiesApi.verifyMembershipOrder(orderNumber);
+        if (response.data.order.status !== "paid") {
+          return {
+            verified: false,
+            message: "The backend has not confirmed this payment yet.",
+          };
+        }
+        paymentKey.current = createIdempotencyKey();
+        setCheckoutVisible(false);
+        navigation.replace("CommunityProfile", {
+          communityId: paymentCommunityId,
+        });
+        return { verified: true };
+      } catch (error) {
+        return {
+          verified: false,
+          message:
+            error instanceof ApiError
+              ? error.message
+              : "Unable to verify this payment.",
+        };
+      }
+    };
+
   const join = async () => {
     if (submitting) return;
     const id = extractCommunityId(communityInput.trim());
-    if (!id) {
+    if (orderNumber && checkoutUrl) {
+      setCheckoutVisible(true);
+      return;
+    }
+    if (!id && method !== "accessCode") {
       setNotice({
         title: "Community ID needed",
         message:
@@ -74,6 +184,15 @@ export default function CommunityJoinConnectedScreen({
 
     setSubmitting(true);
     try {
+      if (!id && method === "accessCode") {
+        const response = await communitiesApi.resolveCode({
+          accessCode: credential.trim(),
+        });
+        setResolvedCommunity(response.data.community);
+        setCommunityInput(response.data.community.id);
+        return;
+      }
+      if (!id) return;
       const response = await communitiesApi.createJoinRequest(id, {
         ...(method === "accessCode" ? { accessCode: credential.trim() } : {}),
         ...(method === "inviteToken" ? { inviteToken: credential.trim() } : {}),
@@ -81,9 +200,12 @@ export default function CommunityJoinConnectedScreen({
       });
       if ("membership" in response.data) {
         navigation.replace("CommunityProfile", { communityId: id });
+      } else if (response.data.joinRequest?.status === "approved") {
+        await startCheckout(id);
       } else if ("joinRequest" in response.data) {
         setPendingId(id);
         setNotice({ title: "Request sent", message: response.message });
+        void loadPending();
       } else {
         setNotice({
           title: "Join response unclear",
@@ -92,6 +214,7 @@ export default function CommunityJoinConnectedScreen({
       }
     } catch (error) {
       if (
+        id &&
         error instanceof ApiError &&
         error.code === "COMMUNITY_JOIN_REQUEST_EXISTS"
       ) {
@@ -111,12 +234,15 @@ export default function CommunityJoinConnectedScreen({
     }
   };
 
-  const cancelRequest = async () => {
-    if (!pendingId || submitting) return;
+  const cancelRequest = async (id: string) => {
+    if (submitting) return;
     setSubmitting(true);
     try {
-      await communitiesApi.cancelMyJoinRequest(pendingId);
-      setPendingId(null);
+      await communitiesApi.cancelMyJoinRequest(id);
+      if (pendingId === id) setPendingId(null);
+      setPendingRequests((current) =>
+        current.filter((item) => item.communityId?._id !== id),
+      );
       setNotice({
         title: "Request cancelled",
         message: "You can request to join again later.",
@@ -145,14 +271,19 @@ export default function CommunityJoinConnectedScreen({
           </View>
           <Text style={styles.title}>Join with a code or invite</Text>
           <Text style={styles.help}>
-            Ask the owner for the community ID and an access code or invite
-            token.
+            Enter a private access code to find the community. For an invite
+            token or public approval request, paste the community ID too.
           </Text>
-          <Text style={styles.label}>Community ID or shared link</Text>
+          <Text style={styles.label}>
+            Community ID or shared link (optional with a code)
+          </Text>
           <TextInput
             autoCapitalize="none"
             autoCorrect={false}
-            onChangeText={setCommunityInput}
+            onChangeText={(value) => {
+              setCommunityInput(value);
+              setResolvedCommunity(null);
+            }}
             placeholder="Paste community ID or link"
             placeholderTextColor="#718078"
             style={styles.input}
@@ -172,6 +303,7 @@ export default function CommunityJoinConnectedScreen({
                 onPress={() => {
                   setMethod(value);
                   setCredential("");
+                  setResolvedCommunity(null);
                 }}
                 style={[styles.method, method === value && styles.methodActive]}
               >
@@ -187,7 +319,15 @@ export default function CommunityJoinConnectedScreen({
               <TextInput
                 autoCapitalize={method === "accessCode" ? "characters" : "none"}
                 autoCorrect={false}
-                onChangeText={setCredential}
+                onChangeText={(value) => {
+                  if (
+                    resolvedCommunity &&
+                    communityInput === resolvedCommunity.id
+                  )
+                    setCommunityInput("");
+                  setCredential(value);
+                  setResolvedCommunity(null);
+                }}
                 placeholder={
                   method === "accessCode"
                     ? "Enter access code"
@@ -198,6 +338,25 @@ export default function CommunityJoinConnectedScreen({
                 value={credential}
               />
             </>
+          ) : null}
+          {resolvedCommunity ? (
+            <View style={styles.resolvedCard}>
+              {resolvedCommunity.imageUrl ? (
+                <Image
+                  source={{ uri: resolvedCommunity.imageUrl }}
+                  style={styles.resolvedImage}
+                />
+              ) : null}
+              <View style={styles.resolvedCopy}>
+                <Text style={styles.resolvedName}>
+                  {resolvedCommunity.name}
+                </Text>
+                <Text style={styles.resolvedMeta}>
+                  Private community ·{" "}
+                  {resolvedCommunity.joinPolicy.replace("_", " ")}
+                </Text>
+              </View>
+            </View>
           ) : null}
           <Text style={styles.label}>Message (optional)</Text>
           <TextInput
@@ -216,7 +375,7 @@ export default function CommunityJoinConnectedScreen({
               </Text>
               <Pressable
                 disabled={submitting}
-                onPress={() => void cancelRequest()}
+                onPress={() => void cancelRequest(pendingId)}
               >
                 <Text style={styles.cancelText}>Cancel request</Text>
               </Pressable>
@@ -231,11 +390,60 @@ export default function CommunityJoinConnectedScreen({
                 <ActivityIndicator color={colors.ink} />
               ) : (
                 <Text style={styles.primaryText}>
-                  {method === "request" ? "Request to join" : "Join community"}
+                  {orderNumber && checkoutUrl
+                    ? "Continue payment"
+                    : method === "accessCode" &&
+                        !extractCommunityId(communityInput)
+                      ? "Find community"
+                      : method === "request"
+                        ? "Request to join"
+                        : "Join community"}
                 </Text>
               )}
             </Pressable>
           )}
+          <View style={styles.pendingSection}>
+            <View style={styles.pendingHeading}>
+              <Text style={styles.pendingTitle}>Pending requests</Text>
+              <Pressable
+                disabled={loadingPending}
+                onPress={() => void loadPending()}
+              >
+                <Text style={styles.refreshText}>
+                  {loadingPending ? "Loading..." : "Refresh"}
+                </Text>
+              </Pressable>
+            </View>
+            {pendingRequests.length === 0 && !loadingPending ? (
+              <Text style={styles.pendingEmpty}>
+                {pendingError
+                  ? "Could not load requests. Tap Refresh to try again."
+                  : "No requests awaiting review."}
+              </Text>
+            ) : null}
+            {pendingRequests.map((request) => (
+              <View key={request._id} style={styles.pendingRow}>
+                <View style={styles.resolvedCopy}>
+                  <Text style={styles.pendingName}>
+                    {request.communityId?.name || "Community"}
+                  </Text>
+                  <Text style={styles.pendingMeta}>
+                    Requested{" "}
+                    {new Date(request.createdAt).toLocaleDateString("en-NG")}
+                  </Text>
+                </View>
+                <Pressable
+                  disabled={submitting || !request.communityId}
+                  onPress={() => {
+                    if (request.communityId)
+                      void cancelRequest(request.communityId._id);
+                  }}
+                >
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
         </ScrollView>
       </SafeAreaView>
       <AppAlertModal
@@ -243,6 +451,13 @@ export default function CommunityJoinConnectedScreen({
         title={notice?.title ?? ""}
         message={notice?.message ?? ""}
         onClose={() => setNotice(null)}
+      />
+      <PaystackCheckoutModal
+        visible={checkoutVisible}
+        url={checkoutUrl}
+        title="Community membership payment"
+        onClose={() => setCheckoutVisible(false)}
+        onVerify={verifyMembershipPayment}
       />
     </>
   );
@@ -320,4 +535,55 @@ const styles = StyleSheet.create({
   },
   pendingText: { color: colors.ink, fontFamily: fonts.bold },
   cancelText: { color: "#087b42", fontFamily: fonts.bold, marginTop: 10 },
+  resolvedCard: {
+    alignItems: "center",
+    backgroundColor: "#e7f6ee",
+    borderRadius: 18,
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 18,
+    padding: 12,
+  },
+  resolvedImage: { borderRadius: 24, height: 48, width: 48 },
+  resolvedCopy: { flex: 1 },
+  resolvedName: { color: colors.ink, fontFamily: fonts.bold, fontSize: 15 },
+  resolvedMeta: {
+    color: "#53665a",
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    marginTop: 3,
+  },
+  pendingSection: { marginTop: 36 },
+  pendingHeading: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  pendingTitle: {
+    color: colors.ink,
+    fontFamily: fonts.extraBold,
+    fontSize: 18,
+  },
+  refreshText: { color: "#087b42", fontFamily: fonts.bold, fontSize: 12 },
+  pendingEmpty: {
+    color: "#53665a",
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    marginTop: 12,
+  },
+  pendingRow: {
+    alignItems: "center",
+    borderBottomColor: "#dbece3",
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    gap: 8,
+    paddingVertical: 14,
+  },
+  pendingName: { color: colors.ink, fontFamily: fonts.bold, fontSize: 13 },
+  pendingMeta: {
+    color: "#53665a",
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    marginTop: 3,
+  },
 });

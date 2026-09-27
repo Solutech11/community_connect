@@ -15,6 +15,8 @@ import type {
   GetCommunitiesQuery,
   GetUsersMeCommunitiesQuery,
   GetUsersMeCommunitiesResponse,
+  GetUsersMeCommunityJoinRequestsQuery,
+  GetUsersMeCommunityJoinRequestsResponse,
   PatchCommunitiesIdAnnouncementsAnnouncementIdBody,
   PatchCommunitiesIdBody,
   PatchCommunitiesIdMembersUserIdBody,
@@ -24,6 +26,7 @@ import type {
   PatchCommunitiesIdSettingsBody,
   PatchCommunitiesIdJoinRequestsRequestIdBody,
   PostCommunitiesBody,
+  PostCommunitiesResolveCodeBody,
   PostCommunitiesIdAnnouncementsBody,
   PostCommunitiesIdCallsBody,
   PostCommunitiesIdInvitesBody,
@@ -66,6 +69,39 @@ export const communitiesApi = {
     } while (page <= totalPages);
     return communities;
   },
+  myJoinRequests: (
+    query: GetUsersMeCommunityJoinRequestsQuery = {},
+    signal?: AbortSignal,
+  ) =>
+    apiClient.request("get__users_me_community_join_requests", {
+      query,
+      signal,
+    }),
+  allMyJoinRequests: async (
+    signal?: AbortSignal,
+  ): Promise<
+    GetUsersMeCommunityJoinRequestsResponse["data"]["joinRequests"]
+  > => {
+    const requests: GetUsersMeCommunityJoinRequestsResponse["data"]["joinRequests"] =
+      [];
+    let page = 1;
+    let totalPages = 1;
+    do {
+      const response = await apiClient.request(
+        "get__users_me_community_join_requests",
+        {
+          query: { page, limit: 100 },
+          signal,
+        },
+      );
+      requests.push(...response.data.joinRequests);
+      totalPages = response.data.pagination.totalPages;
+      page += 1;
+    } while (page <= totalPages);
+    return requests;
+  },
+  resolveCode: (body: PostCommunitiesResolveCodeBody, signal?: AbortSignal) =>
+    apiClient.request("post__communities_resolve_code", { body, signal }),
   get: (id: string, signal?: AbortSignal) =>
     apiClient.request("get__communities_id_", { pathParams: { id }, signal }),
   create: (body: PostCommunitiesBody, signal?: AbortSignal) =>

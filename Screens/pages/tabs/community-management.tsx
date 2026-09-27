@@ -470,8 +470,7 @@ export default function CommunityManagementScreen({
     if (premiumCommunity && settings.joinPolicy !== "open") {
       setNotice({
         title: "Paid membership rule",
-        message:
-          "Paid communities must use open joining until the backend can enforce payment for approval and invite flows.",
+        message: "Paid communities must be public with open joining.",
       });
       return;
     }
@@ -1051,8 +1050,8 @@ export default function CommunityManagementScreen({
                   />
                   {premiumCommunity ? (
                     <Text style={styles.meta}>
-                      Paid communities currently require open joining and
-                      backend checkout.
+                      Paid communities require public, open joining and backend
+                      checkout.
                     </Text>
                   ) : null}
                   {settings.joinPolicy === "access_code" ? (

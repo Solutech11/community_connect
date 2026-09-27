@@ -134,11 +134,13 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
-      const [detailResponse, rulesResponse, mineResponse] = await Promise.all([
-        communitiesApi.get(communityId, signal),
-        communitiesApi.rules(communityId, signal),
-        communitiesApi.allMyCommunities(signal),
-      ]);
+      const [detailResponse, rulesResponse, mineResponse, pendingRequests] =
+        await Promise.all([
+          communitiesApi.get(communityId, signal),
+          communitiesApi.rules(communityId, signal),
+          communitiesApi.allMyCommunities(signal),
+          communitiesApi.allMyJoinRequests(signal),
+        ]);
       const nextCommunity = detailResponse.data.community;
       const membership =
         mineResponse.find((item) => item._id === communityId)
@@ -147,7 +149,9 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
       setCommunityRules(rulesResponse.data.rules);
       setViewerMembership(membership);
       setJoinRequestPending(
-        (previous) => previous || membership?.status === "pending",
+        pendingRequests.some(
+          (request) => request.communityId?._id === communityId,
+        ),
       );
 
       if (membership?.status === "active") {
@@ -338,20 +342,41 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
         community.joinPolicy === "invite_only"
       ) {
         navigation.navigate("CommunityJoin", { communityId: community._id });
-      } else if (
-        community.joinPolicy === "approval" &&
-        community.membershipType === "free"
-      ) {
-        const response = await communitiesApi.createJoinRequest(
-          community._id,
-          {},
-        );
-        if ("membership" in response.data) {
-          await load();
-          setAlert({ title: "Joined community", message: response.message });
+      } else if (community.joinPolicy === "approval") {
+        if (community.membershipType === "premium") {
+          try {
+            const order = await communitiesApi.createMembershipOrder(
+              community._id,
+              paymentKey.current,
+            );
+            setOrderNumber(order.data.order.orderNumber);
+            setAuthorizationUrl(order.data.checkoutUrl);
+            setCheckoutVisible(true);
+          } catch (error) {
+            if (
+              !(error instanceof ApiError) ||
+              error.code !== "COMMUNITY_APPROVAL_REQUIRED"
+            )
+              throw error;
+            const response = await communitiesApi.createJoinRequest(
+              community._id,
+              {},
+            );
+            setJoinRequestPending(true);
+            setAlert({ title: "Request sent", message: response.message });
+          }
         } else {
-          setJoinRequestPending(true);
-          setAlert({ title: "Request sent", message: response.message });
+          const response = await communitiesApi.createJoinRequest(
+            community._id,
+            {},
+          );
+          if ("membership" in response.data) {
+            await load();
+            setAlert({ title: "Joined community", message: response.message });
+          } else {
+            setJoinRequestPending(true);
+            setAlert({ title: "Request sent", message: response.message });
+          }
         }
       } else if (community.membershipType === "free") {
         const response = await communitiesApi.join(community._id);
@@ -410,6 +435,22 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
     } catch (error) {
       setAlert({
         title: "Unable to cancel",
+        message:
+          error instanceof ApiError ? error.message : "Please try again.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const refreshJoinStatus = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await load();
+    } catch (error) {
+      setAlert({
+        title: "Unable to check request",
         message:
           error instanceof ApiError ? error.message : "Please try again.",
       });
@@ -621,8 +662,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
                           community.joinPolicy === "access_code" ||
                           community.joinPolicy === "invite_only"
                         ? "Enter Access Code"
-                        : community.joinPolicy === "approval" &&
-                            community.membershipType === "free"
+                        : community.joinPolicy === "approval"
                           ? "Request to Join"
                           : community.membershipType === "free"
                             ? "Join Community"
@@ -630,6 +670,15 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
                 </Text>
               </Pressable>
             )}
+            {!joined && joinRequestPending ? (
+              <Pressable
+                disabled={submitting}
+                onPress={() => void refreshJoinStatus()}
+                style={styles.checkStatusButton}
+              >
+                <Text style={styles.checkStatusText}>Check request status</Text>
+              </Pressable>
+            ) : null}
           </View>
 
           <View style={styles.tabs}>
@@ -977,6 +1026,8 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   joinedText: { color: "#00c85a", fontFamily: fonts.bold, fontSize: 16 },
+  checkStatusButton: { marginTop: 12, padding: 8 },
+  checkStatusText: { color: "#087b42", fontFamily: fonts.bold, fontSize: 13 },
   joinButton: {
     alignItems: "center",
     backgroundColor: colors.lime,

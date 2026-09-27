@@ -278,7 +278,9 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
       setOlderCursor(messageResponse.data.pageInfo?.nextCursor ?? null);
       setHasOlderMessages(messageResponse.data.pageInfo?.hasMore ?? false);
       setMembershipRole((viewer?.role as CommunityRole | undefined) ?? null);
-      setNotificationLevel(viewer?.muted ? "muted" : "unknown");
+      setNotificationLevel(
+        viewer?.notificationLevel ?? (viewer?.muted ? "muted" : "unknown"),
+      );
       setMessagePermission(settingsResponse.data.settings.messagePermission);
       setActiveCall(mapCommunityCall(callResponse.data.call));
       const latest = parsed.at(-1);

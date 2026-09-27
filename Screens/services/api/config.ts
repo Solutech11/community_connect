@@ -1,5 +1,5 @@
-const DEFAULT_API_URL = "http://192.168.1.7:5000/api/v1";
-const DEFAULT_SOCKET_URL = "http://192.168.1.7:5000";
+const DEFAULT_API_URL = "http://192.168.1.4:5000/api/v1";
+const DEFAULT_SOCKET_URL = "http://192.168.1.4:5000";
 
 function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, "");

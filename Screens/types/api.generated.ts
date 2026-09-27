@@ -498,6 +498,41 @@ export type PostUsersIdReportsResponse = {
 };
 
 export type GetUsersMeCommunitiesBody = never;
+export type GetUsersMeCommunityJoinRequestsBody = never;
+export type GetUsersMeCommunityJoinRequestsQuery = {
+  "page"?: number;
+  "limit"?: number;
+};
+export type GetUsersMeCommunityJoinRequestsPath = {};
+export type GetUsersMeCommunityJoinRequestsHeaders = {};
+export type GetUsersMeCommunityJoinRequestsResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "joinRequests": Array<{
+      "_id": string;
+      "communityId": {
+        "_id": string;
+        "name": string;
+        "imageUrl": string;
+        "visibility": "public" | "private";
+        "membershipType": "free" | "premium";
+        "membershipPriceKobo": number;
+        "joinPolicy": "open" | "approval" | "invite_only" | "access_code";
+      } | null;
+      "requesterId": string;
+      "message": string;
+      "status": "pending";
+      "createdAt": string;
+    }>;
+    "pagination": {
+      "page": number;
+      "limit": number;
+      "total": number;
+      "totalPages": number;
+    };
+  };
+};
 export type GetUsersMeCommunitiesQuery = {
   "page"?: number;
   "limit"?: number;
@@ -539,6 +574,7 @@ export type GetUsersMeCommunitiesResponse = {
           "status": string;
           "joinedAt": string;
           "muted": boolean;
+          "notificationLevel"?: "all" | "announcements" | "mentions" | "muted";
         };
         "unreadCount": number;
         "lastActivityAt": string;
@@ -820,6 +856,7 @@ export type PostCommunitiesIdJoinRequestsResponse = {
       "status": string;
       "joinedAt": string;
       "muted": boolean;
+      "notificationLevel"?: "all" | "announcements" | "mentions" | "muted";
     };
     "joinRequest"?: {
       "_id": string;
@@ -2568,12 +2605,30 @@ export type PostCommunitiesBody = {
   "coverImageUrl"?: string;
   "avatarImageUrl"?: string;
   "accessCode"?: string;
+  "joinPolicy"?: "open" | "approval" | "invite_only" | "access_code";
   "category": string;
   "state"?: string;
   "lga"?: string;
   "visibility"?: "public" | "private";
   "membershipType"?: "free" | "premium";
   "membershipPriceKobo"?: number;
+};
+export type PostCommunitiesResolveCodeBody = { "accessCode": string };
+export type PostCommunitiesResolveCodeQuery = {};
+export type PostCommunitiesResolveCodePath = {};
+export type PostCommunitiesResolveCodeHeaders = {};
+export type PostCommunitiesResolveCodeResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "community": {
+      "id": string;
+      "name": string;
+      "imageUrl": string;
+      "visibility": "private";
+      "joinPolicy": "open" | "approval" | "access_code";
+    };
+  };
 };
 export type PostCommunitiesQuery = {
 
@@ -4991,6 +5046,16 @@ export interface ApiOperationMap {
     headers: GetUsersMeCommunitiesHeaders;
     response: GetUsersMeCommunitiesResponse;
   };
+  "get__users_me_community_join_requests": {
+    method: "GET";
+    path: "/users/me/community-join-requests";
+    authenticated: true;
+    body: GetUsersMeCommunityJoinRequestsBody;
+    query: GetUsersMeCommunityJoinRequestsQuery;
+    pathParams: GetUsersMeCommunityJoinRequestsPath;
+    headers: GetUsersMeCommunityJoinRequestsHeaders;
+    response: GetUsersMeCommunityJoinRequestsResponse;
+  };
   "get__communities_id_rules": {
     method: "GET";
     path: "/communities/{id}/rules";
@@ -5480,6 +5545,16 @@ export interface ApiOperationMap {
     pathParams: PostCommunitiesPath;
     headers: PostCommunitiesHeaders;
     response: PostCommunitiesResponse;
+  };
+  "post__communities_resolve_code": {
+    method: "POST";
+    path: "/communities/resolve-code";
+    authenticated: true;
+    body: PostCommunitiesResolveCodeBody;
+    query: PostCommunitiesResolveCodeQuery;
+    pathParams: PostCommunitiesResolveCodePath;
+    headers: PostCommunitiesResolveCodeHeaders;
+    response: PostCommunitiesResolveCodeResponse;
   };
   "get__communities_id_": {
     method: "GET";

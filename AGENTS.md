@@ -2,6 +2,10 @@
 
 This project is an Expo React Native app for a community events experience. Keep the codebase organized, screen-focused, and consistent with the current Stitch-inspired visual direction.
 
+## Website Content Sync
+
+The companion website lives at `C:\Users\soluw\Documents\Lincoln\Community_Connect\CommunityCOnnect_Website`. Whenever a new mobile feature is added or an existing feature receives a major correction, review and update the website's feature descriptions, availability labels, screenshots, and related content before considering the feature complete. Keep website claims aligned with implemented mobile behavior and the current backend contract.
+
 ## Expo Version
 
 - The app is currently aligned to Expo SDK 54 by project decision.
