@@ -27,7 +27,7 @@ export default function BrandMark({ size = 48 }: BrandMarkProps) {
         accessibilityLabel="Community Connect logo"
         resizeMode="contain"
         source={logo}
-        style={[styles.logo, { height: size * 0.94, width: size * 0.94 }]}
+        style={[styles.logo, { height: size * 0.96, width: size * 0.96 }]}
       />
     </View>
   );

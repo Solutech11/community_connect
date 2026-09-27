@@ -46,6 +46,7 @@ type Community = GetCommunitiesIdResponse["data"]["community"];
 type PickedImage = { uri: string; name: string; type: string };
 type CommunityRole = "owner" | "moderator" | "member" | null;
 type CommunityCallType = "voice" | "video";
+type ReactionIconName = keyof typeof Ionicons.glyphMap;
 
 type RoomAttachment = {
   _id: string;
@@ -75,6 +76,33 @@ type RoomMessage = {
   pinnedAt: string | null;
   reactions: Array<{ emoji: string; count: number; reactedByViewer: boolean }>;
 };
+
+function reactionPresentation(reaction: string): {
+  icon: ReactionIconName;
+  label: string;
+} {
+  const codePoint = Array.from(reaction)[0]?.codePointAt(0);
+  switch (codePoint) {
+    case 0x2764:
+      return { icon: "heart", label: "Love" };
+    case 0x1f44d:
+      return { icon: "thumbs-up", label: "Like" };
+    case 0x1f44e:
+      return { icon: "thumbs-down", label: "Dislike" };
+    case 0x1f525:
+      return { icon: "flame", label: "Fire" };
+    case 0x1f389:
+      return { icon: "sparkles", label: "Celebration" };
+    case 0x1f44f:
+      return { icon: "hand-left", label: "Applause" };
+    case 0x1f64f:
+      return { icon: "heart", label: "Thanks" };
+    case 0x2b50:
+      return { icon: "star", label: "Star" };
+    default:
+      return { icon: "sparkles", label: "Reaction" };
+  }
+}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null
@@ -1095,24 +1123,39 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
                         ) : null}
                         {message.reactions.length ? (
                           <View style={styles.reactionRow}>
-                            {message.reactions.map((reaction) => (
-                              <Pressable
-                                key={reaction.emoji}
-                                onPress={() =>
-                                  void toggleReaction(message, reaction.emoji)
-                                }
-                                style={[
-                                  styles.reaction,
-                                  reaction.reactedByViewer &&
-                                    styles.reactionActive,
-                                ]}
-                              >
-                                <Text>{reaction.emoji}</Text>
-                                <Text style={styles.reactionCount}>
-                                  {reaction.count}
-                                </Text>
-                              </Pressable>
-                            ))}
+                            {message.reactions.map((reaction) => {
+                              const presentation = reactionPresentation(
+                                reaction.emoji,
+                              );
+                              return (
+                                <Pressable
+                                  key={reaction.emoji}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`${presentation.label} reaction, ${reaction.count}`}
+                                  onPress={() =>
+                                    void toggleReaction(message, reaction.emoji)
+                                  }
+                                  style={[
+                                    styles.reaction,
+                                    reaction.reactedByViewer &&
+                                      styles.reactionActive,
+                                  ]}
+                                >
+                                  <Ionicons
+                                    name={presentation.icon}
+                                    size={14}
+                                    color={
+                                      reaction.reactedByViewer
+                                        ? "#078d45"
+                                        : "#52677c"
+                                    }
+                                  />
+                                  <Text style={styles.reactionCount}>
+                                    {reaction.count}
+                                  </Text>
+                                </Pressable>
+                              );
+                            })}
                           </View>
                         ) : null}
                       </Pressable>

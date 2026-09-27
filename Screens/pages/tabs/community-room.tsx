@@ -25,7 +25,14 @@ import type { RootStackParamList } from '../../types/navigation';
 type Props = NativeStackScreenProps<RootStackParamList, 'CommunityRoom'>;
 type AlertState = { title: string; message: string } | null;
 
-const quickEmojis = ['🙂', '🔥', '👏', '🎉', '💚', '🙏'];
+const quickReplies = [
+  { icon: 'sparkles-outline', text: 'That sounds exciting' },
+  { icon: 'heart-outline', text: 'Love this!' },
+  { icon: 'hand-left-outline', text: 'Thank you!' },
+  { icon: 'people-outline', text: "I'm in!" },
+  { icon: 'trophy-outline', text: 'Well done!' },
+  { icon: 'calendar-outline', text: "Can't wait!" },
+] as const;
 
 function MessageBubble({ message }: { message: CommunityRoomMessage }) {
   const isRight = message.side === 'right';
@@ -110,7 +117,7 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
 
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<CommunityRoomMessage[]>(() => room?.seedMessages ?? []);
-  const [emojiTrayVisible, setEmojiTrayVisible] = useState(false);
+  const [quickReplyTrayVisible, setQuickReplyTrayVisible] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [alertState, setAlertState] = useState<AlertState>(null);
   const [roomStatus, setRoomStatus] = useState<'active' | 'left'>('active');
@@ -144,7 +151,7 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
 
     setMessages((current) => [...current, nextMessage]);
     setDraft('');
-    setEmojiTrayVisible(false);
+    setQuickReplyTrayVisible(false);
     scrollToEnd();
   };
 
@@ -168,33 +175,34 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
     };
 
     setMessages((current) => [...current, nextFile]);
-    setEmojiTrayVisible(false);
+    setQuickReplyTrayVisible(false);
     scrollToEnd();
   };
 
-  const handleEmojiPress = (emoji: string) => {
+  const handleQuickReplyPress = (reply: string) => {
     if (roomStatus === 'left') {
       return;
     }
 
     tapFeedback();
-    setDraft((current) => `${current}${emoji}`);
+    setDraft((current) => `${current.trimEnd()} ${reply}`.trimStart());
+    setQuickReplyTrayVisible(false);
   };
 
-  const toggleEmojiTray = () => {
+  const toggleQuickReplyTray = () => {
     if (roomStatus === 'left') {
       return;
     }
 
     tapFeedback();
-    setEmojiTrayVisible((current) => !current);
+    setQuickReplyTrayVisible((current) => !current);
   };
 
   const handleLeaveGroup = () => {
     tapFeedback();
     setMenuVisible(false);
     setRoomStatus('left');
-    setEmojiTrayVisible(false);
+    setQuickReplyTrayVisible(false);
     showAlert('Left Group', `You left ${room?.name ?? 'this group'}.`);
   };
 
@@ -281,12 +289,19 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
             </View>
           ) : (
             <>
-              {emojiTrayVisible ? (
-                <View style={styles.emojiTrayWrap}>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.emojiTrayContent}>
-                    {quickEmojis.map((emoji) => (
-                      <Pressable key={emoji} onPress={() => handleEmojiPress(emoji)} style={styles.emojiChip}>
-                        <Text style={styles.emojiChipText}>{emoji}</Text>
+              {quickReplyTrayVisible ? (
+                <View style={styles.quickReplyTrayWrap}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickReplyTrayContent}>
+                    {quickReplies.map((reply) => (
+                      <Pressable
+                        key={reply.text}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Add ${reply.text} to message`}
+                        onPress={() => handleQuickReplyPress(reply.text)}
+                        style={styles.quickReplyChip}
+                      >
+                        <Ionicons name={reply.icon} size={16} color="#518135" />
+                        <Text style={styles.quickReplyChipText}>{reply.text}</Text>
                       </Pressable>
                     ))}
                   </ScrollView>
@@ -308,8 +323,14 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
                     onSubmitEditing={handleSend}
                     returnKeyType="send"
                   />
-                  <Pressable onPress={toggleEmojiTray} style={styles.emojiButton}>
-                    <Ionicons name="happy-outline" size={24} color={emojiTrayVisible ? colors.lime : '#9aa7ba'} />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={quickReplyTrayVisible ? 'Hide quick replies' : 'Show quick replies'}
+                    accessibilityState={{ expanded: quickReplyTrayVisible }}
+                    onPress={toggleQuickReplyTray}
+                    style={styles.quickReplyButton}
+                  >
+                    <Ionicons name="chatbubble-ellipses-outline" size={23} color={quickReplyTrayVisible ? colors.lime : '#9aa7ba'} />
                   </Pressable>
                 </View>
 
@@ -604,27 +625,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 40,
   },
-  emojiTrayWrap: {
+  quickReplyTrayWrap: {
     backgroundColor: colors.white,
     borderTopColor: '#edf2ef',
     borderTopWidth: 1,
     paddingTop: 10,
   },
-  emojiTrayContent: {
+  quickReplyTrayContent: {
     gap: 10,
     paddingHorizontal: 14,
     paddingBottom: 4,
   },
-  emojiChip: {
+  quickReplyChip: {
     alignItems: 'center',
     backgroundColor: '#eef2f6',
+    flexDirection: 'row',
     borderRadius: 18,
+    gap: 6,
     height: 38,
     justifyContent: 'center',
-    width: 44,
+    paddingHorizontal: 12,
   },
-  emojiChipText: {
-    fontSize: 20,
+  quickReplyChipText: {
+    color: '#34455e',
+    fontFamily: fonts.medium,
+    fontSize: 12,
   },
   inputWrap: {
     alignItems: 'center',
@@ -663,7 +688,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     paddingVertical: 0,
   },
-  emojiButton: {
+  quickReplyButton: {
     alignItems: 'center',
     height: 34,
     justifyContent: 'center',
