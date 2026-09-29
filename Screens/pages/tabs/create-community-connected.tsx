@@ -3,12 +3,12 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import * as Crypto from "expo-crypto";
 import { useMemo, useState } from "react";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import {
   ActivityIndicator,
   Image,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -229,9 +229,12 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
           title="Create Community"
           onBack={navigation.goBack}
         />
-        <ScrollView
+        <KeyboardAwareScrollView
+          enableOnAndroid
+          extraScrollHeight={20}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          style={styles.formScroll}
         >
           <Pressable
             onPress={() => void pickImage("cover")}
@@ -354,7 +357,7 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
               <Text style={styles.primaryText}>Create community</Text>
             )}
           </Pressable>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </SafeAreaView>
 
       <Modal
@@ -516,6 +519,7 @@ function Option({
 
 const styles = StyleSheet.create({
   safe: { backgroundColor: colors.paper, flex: 1 },
+  formScroll: { flex: 1 },
   content: { padding: 22, paddingBottom: 70 },
   imagePicker: {
     alignItems: "center",

@@ -10,10 +10,13 @@ type AppShareSheetProps = {
   visible: boolean;
   title?: string;
   description: string;
+  mode?: 'channels' | 'file';
+  fileActionBusy?: boolean;
   onClose: () => void;
   onCopyLink?: () => void;
   onInvite?: () => void;
   onShareTo?: (channel: ShareChannel) => void;
+  onShareFile?: () => void | Promise<void>;
 };
 
 const channels: Array<{
@@ -29,7 +32,23 @@ const channels: Array<{
   { key: 'twitter', label: 'Twitter', icon: 'logo-twitter', iconColor: '#0f1734', bgColor: '#eff1f4' },
 ];
 
-function ActionRow({ icon, title, subtitle, cta, onPress }: { icon: keyof typeof Ionicons.glyphMap; title: string; subtitle: string; cta: string; onPress?: () => void; }) {
+type ActionRowProps = {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  subtitle: string;
+  cta: string;
+  onPress?: () => void | Promise<void>;
+  disabled?: boolean;
+};
+
+function ActionRow({
+  icon,
+  title,
+  subtitle,
+  cta,
+  onPress,
+  disabled = false,
+}: ActionRowProps) {
   return (
     <View style={styles.actionCard}>
       <View style={styles.actionIconWrap}>
@@ -39,14 +58,33 @@ function ActionRow({ icon, title, subtitle, cta, onPress }: { icon: keyof typeof
         <Text style={styles.actionTitle}>{title}</Text>
         <Text style={styles.actionSubtitle}>{subtitle}</Text>
       </View>
-      <Pressable onPress={() => { tapFeedback(); onPress?.(); }} style={styles.actionCta}>
+      <Pressable
+        disabled={disabled}
+        onPress={() => {
+          if (disabled) return;
+          tapFeedback();
+          void onPress?.();
+        }}
+        style={[styles.actionCta, disabled && styles.actionCtaDisabled]}
+      >
         <Text style={styles.actionCtaText}>{cta}</Text>
       </Pressable>
     </View>
   );
 }
 
-export default function AppShareSheet({ visible, title = 'Share Event', description, onClose, onCopyLink, onInvite, onShareTo }: AppShareSheetProps) {
+export default function AppShareSheet({
+  visible,
+  title = 'Share Event',
+  description,
+  mode = 'channels',
+  fileActionBusy = false,
+  onClose,
+  onCopyLink,
+  onInvite,
+  onShareTo,
+  onShareFile,
+}: AppShareSheetProps) {
   return (
     <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -55,20 +93,35 @@ export default function AppShareSheet({ visible, title = 'Share Event', descript
           <View style={styles.handle} />
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.description}>{description}</Text>
-          <View style={styles.channelRow}>
-            {channels.map((channel) => (
-              <Pressable key={channel.key} onPress={() => { tapFeedback(); onShareTo?.(channel.key); }} style={styles.channelItem}>
-                <View style={[styles.channelBubble, { backgroundColor: channel.bgColor }]}>
-                  <Ionicons name={channel.icon} size={28} color={channel.iconColor} />
-                </View>
-                <Text style={styles.channelLabel}>{channel.label}</Text>
-              </Pressable>
-            ))}
-          </View>
-          <View style={styles.actionsWrap}>
-            <ActionRow icon="link-outline" title="Copy Link" subtitle="Share this event link directly" cta="Copy" onPress={onCopyLink} />
-            <ActionRow icon="person-add-outline" title="Invite Friends" subtitle="Send invites within CommunityConnect" cta="Invite" onPress={onInvite} />
-          </View>
+          {mode === 'file' ? (
+            <View style={styles.actionsWrap}>
+              <ActionRow
+                icon="document-text-outline"
+                title="Watermarked ticket PDF"
+                subtitle="Share your paid ticket and QR code outside the app."
+                cta={fileActionBusy ? 'Preparing...' : 'Share PDF'}
+                onPress={onShareFile}
+                disabled={fileActionBusy}
+              />
+            </View>
+          ) : (
+            <>
+              <View style={styles.channelRow}>
+                {channels.map((channel) => (
+                  <Pressable key={channel.key} onPress={() => { tapFeedback(); onShareTo?.(channel.key); }} style={styles.channelItem}>
+                    <View style={[styles.channelBubble, { backgroundColor: channel.bgColor }]}>
+                      <Ionicons name={channel.icon} size={28} color={channel.iconColor} />
+                    </View>
+                    <Text style={styles.channelLabel}>{channel.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.actionsWrap}>
+                <ActionRow icon="link-outline" title="Copy Link" subtitle="Share this event link directly" cta="Copy" onPress={onCopyLink} />
+                <ActionRow icon="person-add-outline" title="Invite Friends" subtitle="Send invites within CommunityConnect" cta="Invite" onPress={onInvite} />
+              </View>
+            </>
+          )}
           <Pressable onPress={() => { tapFeedback(); onClose(); }} style={styles.cancelButton}>
             <Text style={styles.cancelText}>Cancel</Text>
           </Pressable>
@@ -96,6 +149,7 @@ const styles = StyleSheet.create({
   actionSubtitle: { color: '#60708c', fontFamily: fonts.medium, fontSize: 12, lineHeight: 19, marginTop: 4 },
   actionCta: { alignItems: 'center', backgroundColor: '#dcf9e8', borderRadius: 20, justifyContent: 'center', minWidth: 84, paddingHorizontal: 16, paddingVertical: 10 },
   actionCtaText: { color: '#16b95a', fontFamily: fonts.extraBold, fontSize: 14 },
+  actionCtaDisabled: { opacity: 0.55 },
   cancelButton: { alignItems: 'center', backgroundColor: '#eef3f8', borderRadius: 24, height: 62, justifyContent: 'center', marginTop: 28 },
   cancelText: { color: '#0f1734', fontFamily: fonts.extraBold, fontSize: 18 },
 });

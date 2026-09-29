@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -9,11 +11,11 @@ import {
   ImageBackground,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { captureRef } from "react-native-view-shot";
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -57,6 +59,29 @@ type AlertContent = { title: string; message: string };
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1505236858219-8359eb29e329?auto=format&fit=crop&w=1400&q=88";
+const communityConnectLogo = require("../../../assets/community-connect-logo.png");
+
+function nextAnimationFrame() {
+  return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+function ticketPdfHtml(screenshotBase64: string) {
+  return `<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      @page { size: 612px 792px; margin: 0; }
+      html, body { width: 612px; height: 792px; margin: 0; padding: 0; background: #f5faf7; }
+      body { display: flex; align-items: center; justify-content: center; }
+      img { display: block; width: 100%; height: 100%; object-fit: contain; }
+    </style>
+  </head>
+  <body>
+    <img src="data:image/png;base64,${screenshotBase64}" alt="Community Connect ticket" />
+  </body>
+</html>`;
+}
 
 const statusColors: Record<
   TicketOrderStatusTone,
@@ -184,6 +209,9 @@ export default function MyEventDetailsConnectedScreen({
   const [retryNoticeVisible, setRetryNoticeVisible] = useState(false);
   const [checkoutVisible, setCheckoutVisible] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [qrImageLoaded, setQrImageLoaded] = useState(false);
+  const [sharingTicket, setSharingTicket] = useState(false);
+  const ticketCaptureRef = useRef<View>(null);
   const paymentActionRef = useRef(false);
   const [shareVisible, setShareVisible] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
@@ -200,6 +228,7 @@ export default function MyEventDetailsConnectedScreen({
     setLoadError(null);
     setDetails(null);
     setEventDetails(null);
+    setQrImageLoaded(false);
 
     const load = async () => {
       try {
@@ -267,6 +296,7 @@ export default function MyEventDetailsConnectedScreen({
   const status = getTicketOrderStatusPresentation(order.status);
   const statusColor = statusColors[status.tone];
   const canShowQr = status.isPaid && Boolean(qrToken);
+  const canShareTicket = canShowQr && qrImageLoaded && !sharingTicket;
   const coverImage =
     eventDetails?.coverImageUrl || event.coverImageUrl || fallbackImage;
   const title = eventDetails?.title || event.title;
@@ -297,16 +327,53 @@ export default function MyEventDetailsConnectedScreen({
       }
     : null;
 
-  const share = async () => {
+  const shareTicketPdf = async () => {
+    if (!canShowQr || !qrImageLoaded || sharingTicket) return;
+    setShareVisible(false);
+    setSharingTicket(true);
+
     try {
-      await Share.share({
-        message: `Ticket ${order.orderNumber} for ${title}`,
+      // Let the share sheet close and the watermark render before capture.
+      await new Promise<void>((resolve) => setTimeout(resolve, 250));
+      await nextAnimationFrame();
+      await nextAnimationFrame();
+
+      const ticketView = ticketCaptureRef.current;
+      if (!ticketView) throw new Error("Ticket view is unavailable.");
+
+      const screenshotBase64 = await captureRef(ticketView, {
+        format: "png",
+        quality: 1,
+        result: "base64",
+      });
+
+      const { uri } = await Print.printToFileAsync({
+        html: ticketPdfHtml(screenshotBase64),
+        width: 612,
+        height: 792,
+        margins: { top: 0, right: 0, bottom: 0, left: 0 },
+      });
+
+      if (!(await Sharing.isAvailableAsync())) {
+        setAlert({
+          title: "Sharing is unavailable",
+          message: "This device cannot share files right now. Please try again later.",
+        });
+        return;
+      }
+
+      await Sharing.shareAsync(uri, {
+        dialogTitle: `Share ticket for ${title}`,
+        mimeType: "application/pdf",
+        UTI: ".pdf",
       });
     } catch {
       setAlert({
-        title: "Unable to share",
-        message: "Please try again in a moment.",
+        title: "Unable to share ticket PDF",
+        message: "We could not create or open the ticket PDF. Please try again.",
       });
+    } finally {
+      setSharingTicket(false);
     }
   };
 
@@ -449,15 +516,24 @@ export default function MyEventDetailsConnectedScreen({
             </Pressable>
             <View style={styles.heroRightActions}>
               <Pressable
-                accessibilityLabel="Share ticket"
-                style={styles.circleButton}
+                accessibilityLabel="Share watermarked ticket PDF"
+                accessibilityState={{ disabled: !canShareTicket }}
+                disabled={!canShareTicket}
+                style={[
+                  styles.circleButton,
+                  !canShareTicket && styles.circleButtonDisabled,
+                ]}
                 onPress={() => setShareVisible(true)}
               >
-                <Ionicons
-                  name="share-social-outline"
-                  color={colors.ink}
-                  size={22}
-                />
+                {sharingTicket ? (
+                  <ActivityIndicator color={colors.ink} size="small" />
+                ) : (
+                  <Ionicons
+                    name="share-social-outline"
+                    color={colors.ink}
+                    size={22}
+                  />
+                )}
               </Pressable>
               <Pressable
                 accessibilityLabel="Report event"
@@ -470,7 +546,11 @@ export default function MyEventDetailsConnectedScreen({
           </View>
         </ImageBackground>
 
-        <View style={styles.ticketCard}>
+        <View
+          ref={ticketCaptureRef}
+          collapsable={false}
+          style={styles.ticketCard}
+        >
           <View style={styles.ticketBody}>
             <View
               style={[
@@ -512,6 +592,8 @@ export default function MyEventDetailsConnectedScreen({
                     source={qrSource}
                     style={styles.qrImage}
                     resizeMode="contain"
+                    onLoad={() => setQrImageLoaded(true)}
+                    onError={() => setQrImageLoaded(false)}
                   />
                 </View>
                 <Text style={styles.qrHint}>
@@ -618,6 +700,16 @@ export default function MyEventDetailsConnectedScreen({
               </Text>
             </View>
           </View>
+          {sharingTicket ? (
+            <View pointerEvents="none" style={styles.ticketWatermark}>
+              <Image
+                source={communityConnectLogo}
+                resizeMode="contain"
+                style={styles.ticketWatermarkImage}
+              />
+              <Text style={styles.ticketWatermarkText}>COMMUNITY CONNECT</Text>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.sections}>
@@ -739,13 +831,12 @@ export default function MyEventDetailsConnectedScreen({
 
       <AppShareSheet
         visible={shareVisible}
+        title="Share ticket"
         description={`Share your ticket for ${title}`}
+        mode="file"
+        fileActionBusy={sharingTicket}
         onClose={() => setShareVisible(false)}
-        onCopyLink={() =>
-          setAlert({ title: "Ticket number", message: order.orderNumber })
-        }
-        onInvite={share}
-        onShareTo={share}
+        onShareFile={shareTicketPdf}
       />
       <AppReportSheet
         visible={reportVisible}
@@ -823,6 +914,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  circleButtonDisabled: { opacity: 0.55 },
   ticketCard: {
     backgroundColor: colors.white,
     borderRadius: 30,
@@ -969,6 +1061,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 23,
     paddingTop: 18,
     paddingBottom: 20,
+  },
+  ticketWatermark: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 7,
+    justifyContent: "center",
+    paddingBottom: 16,
+    paddingTop: 1,
+  },
+  ticketWatermarkImage: { height: 24, opacity: 0.38, width: 24 },
+  ticketWatermarkText: {
+    color: colors.forest,
+    fontFamily: fonts.bold,
+    fontSize: 9,
+    letterSpacing: 0.8,
+    opacity: 0.38,
   },
   ticketTime: { alignItems: "flex-end" },
   ticketMetaLabel: { color: "#16804c", fontFamily: fonts.bold, fontSize: 9 },
