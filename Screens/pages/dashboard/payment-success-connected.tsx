@@ -1,9 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AppLoader from "../../components/ui/app-loader";
 import { eventsApi } from "../../services/api/events.api";
 import { colors, fonts } from "../../styles/theme";
 import type { GetEventsIdResponse } from "../../types/api.generated";
@@ -28,7 +34,7 @@ export default function PaymentSuccessConnectedScreen({ navigation, route }: Pro
       <Text style={styles.subtitle}>Your payment was verified by the backend and your tickets are confirmed.</Text>
       <View style={styles.card}>
         <Text style={styles.label}>EVENT</Text>
-        {event ? <Text style={styles.event}>{event.title}</Text> : <ActivityIndicator color="#08b657" style={{ marginTop: 12 }} />}
+        {event ? <Text style={styles.event}>{event.title}</Text> : <AppLoader color="#08b657" style={{ marginTop: 12 }} />}
         <View style={styles.divider} />
         <Row label="Tickets" value={String(route.params.quantity)} />
         <Row label="Amount paid" value={money(route.params.total)} />

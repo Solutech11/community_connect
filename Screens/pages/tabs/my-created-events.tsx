@@ -4,7 +4,6 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { ComponentProps } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   ImageBackground,
   Pressable,
   ScrollView,
@@ -13,6 +12,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import AppLoader from "../../components/ui/app-loader";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import AiValidationModal from "../../components/ui/ai-validation-modal";
@@ -470,7 +470,7 @@ export default function MyCreatedEventsScreen({ navigation, route }: Props) {
                         ]}
                       >
                         {publishingEventId === x.id ? (
-                          <ActivityIndicator color="#fff" size="small" />
+                          <AppLoader color="#fff" size="small" />
                         ) : (
                           <Ionicons
                             name={
@@ -533,7 +533,7 @@ export default function MyCreatedEventsScreen({ navigation, route }: Props) {
           })}
           {loading ? (
             <View style={s.loadingState}>
-              <ActivityIndicator color="#08b657" />
+              <AppLoader color="#08b657" />
               <Text style={s.empty}>Loading your events...</Text>
             </View>
           ) : null}

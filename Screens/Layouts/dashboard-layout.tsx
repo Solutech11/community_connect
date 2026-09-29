@@ -6,6 +6,7 @@ import AiAssistantLauncher from "../components/ui/ai-assistant-launcher";
 
 type DashboardLayoutProps = {
   children: ReactNode;
+  showAiAssistant?: boolean;
 };
 
 const ANDROID_DESIGN_WIDTH = 420;
@@ -16,14 +17,17 @@ const MAX_ANDROID_SCALE = 0.92;
  * Fits dashboard routes to narrower Android viewports without changing the
  * deliberately larger iOS, auth, onboarding, or account-setup layouts.
  */
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+export default function DashboardLayout({
+  children,
+  showAiAssistant = true,
+}: DashboardLayoutProps) {
   const { height, width } = useWindowDimensions();
 
   if (Platform.OS !== "android") {
     return (
       <View style={styles.appFrame}>
         {children}
-        <AiAssistantLauncher />
+        {showAiAssistant ? <AiAssistantLauncher /> : null}
       </View>
     );
   }
@@ -46,7 +50,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         ]}
       >
         {children}
-        <AiAssistantLauncher />
+        {showAiAssistant ? <AiAssistantLauncher /> : null}
       </View>
     </View>
   );
@@ -54,10 +58,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
 export function withDashboardLayout<Props extends object>(
   Screen: ComponentType<Props>,
+  options: { showAiAssistant?: boolean } = {},
 ) {
   function DashboardScreen(props: Props) {
     return (
-      <DashboardLayout>
+      <DashboardLayout showAiAssistant={options.showAiAssistant}>
         <Screen {...props} />
       </DashboardLayout>
     );

@@ -22,6 +22,7 @@ type RequestOptions = {
   query?: Record<string, QueryValue>;
   headers?: Record<string, string>;
   authenticated?: boolean;
+  includeAccessToken?: boolean;
   retryAfterRefresh?: boolean;
   signal?: AbortSignal;
   timeoutMs?: number;
@@ -33,6 +34,7 @@ type OperationOptions<Id extends ApiOperationId> = {
   pathParams?: ApiOperationMap[Id]["pathParams"];
   headers?: ApiOperationMap[Id]["headers"];
   authenticated?: boolean;
+  includeAccessToken?: boolean;
   signal?: AbortSignal;
 };
 
@@ -154,7 +156,7 @@ async function rawRequest<T>(
   if (!isFormData && options.body !== undefined) {
     headers["Content-Type"] = "application/json";
   }
-  if (authenticated && accessToken) {
+  if ((authenticated || options.includeAccessToken) && accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;
   }
 
@@ -227,9 +229,11 @@ async function rawRequest<T>(
     throw error;
   }
 
+  const shouldRefreshAfterUnauthorized =
+    authenticated || (options.includeAccessToken === true && accessToken !== null);
   if (
     response.status === 401 &&
-    authenticated &&
+    shouldRefreshAfterUnauthorized &&
     options.retryAfterRefresh !== false
   ) {
     const authenticationError = isApiFailure(payload)
@@ -996,6 +1000,7 @@ export const apiClient = {
         body: options.body === undefined ? undefined : (options.body as object),
         query: options.query as Record<string, QueryValue> | undefined,
         headers: options.headers as Record<string, string> | undefined,
+        includeAccessToken: options.includeAccessToken,
         signal: options.signal,
       },
     );

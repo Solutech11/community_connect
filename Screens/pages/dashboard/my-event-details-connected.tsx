@@ -6,7 +6,6 @@ import * as Sharing from "expo-sharing";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Image,
   ImageBackground,
   Pressable,
@@ -21,6 +20,7 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
+import AppLoader from "../../components/ui/app-loader";
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import AppReportSheet from "../../components/ui/app-report-sheet";
 import AppShareSheet from "../../components/ui/app-share-sheet";
@@ -269,7 +269,7 @@ export default function MyEventDetailsConnectedScreen({
       <SafeAreaView style={styles.loadingPage}>
         <StatusBar style="dark" backgroundColor={colors.paper} />
         {loading ? (
-          <ActivityIndicator color="#08b657" size="large" />
+          <AppLoader color="#08b657" size="large" />
         ) : (
           <View style={styles.errorState}>
             <Ionicons name="ticket-outline" size={38} color="#72877c" />
@@ -526,7 +526,7 @@ export default function MyEventDetailsConnectedScreen({
                 onPress={() => setShareVisible(true)}
               >
                 {sharingTicket ? (
-                  <ActivityIndicator color={colors.ink} size="small" />
+                  <AppLoader color={colors.ink} size="small" />
                 ) : (
                   <Ionicons
                     name="share-social-outline"
@@ -639,7 +639,7 @@ export default function MyEventDetailsConnectedScreen({
                       ]}
                     >
                       {checkingPayment ? (
-                        <ActivityIndicator color={colors.white} size="small" />
+                        <AppLoader color={colors.white} size="small" />
                       ) : (
                         <Ionicons
                           name="refresh-outline"
@@ -665,7 +665,7 @@ export default function MyEventDetailsConnectedScreen({
                         ]}
                       >
                         {resumingCheckout ? (
-                          <ActivityIndicator color={colors.ink} size="small" />
+                          <AppLoader color={colors.ink} size="small" />
                         ) : (
                           <Ionicons
                             name="card-outline"

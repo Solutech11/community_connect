@@ -3,7 +3,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   ImageBackground,
   Pressable,
   RefreshControl,
@@ -15,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AppLoader from "../../components/ui/app-loader";
 import TicketStatusBadge from "../../components/ui/ticket-status-badge";
 import { ApiError } from "../../services/api/client";
 import { ticketsApi } from "../../services/api/tickets.api";
@@ -268,7 +268,7 @@ export default function MyEventsConnectedScreen({ navigation }: Props) {
             </Text>
           </View>
           {loading && tickets.length > 0 ? (
-            <ActivityIndicator color="#08b657" size="small" />
+            <AppLoader color="#08b657" size="small" />
           ) : null}
         </View>
 
@@ -318,7 +318,7 @@ export default function MyEventsConnectedScreen({ navigation }: Props) {
 
         {loading && tickets.length === 0 ? (
           <View style={styles.stateCard}>
-            <ActivityIndicator color="#08b657" size="large" />
+            <AppLoader color="#08b657" size="large" />
             <Text style={styles.stateTitle}>Loading your tickets</Text>
             <Text style={styles.stateCopy}>
               Your latest event orders will appear here.

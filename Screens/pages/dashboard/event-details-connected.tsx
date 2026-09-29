@@ -3,7 +3,6 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   ImageBackground,
   Linking,
   Pressable,
@@ -15,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AppLoader from "../../components/ui/app-loader";
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import AppReportSheet from "../../components/ui/app-report-sheet";
 import AppShareSheet from "../../components/ui/app-share-sheet";
@@ -155,7 +155,7 @@ export default function EventDetailsScreen({ navigation, route }: Props) {
     return (
       <SafeAreaView style={styles.fallbackSafeArea}>
         <View style={styles.fallbackBody}>
-          <ActivityIndicator color="#08b657" size="large" />
+          <AppLoader color="#08b657" size="large" />
           <Text style={styles.loadingLabel}>Loading event details...</Text>
         </View>
       </SafeAreaView>

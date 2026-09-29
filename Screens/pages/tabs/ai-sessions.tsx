@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -12,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AppLoader from "../../components/ui/app-loader";
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import ProfilePageHeader from "../../components/ui/profile-page-header";
 import { aiApi } from "../../services/api/ai.api";
@@ -87,7 +87,7 @@ export default function AiSessionsScreen({ navigation }: Props) {
             </Text>
           </View>
 
-          {loading ? <ActivityIndicator color="#08b657" style={styles.loader} /> : null}
+          {loading ? <AppLoader color="#08b657" style={styles.loader} /> : null}
           {!loading && !sessions.length ? (
             <View style={styles.empty}>
               <Ionicons color="#70a888" name="time-outline" size={40} />
@@ -120,7 +120,7 @@ export default function AiSessionsScreen({ navigation }: Props) {
                 style={styles.delete}
               >
                 {deletingId === session._id ? (
-                  <ActivityIndicator color="#a34b4b" />
+                  <AppLoader color="#a34b4b" />
                 ) : (
                   <Ionicons color="#a34b4b" name="trash-outline" size={20} />
                 )}

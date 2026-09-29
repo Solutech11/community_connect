@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import {
-  ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
@@ -10,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AppLoader from "./app-loader";
 import type { PostEventsEventIdCheckInsVerifyResponse } from "../../types/api.generated";
 import { colors, fonts } from "../../styles/theme";
 
@@ -190,7 +190,7 @@ export default function ScannedTicketDetailsSheet({
 
             {phase === "verifying" ? (
               <View style={styles.loadingCard}>
-                <ActivityIndicator color={colors.lime} size="large" />
+                <AppLoader color={colors.lime} size="large" />
                 <Text style={styles.loadingTitle}>Verifying this ticket</Text>
                 <Text style={styles.loadingCopy}>
                   Checking event access and matching the ticket to its attendee.
@@ -286,7 +286,7 @@ export default function ScannedTicketDetailsSheet({
                   </View>
                 ) : phase === "checking-in" ? (
                   <View style={[styles.messageCard, styles.progressCard]}>
-                    <ActivityIndicator color={colors.forest} size="small" />
+                    <AppLoader color={colors.forest} size="small" />
                     <View style={styles.messageCopy}>
                       <Text style={styles.progressTitle}>
                         Check-in in progress
@@ -379,7 +379,7 @@ export default function ScannedTicketDetailsSheet({
               ]}
             >
               {isBusy ? (
-                <ActivityIndicator color={colors.forest} size="small" />
+                <AppLoader color={colors.forest} size="small" />
               ) : (
                 <Ionicons
                   color={colors.forest}

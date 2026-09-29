@@ -67,6 +67,9 @@ function AppNavigation() {
   const { notify } = useNotifier();
   const [navigationReady, setNavigationReady] = React.useState(false);
   const lastNavigationTarget = React.useRef<string | null>(null);
+  const [pendingNotificationResponse, setPendingNotificationResponse] =
+    React.useState<Notifications.NotificationResponse | null>(null);
+  const lastHandledNotificationId = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     const subscription = Notifications.addNotificationReceivedListener(
@@ -85,14 +88,22 @@ function AppNavigation() {
   }, [isAuthenticated, notify]);
 
   React.useEffect(() => {
+    let active = true;
     const subscription = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        if (!isAuthenticated) return;
-        navigateFromNotification(response.notification.request.content.data);
-      },
+      setPendingNotificationResponse,
     );
-    return () => subscription.remove();
-  }, [isAuthenticated]);
+    void Notifications.getLastNotificationResponseAsync()
+      .then((response) => {
+        if (active && response) setPendingNotificationResponse(response);
+      })
+      .catch(() => {
+        // The live response listener remains available if cold-start lookup fails.
+      });
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, []);
 
   React.useEffect(() => {
     if (isRestoring || !navigationReady || !navigationRef.isReady()) {
@@ -120,6 +131,30 @@ function AppNavigation() {
     navigationReady,
     unauthenticatedStartRoute,
   ]);
+
+  React.useEffect(() => {
+    if (
+      !pendingNotificationResponse ||
+      !isAuthenticated ||
+      !navigationReady ||
+      !navigationRef.isReady()
+    ) {
+      return;
+    }
+
+    const notificationId =
+      pendingNotificationResponse.notification.request.identifier;
+    if (lastHandledNotificationId.current !== notificationId) {
+      lastHandledNotificationId.current = notificationId;
+      navigateFromNotification(
+        pendingNotificationResponse.notification.request.content.data,
+      );
+    }
+    setPendingNotificationResponse(null);
+    void Notifications.clearLastNotificationResponseAsync().catch(() => {
+      // Clearing the OS response is best-effort after routing has completed.
+    });
+  }, [isAuthenticated, navigationReady, pendingNotificationResponse]);
   if (isRestoring) {
     return <AppLoadingScreen message="Restoring your secure session" />;
   }

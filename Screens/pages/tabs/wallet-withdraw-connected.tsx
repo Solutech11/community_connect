@@ -1,7 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import AppLoader from "../../components/ui/app-loader";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
@@ -91,7 +99,7 @@ export default function WalletWithdrawConnectedScreen({ navigation }: Props) {
     <SafeAreaView edges={[]} style={styles.safe}>
       <ProfilePageHeader title="Withdraw" onBack={navigation.goBack} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {loading ? <ActivityIndicator color="#08b657" /> : null}
+        {loading ? <AppLoader color="#08b657" /> : null}
         <Text style={styles.section}>Saved accounts</Text>
         {accounts.map((account) => <Pressable key={account._id} onPress={() => { setSelectedAccount(account._id); keyRef.current = null; }} style={[styles.account, selectedAccount === account._id && styles.accountActive]}>
           <Ionicons color="#078d45" name="business-outline" size={22} /><View style={styles.accountCopy}><Text style={styles.accountName}>{account.bankName}</Text><Text style={styles.meta}>{account.accountName} - {account.maskedAccountNumber}</Text></View>{selectedAccount === account._id ? <Ionicons color="#08b657" name="checkmark-circle" size={22} /> : null}
@@ -102,7 +110,7 @@ export default function WalletWithdrawConnectedScreen({ navigation }: Props) {
         <Pressable disabled={submitting} onPress={() => void saveAccount()} style={styles.secondary}><Text style={styles.secondaryText}>Verify and save account</Text></Pressable>
         <Text style={styles.section}>Withdrawal amount (NGN)</Text>
         <TextInput keyboardType="decimal-pad" onChangeText={(value) => { setAmount(value); keyRef.current = null; }} placeholder="10000" placeholderTextColor="#718078" style={styles.input} value={amount} />
-        <Pressable disabled={submitting} onPress={() => void withdraw()} style={[styles.primary, submitting && styles.disabled]}>{submitting ? <ActivityIndicator color={colors.ink} /> : <Text style={styles.primaryText}>Submit withdrawal</Text>}</Pressable>
+        <Pressable disabled={submitting} onPress={() => void withdraw()} style={[styles.primary, submitting && styles.disabled]}>{submitting ? <AppLoader color={colors.ink} /> : <Text style={styles.primaryText}>Submit withdrawal</Text>}</Pressable>
         {reference ? <View style={styles.otpCard}><Text style={styles.accountName}>Only if Paystack requests an OTP</Text><TextInput keyboardType="number-pad" maxLength={6} onChangeText={setOtp} placeholder="6-digit OTP" placeholderTextColor="#718078" style={styles.input} value={otp} /><Pressable disabled={otp.length !== 6 || submitting} onPress={() => void finalize()} style={styles.secondary}><Text style={styles.secondaryText}>Finalize OTP</Text></Pressable></View> : null}
       </ScrollView>
     </SafeAreaView>

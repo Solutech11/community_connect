@@ -3,7 +3,6 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Image,
   Pressable,
   RefreshControl,
@@ -15,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AppLoader from "../../components/ui/app-loader";
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import { communityImage } from "../../data/community-presentation";
 import { ApiError } from "../../services/api/client";
@@ -299,7 +299,7 @@ export default function CommunityScreen() {
           </Text>
           {loading ? (
             <View style={styles.stateCard}>
-              <ActivityIndicator color="#08b657" />
+              <AppLoader color="#08b657" />
               <Text style={styles.stateText}>
                 Finding communities near you...
               </Text>

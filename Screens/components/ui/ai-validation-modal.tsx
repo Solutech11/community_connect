@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef } from "react";
 import {
-  ActivityIndicator,
   Animated,
   Easing,
   Modal,
@@ -9,6 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
+import AppLoader from "./app-loader";
 import { colors, fonts } from "../../styles/theme";
 
 type Props = {
@@ -109,7 +109,7 @@ export default function AiValidationModal({ visible }: Props) {
             </View>
           </View>
           <View style={styles.statusRow}>
-            <ActivityIndicator color="#08b957" size="small" />
+            <AppLoader color="#08b957" size="small" />
             <Text style={styles.statusText}>AI REVIEW IN PROGRESS</Text>
           </View>
           <Text accessibilityLiveRegion="polite" style={styles.title}>

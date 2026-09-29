@@ -1,7 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import AppLoader from "../../components/ui/app-loader";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import ProfilePageHeader from "../../components/ui/profile-page-header";
@@ -47,7 +55,7 @@ export default function TransactionsConnectedScreen({ navigation }: Props) {
     <SafeAreaView edges={[]} style={styles.safe}>
       <ProfilePageHeader title="Transactions" onBack={navigation.goBack} />
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(1, true)} />}>
-        {loading ? <View style={styles.state}><ActivityIndicator color="#08b657" /></View> : null}
+        {loading ? <View style={styles.state}><AppLoader color="#08b657" /></View> : null}
         {error ? <View style={styles.state}><Text style={styles.error}>{error}</Text><Pressable onPress={() => void load(page)} style={styles.retry}><Text style={styles.retryText}>Try again</Text></Pressable></View> : null}
         {!loading && !error && !transactions.length ? <View style={styles.state}><Ionicons color="#70a888" name="receipt-outline" size={38} /><Text style={styles.emptyTitle}>No transactions</Text></View> : null}
         <View style={styles.list}>

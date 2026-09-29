@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Modal,
   Pressable,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 
+import AppLoader from "./app-loader";
 import { colors, fonts } from "../../styles/theme";
 
 const PAYSTACK_CALLBACK_PREFIX = "communityconnect://wallet/top-up/callback";
@@ -166,7 +166,7 @@ export default function PaystackCheckoutModal({
             thirdPartyCookiesEnabled
             renderLoading={() => (
               <View style={styles.loading}>
-                <ActivityIndicator color="#08b657" size="large" />
+                <AppLoader color="#08b657" size="large" />
                 <Text style={styles.loadingText}>Opening Paystack...</Text>
               </View>
             )}
@@ -193,7 +193,7 @@ export default function PaystackCheckoutModal({
             ]}
           >
             {verifying ? (
-              <ActivityIndicator color={colors.ink} />
+              <AppLoader color={colors.ink} />
             ) : (
               <Ionicons
                 color={colors.ink}

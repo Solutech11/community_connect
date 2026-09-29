@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Image,
   Pressable,
   ScrollView,
@@ -13,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AppLoader from "../../components/ui/app-loader";
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import PaystackCheckoutModal, {
   type PaystackVerificationResult,
@@ -387,7 +387,7 @@ export default function CommunityJoinConnectedScreen({
               style={[styles.primary, submitting && styles.disabled]}
             >
               {submitting ? (
-                <ActivityIndicator color={colors.ink} />
+                <AppLoader color={colors.ink} />
               ) : (
                 <Text style={styles.primaryText}>
                   {orderNumber && checkoutUrl

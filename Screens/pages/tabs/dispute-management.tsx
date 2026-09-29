@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -11,6 +10,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import AppLoader from "../../components/ui/app-loader";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
@@ -163,7 +163,7 @@ export default function DisputeManagementScreen({ navigation }: Props) {
               />
             }
           >
-            {loading ? <ActivityIndicator color="#08b657" /> : null}
+            {loading ? <AppLoader color="#08b657" /> : null}
             {!loading && !disputes.length ? (
               <Text style={styles.empty}>
                 No disputes are currently available.
@@ -225,7 +225,7 @@ export default function DisputeManagementScreen({ navigation }: Props) {
                   style={[styles.primary, submitting && styles.disabled]}
                 >
                   {submitting ? (
-                    <ActivityIndicator color={colors.ink} />
+                    <AppLoader color={colors.ink} />
                   ) : (
                     <Text style={styles.primaryText}>Update status</Text>
                   )}

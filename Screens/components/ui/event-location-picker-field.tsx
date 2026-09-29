@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Keyboard,
   Modal,
   Pressable,
@@ -12,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AppLoader from "./app-loader";
 import {
   locationsApi,
   type LocationSearchResult,
@@ -206,7 +206,7 @@ export default function EventLocationPickerField({
 
       {searchState === "loading" ? (
         <View style={styles.feedbackRow}>
-          <ActivityIndicator color="#078d45" size="small" />
+          <AppLoader color="#078d45" size="small" />
           <Text style={styles.feedbackText}>Searching places...</Text>
         </View>
       ) : null}

@@ -4,7 +4,6 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Image,
   ImageBackground,
   Pressable,
@@ -14,6 +13,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import AppLoader from "../../components/ui/app-loader";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
@@ -509,7 +509,7 @@ export default function ManageCreatedEventConnectedScreen({
         >
           {loading ? (
             <View style={styles.state}>
-              <ActivityIndicator color="#08b657" />
+              <AppLoader color="#08b657" />
               <Text style={styles.meta}>Loading event...</Text>
             </View>
           ) : null}
@@ -540,7 +540,7 @@ export default function ManageCreatedEventConnectedScreen({
                     ]}
                   >
                     {uploadingCover ? (
-                      <ActivityIndicator color="#087b3d" size="small" />
+                      <AppLoader color="#087b3d" size="small" />
                     ) : (
                       <Ionicons
                         color="#087b3d"
@@ -762,7 +762,7 @@ export default function ManageCreatedEventConnectedScreen({
                         ]}
                       >
                         {publishing ? (
-                          <ActivityIndicator color={colors.ink} size="small" />
+                          <AppLoader color={colors.ink} size="small" />
                         ) : (
                           <Ionicons
                             color={colors.ink}
@@ -946,7 +946,7 @@ export default function ManageCreatedEventConnectedScreen({
                         ]}
                       >
                         {savingDetails ? (
-                          <ActivityIndicator color={colors.ink} size="small" />
+                          <AppLoader color={colors.ink} size="small" />
                         ) : (
                           <Text style={styles.primaryText}>Save details</Text>
                         )}

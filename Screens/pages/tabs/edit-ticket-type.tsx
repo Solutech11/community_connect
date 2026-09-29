@@ -2,13 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import AppLoader from "../../components/ui/app-loader";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
@@ -150,7 +150,7 @@ export default function EditTicketTypeScreen({ navigation, route }: Props) {
         />
         {loading ? (
           <View style={styles.loading}>
-            <ActivityIndicator color="#08b657" />
+            <AppLoader color="#08b657" />
           </View>
         ) : null}
         {ticket ? (
@@ -223,7 +223,7 @@ export default function EditTicketTypeScreen({ navigation, route }: Props) {
               ]}
             >
               {submitting ? (
-                <ActivityIndicator color={colors.ink} />
+                <AppLoader color={colors.ink} />
               ) : (
                 <Text style={styles.primaryText}>
                   {canEditTicket

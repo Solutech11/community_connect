@@ -5,7 +5,6 @@ import * as Crypto from "expo-crypto";
 import { useMemo, useState } from "react";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import {
-  ActivityIndicator,
   Image,
   Modal,
   Pressable,
@@ -14,6 +13,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import AppLoader from "../../components/ui/app-loader";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
@@ -352,7 +352,7 @@ export default function CreateCommunityConnectedScreen({ navigation }: Props) {
             style={[styles.primary, submitting && styles.disabled]}
           >
             {submitting ? (
-              <ActivityIndicator color={colors.ink} />
+              <AppLoader color={colors.ink} />
             ) : (
               <Text style={styles.primaryText}>Create community</Text>
             )}

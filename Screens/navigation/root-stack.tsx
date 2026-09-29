@@ -63,7 +63,6 @@ import MainTabs from "./main-tabs";
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const DashboardCommunityJoin = withDashboardLayout(CommunityJoinScreen);
-const DashboardCommunityRoom = withDashboardLayout(CommunityRoomScreen);
 const DashboardCommunityProfile = withDashboardLayout(CommunityProfileScreen);
 const DashboardCommunityRules = withDashboardLayout(CommunityRulesScreen);
 const DashboardCommunityManagement = withDashboardLayout(
@@ -93,7 +92,9 @@ const DashboardCreateEventReview = withDashboardLayout(CreateEventReviewScreen);
 const DashboardTicketScanner = withDashboardLayout(TicketScannerScreen);
 const DashboardNotifications = withDashboardLayout(NotificationsScreen);
 const DashboardFriends = withDashboardLayout(FriendsScreen);
-const DashboardChatThread = withDashboardLayout(ChatThreadScreen);
+const DashboardChatThread = withDashboardLayout(ChatThreadScreen, {
+  showAiAssistant: false,
+});
 const DashboardAISessions = withDashboardLayout(AISessionsScreen);
 const DashboardSettings = withDashboardLayout(SettingsScreen);
 const DashboardChangePassword = withDashboardLayout(ChangePasswordScreen);
@@ -188,7 +189,7 @@ export default function RootStackNavigator({
           />
           <Stack.Screen
             name="CommunityRoom"
-            component={DashboardCommunityRoom}
+            component={CommunityRoomScreen}
             options={{
               animation: "slide_from_right",
               contentStyle: { backgroundColor: "#f7fbf9" },

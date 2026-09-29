@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
@@ -11,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AppLoader from "./app-loader";
 import { colors, fonts } from "../../styles/theme";
 import type { GetEventsIdResponse } from "../../types/api.generated";
 import type { RootStackParamList } from "../../types/navigation";
@@ -155,7 +155,7 @@ export default function EventTicketSheet({
           >
             {loading ? (
               <View style={styles.state}>
-                <ActivityIndicator color="#08b657" />
+                <AppLoader color="#08b657" />
                 <Text style={styles.stateText}>Loading tickets...</Text>
               </View>
             ) : null}

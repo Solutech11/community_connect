@@ -3,7 +3,6 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRef, useState } from "react";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AppLoader from "../../components/ui/app-loader";
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import { aiApi } from "../../services/api/ai.api";
 import { ApiError } from "../../services/api/client";
@@ -209,7 +209,7 @@ export default function AIChatConnectedScreen({ navigation, route }: Props) {
                 <Ionicons color={colors.ink} name="sparkles" size={15} />
               </View>
               <View style={styles.assistantBubble}>
-                <ActivityIndicator color="#08ad54" />
+                <AppLoader color="#08ad54" />
               </View>
             </View>
           ) : null}

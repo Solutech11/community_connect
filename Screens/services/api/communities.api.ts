@@ -44,7 +44,11 @@ import { apiClient, createIdempotencyKey } from "./client";
 
 export const communitiesApi = {
   list: (query: GetCommunitiesQuery = {}, signal?: AbortSignal) =>
-    apiClient.request("get__communities", { query, signal }),
+    apiClient.request("get__communities", {
+      query,
+      signal,
+      includeAccessToken: true,
+    }),
   myCommunities: (
     query: GetUsersMeCommunitiesQuery = {},
     signal?: AbortSignal,
@@ -103,18 +107,17 @@ export const communitiesApi = {
   resolveCode: (body: PostCommunitiesResolveCodeBody, signal?: AbortSignal) =>
     apiClient.request("post__communities_resolve_code", { body, signal }),
   get: (id: string, signal?: AbortSignal) =>
-    apiClient.request("get__communities_id_", { pathParams: { id }, signal }),
+    apiClient.request("get__communities_id_", {
+      pathParams: { id },
+      signal,
+      includeAccessToken: true,
+    }),
   create: (body: PostCommunitiesBody, signal?: AbortSignal) =>
     apiClient.request("post__communities", { body, signal }),
   update: (id: string, body: PatchCommunitiesIdBody, signal?: AbortSignal) =>
     apiClient.request("patch__communities_id_", {
       pathParams: { id },
       body,
-      signal,
-    }),
-  join: (id: string, signal?: AbortSignal) =>
-    apiClient.request("post__communities_id_members", {
-      pathParams: { id },
       signal,
     }),
   leave: (id: string, signal?: AbortSignal) =>
@@ -169,6 +172,7 @@ export const communitiesApi = {
     apiClient.request("get__communities_id_rules", {
       pathParams: { id },
       signal,
+      includeAccessToken: true,
     }),
   updateRules: (
     id: string,

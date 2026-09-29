@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as Crypto from "expo-crypto";
-import { useCallback, useEffect, useState } from "react";
+import * as ImagePicker from "expo-image-picker";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
+  Image,
   Modal,
   Pressable,
   RefreshControl,
@@ -16,10 +17,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AppLoader from "../../components/ui/app-loader";
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import ProfilePageHeader from "../../components/ui/profile-page-header";
 import { ApiError } from "../../services/api/client";
 import { communitiesApi } from "../../services/api/communities.api";
+import { uploadsApi } from "../../services/api/uploads.api";
 import { colors, fonts } from "../../styles/theme";
 import type {
   GetCommunitiesIdAnnouncementsResponse,
@@ -198,6 +201,8 @@ export default function CommunityManagementScreen({
   const [contentKind, setContentKind] = useState<ContentKind>("post");
   const [contentText, setContentText] = useState("");
   const [contentImageUrl, setContentImageUrl] = useState("");
+  const [contentImageAsset, setContentImageAsset] =
+    useState<ImagePicker.ImagePickerAsset | null>(null);
   const [editingContentId, setEditingContentId] = useState<string | null>(null);
   const [banReason, setBanReason] = useState("Community policy violation");
   const [banDays, setBanDays] = useState("");
@@ -209,6 +214,7 @@ export default function CommunityManagementScreen({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const contentRequestRef = useRef<AbortController | null>(null);
   const [notice, setNotice] = useState<{
     title: string;
     message: string;
@@ -348,6 +354,7 @@ export default function CommunityManagementScreen({
 
   useEffect(() => {
     void load();
+    return () => contentRequestRef.current?.abort();
   }, [load]);
 
   const hasMore = (section: PagedSection) =>
@@ -418,6 +425,8 @@ export default function CommunityManagementScreen({
       }
       setPages((current) => ({ ...current, [section]: page }));
     } catch (error) {
+      if (error instanceof ApiError && error.code === "REQUEST_CANCELLED")
+        return;
       setNotice({
         title: "Unable to load more",
         message:
@@ -441,20 +450,34 @@ export default function CommunityManagementScreen({
       </Pressable>
     ) : null;
 
+  const saveButtonContent = (key: string, label: string) =>
+    busyKey === key ? (
+      <View style={styles.savingLabel}>
+        <AppLoader accessibilityLabel="Saving" color={colors.ink} />
+        <Text style={styles.primaryText}>Saving...</Text>
+      </View>
+    ) : (
+      <Text style={styles.primaryText}>{label}</Text>
+    );
+
   const run = async (
     key: string,
     action: () => Promise<unknown>,
     success: string,
+    onSuccess?: () => void,
   ) => {
     if (busyKey) return;
     setBusyKey(key);
     try {
       await action();
+      onSuccess?.();
       if (key.startsWith("approve-") || key.startsWith("reject-"))
         setReviewNote("");
       setNotice({ title: "Done", message: success });
       await load(true);
     } catch (error) {
+      if (error instanceof ApiError && error.code === "REQUEST_CANCELLED")
+        return;
       setNotice({
         title: "Action failed",
         message:
@@ -599,7 +622,55 @@ export default function CommunityManagementScreen({
     }
   };
 
+  const pickContentImage = async () => {
+    try {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        setNotice({
+          title: "Photo permission needed",
+          message:
+            "Allow photo access to attach an image to community content.",
+        });
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 0.84,
+        allowsEditing: true,
+        aspect: [4, 3],
+        preferredAssetRepresentationMode:
+          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+      });
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        const mimeType = asset.mimeType?.toLowerCase();
+        if (
+          mimeType &&
+          !["image/jpeg", "image/png", "image/webp"].includes(mimeType)
+        ) {
+          setNotice({
+            title: "Unsupported image type",
+            message: "Choose a JPEG, PNG, or WebP image to upload.",
+          });
+          return;
+        }
+        setContentImageAsset(asset);
+      }
+    } catch (error) {
+      setNotice({
+        title: "Unable to choose image",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Please try choosing the image again.",
+      });
+    }
+  };
+
   const saveContent = async () => {
+    if (busyKey) return;
     const text = contentText.trim();
     const imageUrl = contentImageUrl.trim();
     if (!text) {
@@ -609,34 +680,79 @@ export default function CommunityManagementScreen({
       });
       return;
     }
-    if (imageUrl && !/^https:\/\//i.test(imageUrl)) {
+    if (!contentImageAsset && imageUrl && !/^https:\/\//i.test(imageUrl)) {
       setNotice({
         title: "Invalid image link",
         message: "Use a complete HTTPS image URL.",
       });
       return;
     }
-    const body = { text, ...(imageUrl ? { imageUrl } : {}) };
-    const action = editingContentId
-      ? contentKind === "post"
-        ? () => communitiesApi.updatePost(communityId, editingContentId, body)
-        : () =>
-            communitiesApi.updateAnnouncement(
-              communityId,
-              editingContentId,
-              body,
-            )
-      : contentKind === "post"
-        ? () => communitiesApi.createPost(communityId, body)
-        : () => communitiesApi.createAnnouncement(communityId, body);
-    await run(
-      "content",
-      action,
-      editingContentId ? "Content updated." : "Content published.",
-    );
-    setContentText("");
-    setContentImageUrl("");
-    setEditingContentId(null);
+    const controller = new AbortController();
+    contentRequestRef.current = controller;
+    const action = async () => {
+      let nextImageUrl = imageUrl;
+      if (contentImageAsset) {
+        const upload = await uploadsApi.image(
+          {
+            uri: contentImageAsset.uri,
+            name:
+              contentImageAsset.fileName ||
+              `community-content-${Date.now()}.${
+                contentImageAsset.mimeType?.split("/")[1] || "jpg"
+              }`,
+            type: contentImageAsset.mimeType || "image/jpeg",
+          },
+          "communities",
+          controller.signal,
+        );
+        nextImageUrl = upload.data.url;
+      }
+
+      const body = {
+        text,
+        ...(nextImageUrl ? { imageUrl: nextImageUrl } : {}),
+      };
+      if (editingContentId) {
+        if (contentKind === "post") {
+          return communitiesApi.updatePost(
+            communityId,
+            editingContentId,
+            body,
+            controller.signal,
+          );
+        }
+        return communitiesApi.updateAnnouncement(
+          communityId,
+          editingContentId,
+          body,
+          controller.signal,
+        );
+      }
+      return contentKind === "post"
+        ? communitiesApi.createPost(communityId, body, controller.signal)
+        : communitiesApi.createAnnouncement(
+            communityId,
+            body,
+            controller.signal,
+          );
+    };
+    try {
+      await run(
+        "content",
+        action,
+        editingContentId ? "Content updated." : "Content published.",
+        () => {
+          setContentText("");
+          setContentImageUrl("");
+          setContentImageAsset(null);
+          setEditingContentId(null);
+        },
+      );
+    } finally {
+      if (contentRequestRef.current === controller) {
+        contentRequestRef.current = null;
+      }
+    }
   };
 
   const editContent = (item: Post | Announcement, kind: ContentKind) => {
@@ -644,6 +760,7 @@ export default function CommunityManagementScreen({
     setEditingContentId(item._id);
     setContentText(item.text);
     setContentImageUrl(item.imageUrl || "");
+    setContentImageAsset(null);
   };
 
   const removeContent = (item: Post | Announcement, kind: ContentKind) => {
@@ -667,7 +784,7 @@ export default function CommunityManagementScreen({
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <ActivityIndicator color="#08b657" size="large" />
+          <AppLoader color="#08b657" size="large" />
           <Text style={styles.muted}>Loading management tools...</Text>
         </View>
       </SafeAreaView>
@@ -1132,7 +1249,7 @@ export default function CommunityManagementScreen({
                     }}
                     style={styles.primary}
                   >
-                    <Text style={styles.primaryText}>Save settings</Text>
+                    {saveButtonContent("settings", "Save settings")}
                   </Pressable>
                 </Section>
                 <Section title="Community rules">
@@ -1218,7 +1335,7 @@ export default function CommunityManagementScreen({
                     }}
                     style={styles.primary}
                   >
-                    <Text style={styles.primaryText}>Save rules</Text>
+                    {saveButtonContent("rules", "Save rules")}
                   </Pressable>
                 </Section>
               </>
@@ -1237,6 +1354,7 @@ export default function CommunityManagementScreen({
                       setEditingContentId(null);
                       setContentText("");
                       setContentImageUrl("");
+                      setContentImageAsset(null);
                     }}
                   />
                   <TextInput
@@ -1247,14 +1365,48 @@ export default function CommunityManagementScreen({
                     style={[styles.input, styles.multiline]}
                     value={contentText}
                   />
-                  <TextInput
-                    autoCapitalize="none"
-                    onChangeText={setContentImageUrl}
-                    placeholder="HTTPS image URL (optional)"
-                    placeholderTextColor="#718078"
-                    style={styles.input}
-                    value={contentImageUrl}
-                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={Boolean(busyKey)}
+                    onPress={() => void pickContentImage()}
+                    style={styles.imagePicker}
+                  >
+                    {contentImageAsset || contentImageUrl ? (
+                      <Image
+                        source={{
+                          uri: contentImageAsset?.uri ?? contentImageUrl,
+                        }}
+                        style={styles.imagePickerPreview}
+                      />
+                    ) : (
+                      <View style={styles.imagePickerPlaceholder}>
+                        <Ionicons
+                          color="#078d45"
+                          name="image-outline"
+                          size={24}
+                        />
+                      </View>
+                    )}
+                    <View style={styles.imagePickerCopy}>
+                      <Text style={styles.imagePickerTitle}>
+                        {contentImageAsset || contentImageUrl
+                          ? "Change image"
+                          : "Add an image"}
+                      </Text>
+                      <Text style={styles.imagePickerHint}>
+                        {contentImageAsset
+                          ? "It will upload to Cloudinary when you save."
+                          : contentImageUrl
+                            ? "Current image is on Cloudinary. Select a new one to replace it."
+                            : "Choose a JPG, PNG, or WebP image to upload to Cloudinary."}
+                      </Text>
+                    </View>
+                    <Ionicons
+                      color="#078d45"
+                      name="cloud-upload-outline"
+                      size={21}
+                    />
+                  </Pressable>
                   <Pressable
                     disabled={Boolean(busyKey)}
                     onPress={() => {
@@ -1262,9 +1414,10 @@ export default function CommunityManagementScreen({
                     }}
                     style={styles.primary}
                   >
-                    <Text style={styles.primaryText}>
-                      {editingContentId ? "Save changes" : "Publish"}
-                    </Text>
+                    {saveButtonContent(
+                      "content",
+                      editingContentId ? "Save changes" : "Publish",
+                    )}
                   </Pressable>
                   {editingContentId ? (
                     <Pressable
@@ -1272,6 +1425,7 @@ export default function CommunityManagementScreen({
                         setEditingContentId(null);
                         setContentText("");
                         setContentImageUrl("");
+                      setContentImageAsset(null);
                       }}
                       style={styles.secondary}
                     >
@@ -1562,6 +1716,35 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   multiline: { minHeight: 84, textAlignVertical: "top" },
+  imagePicker: {
+    alignItems: "center",
+    backgroundColor: "#f1f7f4",
+    borderColor: "#dbece1",
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 11,
+    marginTop: 9,
+    padding: 10,
+  },
+  imagePickerPreview: { borderRadius: 12, height: 60, width: 60 },
+  imagePickerPlaceholder: {
+    alignItems: "center",
+    backgroundColor: "#e2f4e9",
+    borderRadius: 12,
+    height: 60,
+    justifyContent: "center",
+    width: 60,
+  },
+  imagePickerCopy: { flex: 1 },
+  imagePickerTitle: { color: colors.ink, fontFamily: fonts.bold, fontSize: 12 },
+  imagePickerHint: {
+    color: "#718078",
+    fontFamily: fonts.medium,
+    fontSize: 10,
+    lineHeight: 14,
+    marginTop: 3,
+  },
   primary: {
     alignItems: "center",
     backgroundColor: colors.lime,
@@ -1569,6 +1752,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     padding: 13,
   },
+  savingLabel: { alignItems: "center", flexDirection: "row", gap: 8 },
   primaryText: { color: colors.ink, fontFamily: fonts.bold, fontSize: 12 },
   secondary: {
     alignItems: "center",

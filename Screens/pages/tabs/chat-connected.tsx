@@ -4,7 +4,6 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { LinearGradient } from "expo-linear-gradient";
 import { useCallback, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Image,
   Pressable,
   RefreshControl,
@@ -16,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AppLoader from "../../components/ui/app-loader";
 import { useAuth } from "../../hooks/use-auth";
 import { ApiError } from "../../services/api/client";
 import { chatApi } from "../../services/api/chat.api";
@@ -25,23 +25,73 @@ import { colors, fonts } from "../../styles/theme";
 
 type Conversation = GetChatConversationsResponse["data"]["conversations"][number];
 
-const FALLBACK_AVATAR =
-  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80";
+function otherParticipant(conversation: Conversation, currentUserId?: string) {
+  return conversation.participants.find(
+    (participant) => participant._id !== currentUserId,
+  );
+}
 
 function conversationLabel(conversation: Conversation, currentUserId?: string) {
   if (conversation.title) return conversation.title;
-  const otherParticipant = conversation.participantIds.find((id) => id !== currentUserId);
-  return otherParticipant ? `Member ${otherParticipant.slice(-6).toUpperCase()}` : "Community conversation";
+  if (conversation.type === "group") return "Group conversation";
+
+  const participant = otherParticipant(conversation, currentUserId);
+  const fullName = [participant?.firstName, participant?.lastName]
+    .filter(Boolean)
+    .join(" ");
+  if (fullName) return fullName;
+
+  const participantId = conversation.participantIds.find(
+    (id) => id !== currentUserId,
+  );
+  return participantId
+    ? `Member ${participantId.slice(-6).toUpperCase()}`
+    : "Community conversation";
+}
+
+function conversationAvatar(conversation: Conversation, currentUserId?: string) {
+  if (conversation.type === "group") return "";
+  return otherParticipant(conversation, currentUserId)?.avatarUrl ?? "";
+}
+
+function initials(label: string) {
+  return label
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
+
+function previewText(conversation: Conversation, currentUserId?: string) {
+  const preview = conversation.lastMessagePreview;
+  if (!preview) return "Start a conversation";
+
+  let message = preview.text?.trim();
+  if (preview.type === "image") message = "Shared a photo";
+  else if (!message) message = "Shared a message";
+
+  return preview.senderId === currentUserId ? `You: ${message}` : message;
 }
 
 function formatTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) {
+    return new Intl.DateTimeFormat("en-NG", {
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(date);
+  }
+
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
   return new Intl.DateTimeFormat("en-NG", {
     day: "numeric",
     month: "short",
-    hour: "numeric",
-    minute: "2-digit",
   }).format(date);
 }
 
@@ -84,7 +134,7 @@ export default function ChatConnectedScreen() {
   const openConversation = (conversation: Conversation) => {
     navigation.navigate("ChatThread", {
       conversationId: conversation._id,
-      image: FALLBACK_AVATAR,
+      image: conversationAvatar(conversation, user?._id),
       name: conversationLabel(conversation, user?._id),
       online: false,
     });
@@ -94,8 +144,8 @@ export default function ChatConnectedScreen() {
     <SafeAreaView edges={["top"]} style={styles.safe}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.eyebrow}>COMMUNITYCONNECT</Text>
           <Text style={styles.title}>Messages</Text>
+          <Text style={styles.subtitle}>Catch up with your people</Text>
         </View>
         <Pressable onPress={() => navigation.navigate("Friends")} style={styles.headerButton}>
           <Ionicons color={colors.ink} name="create-outline" size={23} />
@@ -108,15 +158,16 @@ export default function ChatConnectedScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} />}
         showsVerticalScrollIndicator={false}
       >
-        <LinearGradient colors={["#09291d", "#0c5634", "#08b657"]} style={styles.aiCard}>
+        <LinearGradient colors={["#0b3927", "#0c5634", "#087b43"]} style={styles.aiCard}>
           <View style={styles.aiOrb}>
-            <Ionicons color={colors.ink} name="sparkles" size={25} />
+            <Ionicons color={colors.ink} name="sparkles" size={20} />
           </View>
-          <Text style={styles.aiTitle}>Meet Community AI</Text>
-          <Text style={styles.aiCopy}>Discover events, plan gatherings, and get instant help across the app.</Text>
-          <Pressable onPress={() => navigation.navigate("AIChat")} style={styles.aiButton}>
-            <Text style={styles.aiButtonText}>Ask Community AI</Text>
-            <Ionicons color={colors.ink} name="arrow-forward" size={20} />
+          <View style={styles.aiCopyWrap}>
+            <Text style={styles.aiTitle}>A little help, anytime</Text>
+            <Text numberOfLines={1} style={styles.aiCopy}>Plan events and find ideas with Community AI</Text>
+          </View>
+          <Pressable accessibilityLabel="Ask Community AI" onPress={() => navigation.navigate("AIChat")} style={styles.aiButton}>
+            <Ionicons color={colors.ink} name="arrow-forward" size={19} />
           </Pressable>
         </LinearGradient>
 
@@ -131,9 +182,14 @@ export default function ChatConnectedScreen() {
           />
         </View>
 
-        <Text style={styles.sectionTitle}>Conversations</Text>
+        <View style={styles.sectionHeading}>
+          <Text style={styles.sectionTitle}>Recent conversations</Text>
+          {!loading && visibleConversations.length ? (
+            <Text style={styles.conversationCount}>{visibleConversations.length}</Text>
+          ) : null}
+        </View>
         {loading ? (
-          <View style={styles.state}><ActivityIndicator color="#08ad54" /><Text style={styles.stateCopy}>Loading conversations...</Text></View>
+          <View style={styles.state}><AppLoader color="#08ad54" /><Text style={styles.stateCopy}>Loading conversations...</Text></View>
         ) : error ? (
           <View style={styles.state}>
             <Ionicons color="#b54d4d" name="cloud-offline-outline" size={34} />
@@ -144,14 +200,29 @@ export default function ChatConnectedScreen() {
           <View style={styles.conversations}>
             {visibleConversations.map((conversation) => (
               <Pressable key={conversation._id} onPress={() => openConversation(conversation)} style={styles.conversation}>
-                <Image source={{ uri: FALLBACK_AVATAR }} style={styles.avatar} />
+                <View style={styles.avatarWrap}>
+                  {conversationAvatar(conversation, user?._id) ? (
+                    <Image source={{ uri: conversationAvatar(conversation, user?._id) }} style={styles.avatar} />
+                  ) : (
+                    <View style={[styles.avatar, styles.avatarFallback]}>
+                      <Text style={styles.avatarInitials}>{initials(conversationLabel(conversation, user?._id))}</Text>
+                    </View>
+                  )}
+                </View>
                 <View style={styles.conversationBody}>
                   <Text style={styles.name}>{conversationLabel(conversation, user?._id)}</Text>
                   <Text numberOfLines={1} style={styles.preview}>
-                    {conversation.type === "group" ? "Group conversation" : "Open conversation"}
+                    {previewText(conversation, user?._id)}
                   </Text>
                 </View>
-                <Text style={styles.time}>{formatTime(conversation.lastMessageAt)}</Text>
+                <View style={styles.conversationMeta}>
+                  <Text style={styles.time}>{formatTime(conversation.lastMessageAt)}</Text>
+                  {conversation.unreadCount > 0 ? (
+                    <View style={styles.unreadBadge}>
+                      <Text style={styles.unreadText}>{conversation.unreadCount > 99 ? "99+" : conversation.unreadCount}</Text>
+                    </View>
+                  ) : null}
+                </View>
               </Pressable>
             ))}
           </View>
@@ -170,27 +241,35 @@ export default function ChatConnectedScreen() {
 
 const styles = StyleSheet.create({
   safe: { backgroundColor: colors.paper, flex: 1 },
-  header: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 24, paddingTop: 12 },
-  eyebrow: { color: "#2e9660", fontFamily: fonts.bold, fontSize: 10, letterSpacing: 1.1 },
-  title: { color: colors.ink, fontFamily: fonts.extraBold, fontSize: 30, marginTop: 2 },
-  headerButton: { alignItems: "center", backgroundColor: colors.white, borderRadius: 24, height: 48, justifyContent: "center", width: 48 },
-  content: { padding: 24, paddingBottom: 135 },
-  aiCard: { borderRadius: 28, marginBottom: 20, padding: 22 },
-  aiOrb: { alignItems: "center", backgroundColor: colors.lime, borderRadius: 23, height: 46, justifyContent: "center", marginBottom: 18, width: 46 },
-  aiTitle: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 23 },
-  aiCopy: { color: "#c9e7d6", fontFamily: fonts.medium, fontSize: 13, lineHeight: 20, marginTop: 7 },
-  aiButton: { alignItems: "center", alignSelf: "flex-start", backgroundColor: colors.lime, borderRadius: 22, flexDirection: "row", gap: 8, marginTop: 18, paddingHorizontal: 16, paddingVertical: 11 },
-  aiButtonText: { color: colors.ink, fontFamily: fonts.bold, fontSize: 12 },
-  search: { alignItems: "center", backgroundColor: colors.white, borderRadius: 20, flexDirection: "row", gap: 10, marginBottom: 22, paddingHorizontal: 15 },
+  header: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 22, paddingTop: 8, paddingBottom: 15 },
+  title: { color: colors.ink, fontFamily: fonts.extraBold, fontSize: 29, letterSpacing: -0.7 },
+  subtitle: { color: "#718078", fontFamily: fonts.medium, fontSize: 12, marginTop: 1 },
+  headerButton: { alignItems: "center", backgroundColor: colors.white, borderColor: "#e5eee8", borderRadius: 21, borderWidth: StyleSheet.hairlineWidth, height: 46, justifyContent: "center", width: 46 },
+  content: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 135 },
+  aiCard: { alignItems: "center", borderRadius: 22, flexDirection: "row", gap: 12, marginBottom: 21, minHeight: 80, paddingHorizontal: 14, paddingVertical: 12 },
+  aiOrb: { alignItems: "center", backgroundColor: colors.lime, borderRadius: 18, height: 38, justifyContent: "center", width: 38 },
+  aiCopyWrap: { flex: 1, minWidth: 0 },
+  aiTitle: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 14 },
+  aiCopy: { color: "#c9e7d6", fontFamily: fonts.medium, fontSize: 10, marginTop: 3 },
+  aiButton: { alignItems: "center", backgroundColor: colors.lime, borderRadius: 18, height: 36, justifyContent: "center", width: 36 },
+  search: { alignItems: "center", backgroundColor: colors.white, borderColor: "#e5eee8", borderRadius: 17, borderWidth: StyleSheet.hairlineWidth, flexDirection: "row", gap: 10, marginBottom: 23, paddingHorizontal: 15 },
   searchInput: { color: colors.ink, flex: 1, fontFamily: fonts.medium, fontSize: 14, height: 50 },
-  sectionTitle: { color: colors.ink, fontFamily: fonts.extraBold, fontSize: 18, marginBottom: 12 },
-  conversations: { gap: 10 },
-  conversation: { alignItems: "center", backgroundColor: colors.white, borderRadius: 20, flexDirection: "row", padding: 13 },
-  avatar: { borderRadius: 25, height: 50, width: 50 },
-  conversationBody: { flex: 1, marginLeft: 12 },
-  name: { color: colors.ink, fontFamily: fonts.bold, fontSize: 14 },
-  preview: { color: "#718078", fontFamily: fonts.medium, fontSize: 12, marginTop: 5 },
-  time: { color: "#7b8d84", fontFamily: fonts.medium, fontSize: 9, marginLeft: 8, maxWidth: 75, textAlign: "right" },
+  sectionHeading: { alignItems: "center", flexDirection: "row", gap: 8, marginBottom: 13 },
+  sectionTitle: { color: colors.ink, fontFamily: fonts.extraBold, fontSize: 17 },
+  conversationCount: { backgroundColor: "#e8f5ec", borderRadius: 10, color: "#368457", fontFamily: fonts.bold, fontSize: 10, overflow: "hidden", paddingHorizontal: 7, paddingVertical: 3 },
+  conversations: { gap: 9 },
+  conversation: { alignItems: "center", backgroundColor: colors.white, borderColor: "#e6eee8", borderRadius: 19, borderWidth: StyleSheet.hairlineWidth, flexDirection: "row", minHeight: 78, paddingHorizontal: 12, paddingVertical: 11 },
+  avatarWrap: { height: 52, position: "relative", width: 52 },
+  avatar: { borderColor: "#d7eddf", borderRadius: 26, borderWidth: 1, height: 52, width: 52 },
+  avatarFallback: { alignItems: "center", backgroundColor: "#e6f8ed", justifyContent: "center" },
+  avatarInitials: { color: "#087b43", fontFamily: fonts.extraBold, fontSize: 14 },
+  conversationBody: { flex: 1, marginLeft: 12, minWidth: 0 },
+  name: { color: colors.ink, fontFamily: fonts.bold, fontSize: 13 },
+  preview: { color: "#718078", fontFamily: fonts.medium, fontSize: 11, marginTop: 5 },
+  conversationMeta: { alignItems: "flex-end", justifyContent: "center", marginLeft: 7, minWidth: 47 },
+  time: { color: "#7b8d84", fontFamily: fonts.medium, fontSize: 9, textAlign: "right" },
+  unreadBadge: { alignItems: "center", backgroundColor: "#0bae53", borderRadius: 10, justifyContent: "center", marginTop: 6, minWidth: 19, paddingHorizontal: 5, paddingVertical: 2 },
+  unreadText: { color: colors.white, fontFamily: fonts.bold, fontSize: 9 },
   state: { alignItems: "center", backgroundColor: colors.white, borderRadius: 22, padding: 28 },
   stateCopy: { color: "#718078", fontFamily: fonts.medium, fontSize: 12, marginTop: 9, textAlign: "center" },
   error: { color: "#9c3f3f", fontFamily: fonts.medium, fontSize: 12, marginTop: 9, textAlign: "center" },

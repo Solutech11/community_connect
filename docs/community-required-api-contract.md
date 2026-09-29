@@ -33,7 +33,7 @@ type PagePagination = {
 };
 ```
 
-All protected endpoints require `Authorization: Bearer <accessToken>`. Object IDs below are strings containing valid MongoDB ObjectIds. Authorization must be enforced by the backend, never inferred from client UI state.
+All protected endpoints require `Authorization: Bearer <accessToken>`. Public discovery and public community reads do not require a token; the mobile client includes the current token on those reads when available so optional-auth routes can identify the viewer. Object IDs below are strings containing valid MongoDB ObjectIds. Authorization must be enforced by the backend, never inferred from client UI state.
 
 ## Shared community DTOs
 
@@ -366,11 +366,66 @@ type UnbanCommunityMemberResponse = ApiSuccess<{
 
 ---
 
-## 5. Private-community join requests
+## 5. Select the correct community join endpoint
+
+Use the endpoint that matches the community's visibility, join policy, and
+membership type. The backend confirms these routes:
+
+### `POST /communities/{communityId}/members`
+
+**Use:** Directly joins the signed-in user to a public, free community whose
+join policy is `open`.
+
+**Authorization:** Required. Send `Authorization: Bearer <accessToken>`.
+
+**Request body:** None.
+
+**Response:**
+
+```ts
+type JoinPublicFreeCommunityResponse = {
+  success: true;
+  message: string;
+};
+```
+
+**404 behavior:** The backend returns `404 COMMUNITY_NOT_FOUND` if the ID does
+not identify a community that is simultaneously `visibility: "public"`,
+`membershipType: "free"`, and `joinPolicy: "open"`. Public visibility alone
+does not qualify. Public approval communities use the join-request route;
+premium communities use membership checkout.
+
+The mobile profile uses the join-request operation for free communities. That
+operation returns an active membership for public/free/open communities and
+handles approval or private-access policies as described below. The direct
+members route remains available in the backend but is not called by the mobile
+join button.
+
+`GET /communities/{communityId}/members` is a different operation: it lists
+community members. The `POST` method is the direct join action.
+
+Use these routes for other policies:
+
+- Public, free, `approval`: `POST /communities/{communityId}/join-requests`;
+  the initial response is a pending request.
+- Private, access-code: first resolve the code with
+  `POST /communities/resolve-code` and `{ accessCode }`, then submit the
+  resolved community ID and the same code to the join-request route. A valid
+  code can activate a free membership immediately.
+- Invite-only: submit the community ID and `inviteToken` to the join-request
+  route. A valid invite can activate a free membership immediately.
+- Premium membership: initialize checkout with
+  `POST /communities/{communityId}/membership-orders` and a fresh
+  `Idempotency-Key`. Verify the order with
+  `GET /communities/membership-orders/{orderNumber}/verify`; only a verified
+  paid result activates membership. Restricted premium communities may first
+  require a valid code, invite, or approved request.
 
 ### `POST /communities/{communityId}/join-requests`
 
-**Use:** Handles private, approval-based, invite-only, or access-code communities instead of joining them immediately.
+**Use:** Creates an approval request or validates private-community access.
+Depending on policy and credentials, it may return an active free membership,
+a pending request, or an approved request that still needs premium checkout.
 
 **Authorization:** Authenticated non-member.
 
@@ -390,7 +445,7 @@ type CreateCommunityJoinRequestBody = {
 type CommunityJoinRequest = {
   _id: string;
   communityId: string;
-  requester: {
+  requesterId: {
     _id: string;
     firstName: string;
     lastName: string;
@@ -404,8 +459,8 @@ type CommunityJoinRequest = {
 };
 
 type CreateCommunityJoinRequestResponse = ApiSuccess<{
-  joinRequest: CommunityJoinRequest;
-  membership?: ViewerMembership; // present when a valid code/invite grants immediate access
+  joinRequest?: CommunityJoinRequest;
+  membership?: ViewerMembership; // present when valid free access is activated immediately
 }>;
 ```
 

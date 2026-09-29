@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,6 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import AppLoader from "../../components/ui/app-loader";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
@@ -213,7 +213,7 @@ export default function WalletDisputeConnectedScreen({
             style={[styles.primary, submitting && styles.disabled]}
           >
             {submitting ? (
-              <ActivityIndicator color={colors.ink} />
+              <AppLoader color={colors.ink} />
             ) : (
               <Text style={styles.primaryText}>Submit dispute</Text>
             )}
@@ -230,7 +230,7 @@ export default function WalletDisputeConnectedScreen({
             ) : null}
           </View>
           {loading ? (
-            <ActivityIndicator color="#08b657" />
+            <AppLoader color="#08b657" />
           ) : disputes.length ? (
             disputes.map((dispute) => (
               <Pressable
@@ -257,7 +257,7 @@ export default function WalletDisputeConnectedScreen({
           ) : (
             <Text style={styles.empty}>You have no previous disputes.</Text>
           )}
-          {detailLoading ? <ActivityIndicator color="#08b657" /> : null}
+          {detailLoading ? <AppLoader color="#08b657" /> : null}
           {selected ? (
             <View style={styles.replyCard}>
               <Text style={styles.title}>Reply to: {selected.subject}</Text>

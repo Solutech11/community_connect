@@ -1,9 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AppLoader from "../../components/ui/app-loader";
 import AppAlertModal from '../../components/ui/app-alert-modal';
 import { ApiError } from '../../services/api/client';
 import { communitiesApi } from '../../services/api/communities.api';
@@ -45,7 +52,7 @@ export default function CommunityRulesScreen({ navigation, route }: Props) {
         <Text style={styles.headerTitle}>Community Rules</Text>
         <View style={styles.headerSpacer} />
       </View>
-      {loading ? <View style={styles.loading}><ActivityIndicator color="#00b955" /></View> : rules ? <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {loading ? <View style={styles.loading}><AppLoader color="#00b955" /></View> : rules ? <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.introCard}>
           <View style={styles.introIcon}><Ionicons name="hammer" size={31} color="#00ad50" /></View>
           <Text style={styles.introTitle}>{communityName} Guidelines</Text>

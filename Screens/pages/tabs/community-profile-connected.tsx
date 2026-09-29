@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Image,
   ImageBackground,
   Pressable,
@@ -14,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AppLoader from "../../components/ui/app-loader";
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import PaystackCheckoutModal, {
   type PaystackVerificationResult,
@@ -35,6 +35,7 @@ import { communitiesApi } from "../../services/api/communities.api";
 import { colors, fonts } from "../../styles/theme";
 import type {
   GetCommunitiesIdAnnouncementsResponse,
+  GetCommunitiesIdPostsResponse,
   GetCommunitiesIdResponse,
   GetCommunitiesIdRulesResponse,
   GetUsersMeCommunitiesResponse,
@@ -58,10 +59,15 @@ type Member = {
 };
 type Announcement =
   GetCommunitiesIdAnnouncementsResponse["data"]["announcements"][number];
+type Post = GetCommunitiesIdPostsResponse["data"]["posts"][number];
+type CommunityUpdate = Announcement | Post;
 type CommunityRules = GetCommunitiesIdRulesResponse["data"]["rules"];
 type ViewerMembership =
   GetUsersMeCommunitiesResponse["data"]["communities"][number]["viewerMembership"];
-type ProfileTab = "About" | "Members" | "Rules";
+type ProfileTab = "About" | "Members" | "Rules" | "Updates";
+type UpdateTab = "posts" | "announcements";
+
+const COMMUNITY_UPDATE_PAGE_SIZE = 20;
 
 function readableDate(value: string) {
   const date = new Date(value);
@@ -100,6 +106,49 @@ function mapMember(value: unknown): Member | null {
   };
 }
 
+function CommunityUpdateCard({
+  item,
+  communityName,
+  kind,
+}: {
+  item: CommunityUpdate;
+  communityName: string;
+  kind: UpdateTab;
+}) {
+  const authorName =
+    `${item.authorId.firstName} ${item.authorId.lastName}`.trim() ||
+    communityName;
+
+  return (
+    <View style={styles.updateCard}>
+      <View style={styles.updateCardHeader}>
+        <View style={styles.updateIcon}>
+          <Ionicons
+            color="#078d45"
+            name={kind === "announcements" ? "megaphone-outline" : "chatbubble-outline"}
+            size={18}
+          />
+        </View>
+        <View style={styles.updateAuthor}>
+          <Text style={styles.updateAuthorName}>{authorName}</Text>
+          <Text style={styles.updateDate}>{readableDate(item.createdAt)}</Text>
+        </View>
+        {kind === "announcements" ? (
+          <Text style={styles.announcementBadge}>ANNOUNCEMENT</Text>
+        ) : null}
+      </View>
+      <Text style={styles.updateText}>{item.text}</Text>
+      {item.imageUrl ? (
+        <Image
+          accessibilityLabel="Community update image"
+          source={{ uri: item.imageUrl }}
+          style={styles.updateImage}
+        />
+      ) : null}
+    </View>
+  );
+}
+
 export default function CommunityProfileScreen({ navigation, route }: Props) {
   const { user } = useAuth();
   const communityId = route.params.communityId;
@@ -109,6 +158,17 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
   const [moreMembers, setMoreMembers] = useState(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [activeUpdateTab, setActiveUpdateTab] =
+    useState<UpdateTab>("announcements");
+  const [postPage, setPostPage] = useState(1);
+  const [announcementPage, setAnnouncementPage] = useState(1);
+  const [morePosts, setMorePosts] = useState(false);
+  const [moreAnnouncements, setMoreAnnouncements] = useState(false);
+  const [loadingUpdates, setLoadingUpdates] = useState(false);
+  const [loadingMorePosts, setLoadingMorePosts] = useState(false);
+  const [loadingMoreAnnouncements, setLoadingMoreAnnouncements] =
+    useState(false);
   const [communityRules, setCommunityRules] = useState<CommunityRules | null>(
     null,
   );
@@ -130,6 +190,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
   const [alert, setAlert] = useState<{ title: string; message: string } | null>(
     null,
   );
+  const updateRequestsRef = useRef(new Set<AbortController>());
   const paymentKey = useRef(createIdempotencyKey());
 
   const load = useCallback(
@@ -155,49 +216,80 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
       );
 
       if (membership?.status === "active") {
-        const [announcementResponse, settingsResponse] = await Promise.all([
-          communitiesApi.announcements(
-            communityId,
-            { page: 1, limit: 5 },
-            signal,
-          ),
-          communitiesApi.settings(communityId, signal),
-        ]);
-        const canListMembers =
-          settingsResponse.data.settings.showMemberList ||
-          membership.role === "owner" ||
-          membership.role === "moderator";
-        setMemberListVisible(canListMembers);
-        if (canListMembers) {
-          const memberResponse = await communitiesApi.members(
-            communityId,
-            { page: 1, limit: 100 },
-            signal,
+        setLoadingUpdates(true);
+        try {
+          const [postsResponse, announcementResponse, settingsResponse] =
+            await Promise.all([
+              communitiesApi.posts(
+                communityId,
+                { page: 1, limit: COMMUNITY_UPDATE_PAGE_SIZE },
+                signal,
+              ),
+              communitiesApi.announcements(
+                communityId,
+                { page: 1, limit: COMMUNITY_UPDATE_PAGE_SIZE },
+                signal,
+              ),
+              communitiesApi.settings(communityId, signal),
+            ]);
+          setPosts(postsResponse.data.posts);
+          setPostPage(1);
+          setMorePosts(
+            postsResponse.data.posts.length <
+              postsResponse.data.pagination.total,
           );
-          setMembers(
-            (memberResponse.data.members as unknown[])
-              .map(mapMember)
-              .filter((item): item is Member => item !== null),
+          setAnnouncements(announcementResponse.data.announcements);
+          setAnnouncementPage(1);
+          setMoreAnnouncements(
+            announcementResponse.data.announcements.length <
+              announcementResponse.data.pagination.total,
           );
-          setMemberPage(1);
-          setMoreMembers(
-            (memberResponse.data.pagination?.total ??
-              memberResponse.data.members.length) >
-              memberResponse.data.members.length,
+          const canListMembers =
+            settingsResponse.data.settings.showMemberList ||
+            membership.role === "owner" ||
+            membership.role === "moderator";
+          setMemberListVisible(canListMembers);
+          if (canListMembers) {
+            const memberResponse = await communitiesApi.members(
+              communityId,
+              { page: 1, limit: 100 },
+              signal,
+            );
+            setMembers(
+              (memberResponse.data.members as unknown[])
+                .map(mapMember)
+                .filter((item): item is Member => item !== null),
+            );
+            setMemberPage(1);
+            setMoreMembers(
+              (memberResponse.data.pagination?.total ??
+                memberResponse.data.members.length) >
+                memberResponse.data.members.length,
+            );
+          } else {
+            setMembers([]);
+            setMoreMembers(false);
+            setActiveTab("About");
+          }
+          setMessagePermission(
+            settingsResponse.data.settings.messagePermission,
           );
-        } else {
-          setMembers([]);
-          setMoreMembers(false);
-          setActiveTab("About");
+        } finally {
+          setLoadingUpdates(false);
         }
-        setAnnouncements(announcementResponse.data.announcements);
-        setMessagePermission(settingsResponse.data.settings.messagePermission);
       } else {
         setMembers([]);
         setMemberListVisible(false);
         setMoreMembers(false);
+        setPosts([]);
+        setPostPage(1);
+        setMorePosts(false);
         setAnnouncements([]);
+        setAnnouncementPage(1);
+        setMoreAnnouncements(false);
+        setLoadingUpdates(false);
         setMessagePermission("everyone");
+        setActiveTab("About");
       }
     },
     [communityId],
@@ -219,7 +311,11 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
         });
       })
       .finally(() => setLoading(false));
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      updateRequestsRef.current.forEach((request) => request.abort());
+      updateRequestsRef.current.clear();
+    };
   }, [load]);
 
   const joined = viewerMembership?.status === "active";
@@ -242,6 +338,25 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
         .includes(search),
     );
   }, [memberSearch, members]);
+  const sortedPosts = useMemo(
+    () =>
+      [...posts].sort(
+        (left, right) =>
+          new Date(right.createdAt).getTime() -
+          new Date(left.createdAt).getTime(),
+      ),
+    [posts],
+  );
+  const sortedAnnouncements = useMemo(
+    () =>
+      [...announcements].sort(
+        (left, right) =>
+          new Date(right.createdAt).getTime() -
+          new Date(left.createdAt).getTime(),
+      ),
+    [announcements],
+  );
+  const latestAnnouncements = sortedAnnouncements.slice(0, 2);
 
   const loadMoreMembers = async () => {
     if (!moreMembers || loadingMembers) return;
@@ -272,6 +387,80 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
       });
     } finally {
       setLoadingMembers(false);
+    }
+  };
+
+  const loadMorePosts = async () => {
+    if (!morePosts || loadingMorePosts) return;
+    setLoadingMorePosts(true);
+    const controller = new AbortController();
+    updateRequestsRef.current.add(controller);
+    try {
+      const nextPage = postPage + 1;
+      const response = await communitiesApi.posts(communityId, {
+        page: nextPage,
+        limit: COMMUNITY_UPDATE_PAGE_SIZE,
+      }, controller.signal);
+      if (controller.signal.aborted) return;
+      setPosts((current) => {
+        const ids = new Set(current.map((item) => item._id));
+        return [
+          ...current,
+          ...response.data.posts.filter((item) => !ids.has(item._id)),
+        ];
+      });
+      setPostPage(nextPage);
+      setMorePosts(
+        nextPage * COMMUNITY_UPDATE_PAGE_SIZE <
+          response.data.pagination.total,
+      );
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      setAlert({
+        title: "Unable to load posts",
+        message:
+          error instanceof ApiError ? error.message : "Please try again.",
+      });
+    } finally {
+      updateRequestsRef.current.delete(controller);
+      if (!controller.signal.aborted) setLoadingMorePosts(false);
+    }
+  };
+
+  const loadMoreAnnouncements = async () => {
+    if (!moreAnnouncements || loadingMoreAnnouncements) return;
+    setLoadingMoreAnnouncements(true);
+    const controller = new AbortController();
+    updateRequestsRef.current.add(controller);
+    try {
+      const nextPage = announcementPage + 1;
+      const response = await communitiesApi.announcements(communityId, {
+        page: nextPage,
+        limit: COMMUNITY_UPDATE_PAGE_SIZE,
+      }, controller.signal);
+      if (controller.signal.aborted) return;
+      setAnnouncements((current) => {
+        const ids = new Set(current.map((item) => item._id));
+        return [
+          ...current,
+          ...response.data.announcements.filter((item) => !ids.has(item._id)),
+        ];
+      });
+      setAnnouncementPage(nextPage);
+      setMoreAnnouncements(
+        nextPage * COMMUNITY_UPDATE_PAGE_SIZE <
+          response.data.pagination.total,
+      );
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      setAlert({
+        title: "Unable to load announcements",
+        message:
+          error instanceof ApiError ? error.message : "Please try again.",
+      });
+    } finally {
+      updateRequestsRef.current.delete(controller);
+      if (!controller.signal.aborted) setLoadingMoreAnnouncements(false);
     }
   };
 
@@ -379,9 +568,20 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
           }
         }
       } else if (community.membershipType === "free") {
-        const response = await communitiesApi.join(community._id);
-        await load();
-        setAlert({ title: "Joined community", message: response.message });
+        const response = await communitiesApi.createJoinRequest(community._id, {});
+        if (response.data.membership?.status === "active") {
+          await load();
+          setAlert({ title: "Joined community", message: response.message });
+        } else if (response.data.joinRequest) {
+          setJoinRequestPending(true);
+          setAlert({ title: "Request sent", message: response.message });
+        } else {
+          await load();
+          setAlert({
+            title: "Join status unclear",
+            message: "Check your membership before trying again.",
+          });
+        }
       } else {
         const response = await communitiesApi.createMembershipOrder(
           community._id,
@@ -392,6 +592,13 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
         setCheckoutVisible(true);
       }
     } catch (error) {
+      if (
+        error instanceof ApiError &&
+        error.code === "COMMUNITY_ACCESS_REQUIRED"
+      ) {
+        navigation.navigate("CommunityJoin", { communityId: community._id });
+        return;
+      }
       setAlert({
         title: "Unable to join",
         message:
@@ -479,7 +686,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.loadingState}>
-          <ActivityIndicator color="#08b657" size="large" />
+          <AppLoader color="#08b657" size="large" />
           <Text style={styles.stateText}>Loading community...</Text>
         </View>
       </SafeAreaView>
@@ -649,7 +856,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
                 style={[styles.joinButton, submitting && styles.disabled]}
               >
                 {submitting ? (
-                  <ActivityIndicator color={colors.ink} />
+                  <AppLoader color={colors.ink} />
                 ) : (
                   <Ionicons name="add-circle" size={21} color={colors.ink} />
                 )}
@@ -685,6 +892,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
             {(
               [
                 "About",
+                ...(joined ? ["Updates"] : []),
                 ...(joined && memberListVisible ? ["Members"] : []),
                 "Rules",
               ] as ProfileTab[]
@@ -741,7 +949,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
                     </Text>
                   </View>
                 </View>
-                {joined && announcements.length > 0 ? (
+                {joined ? (
                   <View style={styles.announcementCard}>
                     <View style={styles.cardTitleRow}>
                       <Ionicons name="megaphone" size={20} color="#05b954" />
@@ -749,10 +957,8 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
                         Latest announcements
                       </Text>
                     </View>
-                    {announcements
-                      .slice(-2)
-                      .reverse()
-                      .map((item) => (
+                    {latestAnnouncements.length ? (
+                      latestAnnouncements.map((item) => (
                         <View key={item._id} style={styles.announcement}>
                           <Text style={styles.announcementText}>
                             {item.text}
@@ -761,7 +967,25 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
                             {readableDate(item.createdAt)}
                           </Text>
                         </View>
-                      ))}
+                      ))
+                    ) : (
+                      <Text style={styles.emptyUpdateText}>
+                        No announcements yet.
+                      </Text>
+                    )}
+                    <Pressable
+                      onPress={() => setActiveTab("Updates")}
+                      style={styles.viewUpdatesButton}
+                    >
+                      <Text style={styles.viewUpdatesText}>
+                        See all posts and announcements
+                      </Text>
+                      <Ionicons
+                        color="#087b42"
+                        name="arrow-forward"
+                        size={17}
+                      />
+                    </Pressable>
                   </View>
                 ) : null}
                 <Pressable
@@ -790,6 +1014,135 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
                       "Community guidelines are being prepared."}
                   </Text>
                 </Pressable>
+              </>
+            ) : null}
+
+            {activeTab === "Updates" && joined ? (
+              <>
+                <Text style={styles.bodyHeading}>Community updates</Text>
+                <Text style={styles.updatesIntro}>
+                  Posts and announcements shared with members.
+                </Text>
+                <View style={styles.updateTabs}>
+                  {(["posts", "announcements"] as UpdateTab[]).map(
+                    (updateTab) => (
+                      <Pressable
+                        key={updateTab}
+                        onPress={() => setActiveUpdateTab(updateTab)}
+                        style={[
+                          styles.updateTab,
+                          activeUpdateTab === updateTab &&
+                            styles.updateTabActive,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.updateTabText,
+                            activeUpdateTab === updateTab &&
+                              styles.updateTabTextActive,
+                          ]}
+                        >
+                          {updateTab === "posts" ? "Posts" : "Announcements"}
+                        </Text>
+                      </Pressable>
+                    ),
+                  )}
+                </View>
+
+                {loadingUpdates ? (
+                  <View style={styles.updatesLoading}>
+                    <AppLoader color="#08b657" size="large" />
+                    <Text style={styles.emptyUpdateText}>
+                      Loading community updates...
+                    </Text>
+                  </View>
+                ) : activeUpdateTab === "posts" ? (
+                  <>
+                    {sortedPosts.map((item) => (
+                      <CommunityUpdateCard
+                        key={item._id}
+                        communityName={community.name}
+                        item={item}
+                        kind="posts"
+                      />
+                    ))}
+                    {!sortedPosts.length ? (
+                      <View style={styles.updateEmpty}>
+                        <Ionicons
+                          color="#6b987d"
+                          name="chatbubbles-outline"
+                          size={28}
+                        />
+                        <Text style={styles.emptyUpdateText}>
+                          No posts yet.
+                        </Text>
+                      </View>
+                    ) : null}
+                    {morePosts ? (
+                      <Pressable
+                        disabled={loadingMorePosts}
+                        onPress={() => void loadMorePosts()}
+                        style={styles.loadUpdatesButton}
+                      >
+                        {loadingMorePosts ? (
+                          <View style={styles.loadUpdatesLabel}>
+                            <AppLoader color="#078d45" />
+                            <Text style={styles.loadUpdatesText}>
+                              Loading posts...
+                            </Text>
+                          </View>
+                        ) : (
+                          <Text style={styles.loadUpdatesText}>
+                            Load more posts
+                          </Text>
+                        )}
+                      </Pressable>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    {sortedAnnouncements.map((item) => (
+                      <CommunityUpdateCard
+                        key={item._id}
+                        communityName={community.name}
+                        item={item}
+                        kind="announcements"
+                      />
+                    ))}
+                    {!sortedAnnouncements.length ? (
+                      <View style={styles.updateEmpty}>
+                        <Ionicons
+                          color="#6b987d"
+                          name="megaphone-outline"
+                          size={28}
+                        />
+                        <Text style={styles.emptyUpdateText}>
+                          No announcements yet.
+                        </Text>
+                      </View>
+                    ) : null}
+                    {moreAnnouncements ? (
+                      <Pressable
+                        disabled={loadingMoreAnnouncements}
+                        onPress={() => void loadMoreAnnouncements()}
+                        style={styles.loadUpdatesButton}
+                      >
+                        {loadingMoreAnnouncements ? (
+                          <View style={styles.loadUpdatesLabel}>
+                            <AppLoader color="#078d45" />
+                            <Text style={styles.loadUpdatesText}>
+                              Loading announcements...
+                            </Text>
+                          </View>
+                        ) : (
+                          <Text style={styles.loadUpdatesText}>
+                            Load more announcements
+                          </Text>
+                        )}
+                      </Pressable>
+                    ) : null}
+                  </>
+                )}
               </>
             ) : null}
 
@@ -1116,6 +1469,119 @@ const styles = StyleSheet.create({
     fontSize: 9,
     marginTop: 5,
   },
+  viewUpdatesButton: {
+    alignItems: "center",
+    borderTopColor: "#edf2ef",
+    borderTopWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 14,
+    paddingTop: 13,
+  },
+  viewUpdatesText: { color: "#087b42", fontFamily: fonts.bold, fontSize: 11 },
+  updatesIntro: {
+    color: "#718078",
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 15,
+    marginTop: 6,
+  },
+  updateTabs: {
+    backgroundColor: "#eaf3ed",
+    borderRadius: 18,
+    flexDirection: "row",
+    marginBottom: 15,
+    padding: 4,
+  },
+  updateTab: {
+    alignItems: "center",
+    borderRadius: 14,
+    flex: 1,
+    paddingVertical: 10,
+  },
+  updateTabActive: {
+    backgroundColor: colors.white,
+    elevation: 1,
+  },
+  updateTabText: { color: "#6e8175", fontFamily: fonts.bold, fontSize: 12 },
+  updateTabTextActive: { color: "#087b42" },
+  updateCard: {
+    backgroundColor: colors.white,
+    borderRadius: 22,
+    marginBottom: 13,
+    padding: 15,
+  },
+  updateCardHeader: { alignItems: "center", flexDirection: "row", gap: 10 },
+  updateIcon: {
+    alignItems: "center",
+    backgroundColor: "#e8f7ed",
+    borderRadius: 18,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+  },
+  updateAuthor: { flex: 1 },
+  updateAuthorName: { color: colors.ink, fontFamily: fonts.bold, fontSize: 12 },
+  updateDate: {
+    color: "#8a9a91",
+    fontFamily: fonts.medium,
+    fontSize: 9,
+    marginTop: 3,
+  },
+  announcementBadge: {
+    backgroundColor: "#e8f8ee",
+    borderRadius: 11,
+    color: "#087b42",
+    fontFamily: fonts.bold,
+    fontSize: 8,
+    overflow: "hidden",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  updateText: {
+    color: "#314d3c",
+    fontFamily: fonts.medium,
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 13,
+  },
+  updateImage: {
+    borderRadius: 16,
+    height: 200,
+    marginTop: 12,
+    width: "100%",
+  },
+  updateEmpty: {
+    alignItems: "center",
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    padding: 24,
+  },
+  updatesLoading: {
+    alignItems: "center",
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    padding: 24,
+  },
+  emptyUpdateText: {
+    color: "#718078",
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    marginTop: 9,
+    textAlign: "center",
+  },
+  loadUpdatesButton: {
+    alignItems: "center",
+    backgroundColor: colors.white,
+    borderColor: "#dbece1",
+    borderRadius: 18,
+    borderWidth: 1,
+    marginBottom: 14,
+    padding: 13,
+  },
+  loadUpdatesLabel: { alignItems: "center", flexDirection: "row", gap: 8 },
+  loadUpdatesText: { color: "#087b42", fontFamily: fonts.bold, fontSize: 11 },
   rulesPreview: {
     backgroundColor: colors.white,
     borderRadius: 25,

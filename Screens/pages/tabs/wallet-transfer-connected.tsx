@@ -1,7 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useRef, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import AppLoader from "../../components/ui/app-loader";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
@@ -54,7 +61,7 @@ export default function WalletTransferConnectedScreen({ navigation }: Props) {
         <TextInput keyboardType="decimal-pad" onChangeText={(value) => { setAmount(value); keyRef.current = null; }} placeholder="5000" placeholderTextColor="#718078" style={styles.input} value={amount} />
         <Text style={styles.label}>Note (optional)</Text>
         <TextInput onChangeText={(value) => { setNote(value); keyRef.current = null; }} placeholder="Shared event costs" placeholderTextColor="#718078" style={styles.input} value={note} />
-        <Pressable disabled={submitting} onPress={() => void submit()} style={[styles.primary, submitting && styles.disabled]}>{submitting ? <ActivityIndicator color={colors.ink} /> : <Text style={styles.primaryText}>Send transfer</Text>}</Pressable>
+        <Pressable disabled={submitting} onPress={() => void submit()} style={[styles.primary, submitting && styles.disabled]}>{submitting ? <AppLoader color={colors.ink} /> : <Text style={styles.primaryText}>Send transfer</Text>}</Pressable>
       </View>
     </SafeAreaView>
     <AppAlertModal visible={Boolean(notice)} title={notice?.title ?? ""} message={notice?.message ?? ""} onClose={() => setNotice(null)} />

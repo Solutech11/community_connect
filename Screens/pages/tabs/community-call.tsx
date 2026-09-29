@@ -11,9 +11,15 @@ import {
 } from '@livekit/react-native';
 import { Track } from 'livekit-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AppLoader from "../../components/ui/app-loader";
 import AppAlertModal from '../../components/ui/app-alert-modal';
 import { liveKitUrl } from '../../services/api/config';
 import { ApiError } from '../../services/api/client';
@@ -90,7 +96,7 @@ function CallControls({ callType, canEndCall, ending, onLeave, onRequestEnd }: C
         ) : null}
         {canEndCall ? (
           <Pressable disabled={ending} onPress={onRequestEnd} style={[styles.endButton, ending && styles.disabled]}>
-            {ending ? <ActivityIndicator color={colors.white} /> : <Ionicons name="stop" color={colors.white} size={21} />}
+            {ending ? <AppLoader color={colors.white} /> : <Ionicons name="stop" color={colors.white} size={21} />}
           </Pressable>
         ) : (
           <Pressable onPress={onLeave} style={styles.leaveButton}>

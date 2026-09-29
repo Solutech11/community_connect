@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AppLoader from "../../components/ui/app-loader";
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import ProfilePageHeader from "../../components/ui/profile-page-header";
 import { ApiError } from "../../services/api/client";
@@ -88,7 +88,7 @@ export default function BankAccountsScreen({ navigation }: Props) {
         <ProfilePageHeader title="Bank Accounts" onBack={navigation.goBack} />
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Text style={styles.heading}>Saved accounts</Text>
-          {loading ? <ActivityIndicator color="#08b657" /> : null}
+          {loading ? <AppLoader color="#08b657" /> : null}
           {!loading && !accounts.length ? <Text style={styles.empty}>No saved bank accounts.</Text> : null}
           {accounts.map((account) => (
             <View key={account._id} style={styles.account}>
@@ -113,7 +113,7 @@ export default function BankAccountsScreen({ navigation }: Props) {
           </ScrollView>
           <TextInput keyboardType="number-pad" maxLength={10} onChangeText={setAccountNumber} placeholder="10-digit account number" placeholderTextColor="#718078" style={styles.input} value={accountNumber} />
           <Pressable disabled={submitting} onPress={() => void save()} style={[styles.primary, submitting && styles.disabled]}>
-            {submitting ? <ActivityIndicator color={colors.ink} /> : <Text style={styles.primaryText}>Verify and save</Text>}
+            {submitting ? <AppLoader color={colors.ink} /> : <Text style={styles.primaryText}>Verify and save</Text>}
           </Pressable>
         </ScrollView>
       </SafeAreaView>

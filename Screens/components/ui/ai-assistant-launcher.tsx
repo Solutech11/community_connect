@@ -11,6 +11,7 @@ const HIDDEN_ROUTES = new Set([
   "AIChat",
   "Chat",
   "ChatThread",
+  "CommunityRoom",
   "CreateEventReview",
   "TicketScanner",
 ]);

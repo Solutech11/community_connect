@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
@@ -11,6 +10,7 @@ import {
   View,
 } from "react-native";
 
+import AppLoader from "./app-loader";
 import { reportReasons, type ReportReason } from "../../data/report-options";
 import { lightTap as tapFeedback } from "../../hooks/haptics";
 import { colors, fonts } from "../../styles/theme";
@@ -155,7 +155,7 @@ export default function AppReportSheet({
             style={[styles.submitButton, submitting && styles.disabled]}
           >
             {submitting ? (
-              <ActivityIndicator color={colors.white} />
+              <AppLoader color={colors.white} />
             ) : (
               <Ionicons name="flag" size={20} color={colors.white} />
             )}

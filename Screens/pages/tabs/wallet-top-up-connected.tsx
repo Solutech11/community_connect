@@ -2,13 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import AppLoader from "../../components/ui/app-loader";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
@@ -153,7 +153,7 @@ export default function WalletTopUpConnectedScreen({ navigation }: Props) {
             style={[styles.primary, submitting && styles.disabled]}
           >
             {submitting ? (
-              <ActivityIndicator color={colors.ink} />
+              <AppLoader color={colors.ink} />
             ) : (
               <Text style={styles.primaryText}>
                 {authorizationUrl
@@ -174,7 +174,7 @@ export default function WalletTopUpConnectedScreen({ navigation }: Props) {
                 style={styles.secondary}
               >
                 {verifying ? (
-                  <ActivityIndicator color="#078d45" />
+                  <AppLoader color="#078d45" />
                 ) : (
                   <Text style={styles.secondaryText}>Verify payment</Text>
                 )}

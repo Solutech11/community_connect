@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Image,
   Pressable,
   RefreshControl,
@@ -12,6 +11,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import AppLoader from "../../components/ui/app-loader";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
@@ -228,7 +228,7 @@ export default function FriendsConnectedScreen({ navigation }: Props) {
 
           {loading ? (
             <View style={styles.state}>
-              <ActivityIndicator color="#08ad54" />
+              <AppLoader color="#08ad54" />
             </View>
           ) : null}
 
@@ -254,7 +254,7 @@ export default function FriendsConnectedScreen({ navigation }: Props) {
                       style={styles.iconAction}
                     >
                       {pendingId === friendship._id ? (
-                        <ActivityIndicator color="#078d45" />
+                        <AppLoader color="#078d45" />
                       ) : (
                         <Ionicons
                           color="#078d45"
@@ -414,7 +414,7 @@ export default function FriendsConnectedScreen({ navigation }: Props) {
                     style={styles.add}
                   >
                     {pendingId === suggestion._id ? (
-                      <ActivityIndicator color={colors.ink} />
+                      <AppLoader color={colors.ink} />
                     ) : (
                       <Ionicons
                         color={colors.ink}

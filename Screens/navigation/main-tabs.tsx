@@ -96,7 +96,7 @@ function DashboardCommunity() {
 
 function DashboardChat() {
   return (
-    <DashboardLayout>
+    <DashboardLayout showAiAssistant={false}>
       <ChatScreen />
     </DashboardLayout>
   );

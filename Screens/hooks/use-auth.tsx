@@ -9,7 +9,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Platform } from "react-native";
+import Constants from "expo-constants";
+import { AppState, Platform } from "react-native";
 
 import type {
   PostAuthLoginBody,
@@ -68,7 +69,7 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-async function registerPushNotifications() {
+async function getExpoPushToken(requestPermission: boolean) {
   if (Platform.OS === "web") return null;
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {
@@ -77,12 +78,17 @@ async function registerPushNotifications() {
     });
   }
   const current = await Notifications.getPermissionsAsync();
-  const permission = current.granted
-    ? current
-    : await Notifications.requestPermissionsAsync();
+  const permission =
+    current.granted || !requestPermission
+      ? current
+      : await Notifications.requestPermissionsAsync();
   if (!permission.granted) return null;
-  const result = await Notifications.getExpoPushTokenAsync();
-  await usersApi.registerPushToken(result.data);
+  const projectId =
+    Constants.expoConfig?.extra?.eas?.projectId ??
+    Constants.easConfig?.projectId;
+  if (typeof projectId !== "string" || projectId.length === 0) return null;
+
+  const result = await Notifications.getExpoPushTokenAsync({ projectId });
   return result.data;
 }
 
@@ -93,26 +99,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useState<AuthenticatedStartRoute>("Home");
   const [unauthenticatedStartRoute, setUnauthenticatedStartRoute] =
     useState<UnauthenticatedStartRoute>("OnboardingWelcome");
-  const [pushToken, setPushToken] = useState<string | null>(null);
   const sessionVersion = useRef(0);
+  const pushTokenRef = useRef<string | null>(null);
+  const pushRegistrationRef = useRef<{
+    version: number;
+    promise: Promise<string | null>;
+  } | null>(null);
+
+  const syncPushToken = useCallback(
+    async (expectedVersion: number, requestPermission: boolean) => {
+      while (pushRegistrationRef.current) {
+        const inFlight = pushRegistrationRef.current;
+        if (inFlight.version === expectedVersion) return inFlight.promise;
+        await inFlight.promise;
+      }
+      if (sessionVersion.current !== expectedVersion) return null;
+
+      const task = (async () => {
+        try {
+          const nextToken = await getExpoPushToken(requestPermission);
+          if (!nextToken || sessionVersion.current !== expectedVersion)
+            return null;
+
+          const previousToken = pushTokenRef.current;
+          if (previousToken !== nextToken) {
+            await usersApi.registerPushToken(nextToken);
+          }
+          if (sessionVersion.current !== expectedVersion) {
+            if (previousToken !== nextToken) {
+              try {
+                await usersApi.removePushToken(nextToken);
+              } catch {
+                // The session is ending; avoid keeping a token registered when possible.
+              }
+            }
+            return null;
+          }
+
+          pushTokenRef.current = nextToken;
+          if (previousToken && previousToken !== nextToken) {
+            try {
+              await usersApi.removePushToken(previousToken);
+            } catch {
+              // The new token is active; a stale token can be cleaned up later.
+            }
+          }
+          return nextToken;
+        } catch {
+          // Push registration must not block an otherwise valid authenticated session.
+          return null;
+        }
+      })();
+      const registration = { version: expectedVersion, promise: task };
+      pushRegistrationRef.current = registration;
+      try {
+        return await task;
+      } finally {
+        if (pushRegistrationRef.current === registration) {
+          pushRegistrationRef.current = null;
+        }
+      }
+    },
+    [],
+  );
 
   const establishAuthenticatedSession = useCallback(
     async (
       nextUser: AuthUser,
       startRoute: AuthenticatedStartRoute = "Home",
     ) => {
-      const version = ++sessionVersion.current;
+      sessionVersion.current += 1;
       setAuthenticatedStartRoute(startRoute);
       setUser(nextUser);
       const token = apiClient.getAccessToken();
       if (token) chatSocket.connect(token);
-      void registerPushNotifications()
-        .then((registeredToken) => {
-          if (sessionVersion.current === version) setPushToken(registeredToken);
-        })
-        .catch(() => {
-          // Push registration must not block an otherwise valid authenticated session.
-        });
     },
     [],
   );
@@ -122,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUnauthenticatedStartRoute(startRoute);
       sessionVersion.current += 1;
       chatSocket.disconnect();
-      setPushToken(null);
+      pushTokenRef.current = null;
       setUser(null);
     },
     [],
@@ -139,6 +199,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribeToken();
     };
   }, [clearSessionState, user]);
+
+  useEffect(() => {
+    if (!user || Platform.OS === "web") return;
+
+    const version = sessionVersion.current;
+    void syncPushToken(version, true);
+    const pushTokenSubscription = Notifications.addPushTokenListener(() => {
+      // Expo emits the native token here; fetch and register the corresponding Expo token.
+      void syncPushToken(version, false);
+    });
+    const appStateSubscription = AppState.addEventListener(
+      "change",
+      (state) => {
+        if (state === "active") void syncPushToken(version, false);
+      },
+    );
+
+    return () => {
+      pushTokenSubscription.remove();
+      appStateSubscription.remove();
+    };
+  }, [syncPushToken, user?._id]);
 
   useEffect(() => {
     let active = true;
@@ -222,8 +304,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    sessionVersion.current += 1;
+    const pendingRegistration = pushRegistrationRef.current?.promise;
+    if (pendingRegistration) await pendingRegistration;
     try {
-      if (pushToken) await usersApi.removePushToken(pushToken);
+      if (pushTokenRef.current) {
+        await usersApi.removePushToken(pushTokenRef.current);
+      }
     } catch {
       // Local credential cleanup is mandatory even when push-token removal fails.
     }
@@ -232,7 +319,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       clearSessionState("Login");
     }
-  }, [clearSessionState, pushToken]);
+  }, [clearSessionState]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -268,4 +355,3 @@ export function useAuth() {
   if (!value) throw new Error("useAuth must be used inside AuthProvider");
   return value;
 }
-

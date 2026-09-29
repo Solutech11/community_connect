@@ -1,7 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import AppLoader from "../../components/ui/app-loader";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
@@ -39,7 +46,7 @@ export default function TransactionDetailsScreen({ navigation, route }: Props) {
     <>
       <SafeAreaView edges={[]} style={styles.safe}>
         <ProfilePageHeader title="Transaction Details" onBack={navigation.goBack} />
-        {loading ? <View style={styles.loading}><ActivityIndicator color="#08b657" /></View> : null}
+        {loading ? <View style={styles.loading}><AppLoader color="#08b657" /></View> : null}
         {transaction ? (
           <ScrollView contentContainerStyle={styles.content}>
             <View style={styles.amountCard}>

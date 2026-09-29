@@ -3,8 +3,8 @@ import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AppLoader from "../../components/ui/app-loader";
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import AppReportSheet from "../../components/ui/app-report-sheet";
 import { communityImage, initials } from "../../data/community-presentation";
@@ -241,6 +242,7 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
     {},
   );
   const [draft, setDraft] = useState("");
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [pickedImage, setPickedImage] = useState<PickedImage | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -263,9 +265,26 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
     null,
   );
 
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+
+    const show = Keyboard.addListener("keyboardDidShow", () => {
+      setKeyboardVisible(true);
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
   const canModerate =
     membershipRole === "owner" || membershipRole === "moderator";
   const canSendMessages = messagePermission !== "moderators" || canModerate;
+  const hasSendableContent = Boolean(draft.trim() || pickedImage);
 
   const upsertMessage = useCallback((next: RoomMessage) => {
     setMessages((current) => {
@@ -778,17 +797,26 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
     <>
       <SafeAreaView style={styles.safe} edges={["top"]}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={
+            Platform.OS === "ios"
+              ? "padding"
+              : keyboardVisible
+                ? "height"
+                : undefined
+          }
           style={styles.keyboard}
         >
           <View style={styles.header}>
             <Pressable
+              accessibilityLabel="Go back"
+              hitSlop={6}
               onPress={() => navigation.goBack()}
               style={styles.headerBack}
             >
-              <Ionicons name="chevron-back" size={29} color="#60718d" />
+              <Ionicons name="chevron-back" size={25} color={colors.ink} />
             </Pressable>
             <Pressable
+              accessibilityLabel="Open community profile"
               disabled={!community}
               onPress={() =>
                 navigation.navigate("CommunityProfile", { communityId })
@@ -809,22 +837,28 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
               </View>
             </Pressable>
             <Pressable
+              accessibilityLabel="Start or join voice call"
+              hitSlop={4}
               onPress={() => void startOrJoinCall("voice")}
               style={styles.headerIcon}
             >
-              <Ionicons name="call" size={23} color="#06d263" />
+              <Ionicons name="call" size={19} color="#168b4d" />
             </Pressable>
             <Pressable
+              accessibilityLabel="Start or join video call"
+              hitSlop={4}
               onPress={() => void startOrJoinCall("video")}
               style={styles.headerIcon}
             >
-              <Ionicons name="videocam" size={23} color="#06d263" />
+              <Ionicons name="videocam" size={20} color="#168b4d" />
             </Pressable>
             <Pressable
+              accessibilityLabel="Community room options"
+              hitSlop={4}
               onPress={() => setMenuVisible((value) => !value)}
-              style={styles.headerIcon}
+              style={[styles.headerIcon, styles.headerMenuIcon]}
             >
-              <Ionicons name="ellipsis-vertical" size={24} color="#60718d" />
+              <Ionicons name="ellipsis-vertical" size={20} color={colors.ink} />
             </Pressable>
             {menuVisible ? (
               <View style={styles.menu}>
@@ -934,12 +968,13 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
           </View>
           {loading ? (
             <View style={styles.loading}>
-              <ActivityIndicator color="#00c95a" size="large" />
+              <AppLoader color="#00c95a" size="large" />
               <Text style={styles.loadingText}>Loading messages...</Text>
             </View>
           ) : (
             <ScrollView
               ref={scrollRef}
+              style={styles.messageList}
               contentContainerStyle={styles.messages}
               refreshControl={
                 <RefreshControl
@@ -969,11 +1004,13 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
                   onPress={() => void startOrJoinCall(activeCall.type)}
                   style={styles.liveCallBanner}
                 >
-                  <Ionicons
-                    name={activeCall.type === "video" ? "videocam" : "call"}
-                    size={18}
-                    color={colors.white}
-                  />
+                  <View style={styles.liveCallIcon}>
+                    <Ionicons
+                      name={activeCall.type === "video" ? "videocam" : "call"}
+                      size={18}
+                      color={colors.white}
+                    />
+                  </View>
                   <View style={styles.liveCallCopy}>
                     <Text style={styles.liveCallTitle}>
                       {activeCall.type === "video" ? "Video" : "Voice"} call in
@@ -986,8 +1023,8 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
                     </Text>
                   </View>
                   <Ionicons
-                    name="arrow-forward"
-                    size={18}
+                    name="arrow-forward-circle-outline"
+                    size={22}
                     color={colors.white}
                   />
                 </Pressable>
@@ -1257,7 +1294,7 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
             </ScrollView>
           )}
           {canSendMessages ? (
-            <View style={styles.composerWrap}>
+            <SafeAreaView edges={["bottom"]} style={styles.composerWrap}>
               {replyTarget ? (
                 <View style={styles.editingBanner}>
                   <Text numberOfLines={1} style={styles.editingText}>
@@ -1300,14 +1337,16 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
               ) : null}
               <View style={styles.composer}>
                 <Pressable
+                  accessibilityLabel="Add photo"
+                  accessibilityRole="button"
                   disabled={sending || Boolean(editingMessageId)}
                   onPress={() => void pickImage()}
                   style={[
                     styles.addButton,
-                    editingMessageId && styles.sendDisabled,
+                    (sending || editingMessageId) && styles.addDisabled,
                   ]}
                 >
-                  <Ionicons name="add" size={29} color="#5e718d" />
+                  <Ionicons name="add" size={24} color="#24774a" />
                 </Pressable>
                 <View style={styles.inputWrap}>
                   <TextInput
@@ -1319,40 +1358,42 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
                         ? "Edit your message..."
                         : "Type a message..."
                     }
-                    placeholderTextColor="#98a8bd"
+                    placeholderTextColor="#8a9b91"
                     style={styles.input}
                     value={draft}
                   />
-                  <Ionicons name="happy-outline" size={23} color="#8b9bb0" />
                 </View>
                 <Pressable
-                  disabled={sending || (!draft.trim() && !pickedImage)}
+                  accessibilityLabel={
+                    editingMessageId ? "Save message" : "Send message"
+                  }
+                  accessibilityRole="button"
+                  disabled={sending || !hasSendableContent}
                   onPress={() => void sendMessage()}
                   style={[
                     styles.sendButton,
-                    (sending || (!draft.trim() && !pickedImage)) &&
-                      styles.sendDisabled,
+                    (sending || !hasSendableContent) && styles.sendDisabled,
                   ]}
                 >
                   {sending ? (
-                    <ActivityIndicator color="#07130d" />
+                    <AppLoader color="#07130d" />
                   ) : (
                     <Ionicons
                       name={editingMessageId ? "checkmark" : "send"}
-                      size={25}
-                      color="#07130d"
+                      size={20}
+                      color={hasSendableContent ? "#07130d" : "#779081"}
                     />
                   )}
                 </Pressable>
               </View>
-            </View>
+            </SafeAreaView>
           ) : (
-            <View style={styles.readOnly}>
+            <SafeAreaView edges={["bottom"]} style={styles.readOnly}>
               <Ionicons name="lock-closed" size={21} color="#6c7e98" />
               <Text style={styles.readOnlyText}>
                 Only admins can send messages
               </Text>
-            </View>
+            </SafeAreaView>
           )}
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -1394,39 +1435,49 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  safe: { backgroundColor: "#f7faf8", flex: 1 },
+  safe: { backgroundColor: "#f6faf7", flex: 1 },
   liveCallBanner: {
     alignItems: "center",
-    backgroundColor: "#062b1a",
-    borderRadius: 18,
+    backgroundColor: "#123d2a",
+    borderRadius: 20,
     flexDirection: "row",
-    marginBottom: 22,
-    padding: 14,
+    marginBottom: 18,
+    padding: 12,
   },
-  liveCallCopy: { flex: 1, marginLeft: 10 },
+  liveCallIcon: {
+    alignItems: "center",
+    backgroundColor: "#286348",
+    borderRadius: 18,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+  },
+  liveCallCopy: { flex: 1, marginLeft: 11 },
   liveCallTitle: { color: colors.white, fontFamily: fonts.bold, fontSize: 13 },
   liveCallMeta: {
-    color: "#b6e3c9",
+    color: "#b9dcc7",
     fontFamily: fonts.medium,
-    fontSize: 10,
-    marginTop: 3,
+    fontSize: 11,
+    marginTop: 2,
   },
   keyboard: { flex: 1 },
+  messageList: { flex: 1 },
   header: {
     alignItems: "center",
     backgroundColor: colors.white,
-    borderBottomColor: "#e8f3ed",
-    borderBottomWidth: 1,
+    borderBottomColor: "#e2eee5",
+    borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
-    minHeight: 86,
-    paddingHorizontal: 14,
+    minHeight: 76,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     zIndex: 10,
   },
   headerBack: {
     alignItems: "center",
-    height: 48,
+    height: 40,
     justifyContent: "center",
-    width: 42,
+    width: 36,
   },
   identity: {
     alignItems: "center",
@@ -1435,37 +1486,41 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   avatar: {
-    borderColor: colors.lime,
-    borderRadius: 28,
-    borderWidth: 2,
-    height: 56,
-    width: 56,
+    borderColor: "#c8efd5",
+    borderRadius: 24,
+    borderWidth: 1.5,
+    height: 48,
+    width: 48,
   },
   onlineDot: {
     backgroundColor: colors.lime,
     borderColor: colors.white,
-    borderRadius: 8,
+    borderRadius: 7,
     borderWidth: 2,
-    height: 16,
-    left: 44,
+    height: 14,
+    left: 37,
     position: "absolute",
-    top: 40,
-    width: 16,
+    top: 34,
+    width: 14,
   },
-  identityCopy: { flex: 1, marginLeft: 12 },
-  title: { color: "#081126", fontFamily: fonts.extraBold, fontSize: 18 },
+  identityCopy: { flex: 1, marginLeft: 10 },
+  title: { color: colors.ink, fontFamily: fonts.extraBold, fontSize: 16 },
   subtitle: {
-    color: "#61728f",
+    color: "#708579",
     fontFamily: fonts.medium,
-    fontSize: 13,
+    fontSize: 11,
     marginTop: 2,
   },
   headerIcon: {
     alignItems: "center",
-    height: 46,
+    backgroundColor: "#eff8f1",
+    borderRadius: 20,
+    height: 38,
     justifyContent: "center",
-    width: 42,
+    marginLeft: 5,
+    width: 38,
   },
+  headerMenuIcon: { backgroundColor: "#f2f5f3" },
   menu: {
     backgroundColor: colors.white,
     borderRadius: 18,
@@ -1475,7 +1530,7 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 16,
-    top: 70,
+    top: 68,
     width: 190,
     zIndex: 30,
   },
@@ -1502,19 +1557,19 @@ const styles = StyleSheet.create({
   },
   messages: {
     flexGrow: 1,
-    paddingBottom: 24,
-    paddingHorizontal: 18,
-    paddingTop: 24,
+    paddingBottom: 18,
+    paddingHorizontal: 16,
+    paddingTop: 18,
   },
   datePill: {
     alignSelf: "center",
-    backgroundColor: colors.white,
+    backgroundColor: "#eaf3ed",
     borderRadius: 20,
-    marginBottom: 30,
-    paddingHorizontal: 21,
-    paddingVertical: 9,
+    marginBottom: 22,
+    paddingHorizontal: 17,
+    paddingVertical: 7,
   },
-  dateText: { color: "#90a0b7", fontFamily: fonts.bold, fontSize: 12 },
+  dateText: { color: "#688574", fontFamily: fonts.bold, fontSize: 11 },
   empty: { alignItems: "center", marginTop: 75, padding: 24 },
   emptyIcon: {
     alignItems: "center",
@@ -1540,31 +1595,31 @@ const styles = StyleSheet.create({
   messageRow: {
     alignItems: "flex-end",
     flexDirection: "row",
-    marginBottom: 22,
-    maxWidth: "92%",
+    marginBottom: 17,
+    maxWidth: "90%",
   },
   messageRowMine: { alignSelf: "flex-end", justifyContent: "flex-end" },
   authorAvatar: {
-    borderRadius: 23,
-    height: 46,
-    marginBottom: 18,
-    marginRight: 9,
-    width: 46,
+    borderRadius: 18,
+    height: 36,
+    marginBottom: 15,
+    marginRight: 8,
+    width: 36,
   },
   authorFallback: {
     alignItems: "center",
     backgroundColor: "#dff4e8",
-    borderRadius: 23,
-    height: 46,
+    borderRadius: 18,
+    height: 36,
     justifyContent: "center",
-    marginBottom: 18,
-    marginRight: 9,
-    width: 46,
+    marginBottom: 15,
+    marginRight: 8,
+    width: 36,
   },
   authorInitials: {
     color: "#087b43",
     fontFamily: fonts.extraBold,
-    fontSize: 12,
+    fontSize: 10,
   },
   messageColumn: { maxWidth: "82%" },
   messageColumnMine: { alignItems: "flex-end" },
@@ -1575,8 +1630,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     marginLeft: 5,
   },
-  authorName: { color: "#536985", fontFamily: fonts.bold, fontSize: 12 },
-  ownerName: { color: "#00bd57" },
+  authorName: { color: "#5d7667", fontFamily: fonts.bold, fontSize: 11 },
+  ownerName: { color: "#11864a" },
   ownerBadge: {
     backgroundColor: "#e7faef",
     borderColor: "#a8eec4",
@@ -1588,15 +1643,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 3,
   },
-  bubble: { borderRadius: 22, overflow: "hidden", padding: 16 },
-  otherBubble: { backgroundColor: colors.white, borderBottomLeftRadius: 4 },
-  ownerBubble: {
-    backgroundColor: "#dcf7e8",
-    borderColor: "#b8efd0",
-    borderWidth: 1,
-    borderBottomLeftRadius: 4,
+  bubble: {
+    borderRadius: 19,
+    overflow: "hidden",
+    paddingHorizontal: 15,
+    paddingVertical: 12,
   },
-  myBubble: { backgroundColor: colors.lime, borderBottomRightRadius: 4 },
+  otherBubble: {
+    backgroundColor: colors.white,
+    borderBottomLeftRadius: 6,
+    borderColor: "#e5efe8",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  ownerBubble: {
+    backgroundColor: "#e0f7e8",
+    borderColor: "#c6edd4",
+    borderWidth: 1,
+    borderBottomLeftRadius: 6,
+  },
+  myBubble: { backgroundColor: colors.lime, borderBottomRightRadius: 6 },
   attachmentImage: {
     borderRadius: 14,
     height: 185,
@@ -1620,10 +1685,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   messageText: {
-    color: "#091126",
+    color: colors.ink,
     fontFamily: fonts.medium,
-    fontSize: 15,
-    lineHeight: 23,
+    fontSize: 14,
+    lineHeight: 21,
   },
   reactionRow: { flexDirection: "row", gap: 5, marginTop: 9 },
   reaction: {
@@ -1638,20 +1703,20 @@ const styles = StyleSheet.create({
   reactionActive: { backgroundColor: "#d5f8e3" },
   reactionCount: { color: "#52677c", fontFamily: fonts.bold, fontSize: 9 },
   time: {
-    color: "#95a6bc",
+    color: "#8ba398",
     fontFamily: fonts.medium,
     fontSize: 10,
-    marginLeft: 5,
-    marginTop: 6,
+    marginLeft: 4,
+    marginTop: 5,
   },
   timeMine: { marginRight: 5 },
   composerWrap: {
-    backgroundColor: colors.white,
-    borderTopColor: "#eef1f0",
-    borderTopWidth: 1,
-    paddingBottom: Platform.OS === "ios" ? 8 : 14,
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    backgroundColor: "#f7faf8",
+    borderTopColor: "#e5eee8",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingBottom: 8,
+    paddingHorizontal: 14,
+    paddingTop: 10,
   },
   preview: {
     alignItems: "center",
@@ -1669,48 +1734,62 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginLeft: 10,
   },
-  composer: { alignItems: "center", flexDirection: "row", gap: 10 },
+  composer: {
+    alignItems: "flex-end",
+    backgroundColor: colors.white,
+    borderColor: "#dce9df",
+    borderRadius: 30,
+    borderWidth: 1,
+    elevation: 2,
+    flexDirection: "row",
+    padding: 5,
+    shadowColor: "#174b2c",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+  },
   addButton: {
     alignItems: "center",
-    backgroundColor: "#f0f4f7",
-    borderRadius: 25,
-    height: 50,
+    backgroundColor: "#eaf6ed",
+    borderRadius: 22,
+    height: 44,
     justifyContent: "center",
-    width: 50,
+    width: 44,
   },
+  addDisabled: { opacity: 0.45 },
   inputWrap: {
-    alignItems: "center",
-    backgroundColor: "#f1f5f8",
-    borderRadius: 26,
+    alignItems: "flex-end",
     flex: 1,
     flexDirection: "row",
-    minHeight: 50,
-    paddingHorizontal: 16,
+    minHeight: 44,
+    paddingHorizontal: 10,
   },
   input: {
     color: colors.ink,
     flex: 1,
     fontFamily: fonts.medium,
     fontSize: 14,
-    maxHeight: 100,
+    lineHeight: 20,
+    maxHeight: 110,
+    minHeight: 44,
     paddingVertical: 11,
   },
   sendButton: {
     alignItems: "center",
     backgroundColor: colors.lime,
-    borderRadius: 26,
-    height: 52,
+    borderRadius: 22,
+    height: 44,
     justifyContent: "center",
-    width: 52,
+    width: 44,
   },
-  sendDisabled: { opacity: 0.45 },
+  sendDisabled: { backgroundColor: "#e3eee6" },
   readOnly: {
     alignItems: "center",
     backgroundColor: "#f0f4f8",
     flexDirection: "row",
     gap: 10,
     justifyContent: "center",
-    paddingBottom: Platform.OS === "ios" ? 18 : 24,
+    paddingBottom: 12,
     paddingTop: 18,
   },
   readOnlyText: { color: "#637590", fontFamily: fonts.medium, fontSize: 14 },

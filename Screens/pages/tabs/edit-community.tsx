@@ -4,7 +4,6 @@ import * as Crypto from "expo-crypto";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Image,
   Modal,
   Pressable,
@@ -14,6 +13,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import AppLoader from "../../components/ui/app-loader";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
@@ -249,7 +249,7 @@ export default function EditCommunityScreen({ navigation, route }: Props) {
         <ProfilePageHeader title="Edit Community" onBack={navigation.goBack} />
         {loading ? (
           <View style={styles.loading}>
-            <ActivityIndicator color="#08b657" />
+            <AppLoader color="#08b657" />
           </View>
         ) : community ? (
           <ScrollView
@@ -403,7 +403,7 @@ export default function EditCommunityScreen({ navigation, route }: Props) {
               style={[styles.primary, submitting && styles.disabled]}
             >
               {submitting ? (
-                <ActivityIndicator color={colors.ink} />
+                <AppLoader color={colors.ink} />
               ) : (
                 <Text style={styles.primaryText}>Save changes</Text>
               )}

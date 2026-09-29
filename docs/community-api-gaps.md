@@ -1,13 +1,13 @@
 # Community API integration status
 
-Reviewed the local OpenAPI document and backend community routes/controllers on
-2026-09-27. The local server responded to health and documentation requests
-intermittently during this pass, so authenticated behavior still needs a device
-check with a signed-in account.
+Rechecked the local OpenAPI document and backend community routes/controllers
+on 2026-09-29. The endpoint behavior below is confirmed from the backend route
+and controller code; authenticated behavior still needs a signed-in device
+check.
 
 ## Integrated flows
 
-- All documented `/communities` operations have methods in
+- The `/communities` operations used by the app have methods in
   `Screens/services/api/communities.api.ts` and the relevant screens expose
   discovery, creation and editing, joining, moderation, rules, settings,
   content, messages, notifications, calls, and reporting.
@@ -18,6 +18,21 @@ check with a signed-in account.
 - `POST /communities/resolve-code` lets a user find a private community with
   the code alone. The join screen then uses its resolved ID and the code with
   `POST /communities/{id}/join-requests`.
+- The mobile profile sends free community joins to
+  `POST /communities/{id}/join-requests` with a Bearer access token. The
+  response can contain an active `membership` or a pending `joinRequest`; the
+  UI handles both. Private access still goes through the join screen so the
+  user can supply an access code or invite token. If policy changed after the
+  profile loaded and the backend returns `COMMUNITY_ACCESS_REQUIRED`, the app
+  opens that screen. The backend's `POST /communities/{id}/members` remains a
+  public/free/open-only route, but the mobile join action no longer calls it.
+- Community discovery, detail, and rules reads are public or optional-auth in
+  the backend. The mobile client includes the current Bearer token on those
+  reads when one is available; protected membership actions require it.
+- Approval-based, access-code, and invite-only flows use
+  `POST /communities/{id}/join-requests`. Valid code/invite credentials can
+  activate a free membership immediately; paid membership still requires
+  backend order verification.
 - `GET /users/me/community-join-requests` restores pending requests after app
   restart. The join screen lists and cancels them; a community profile uses the
   same endpoint to show pending status.
