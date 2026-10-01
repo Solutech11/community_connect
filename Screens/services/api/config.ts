@@ -13,6 +13,13 @@ export const socketBaseUrl = trimTrailingSlash(
     apiBaseUrl.replace(/\/api\/v\d+$/i, ""),
 );
 
+// Socket diagnostics default to development only; explicit false also disables them in development.
+export const socketLoggingEnabled =
+  process.env.EXPO_PUBLIC_SOCKET_LOGGING === "true" ||
+  (process.env.EXPO_PUBLIC_SOCKET_LOGGING !== "false" &&
+    typeof __DEV__ !== "undefined" &&
+    __DEV__);
+
 // LiveKit URL is public; access is protected by the short-lived token issued by the backend.
 export const liveKitUrl = trimTrailingSlash(
   process.env.EXPO_PUBLIC_LIVEKIT_URL?.trim() || "",

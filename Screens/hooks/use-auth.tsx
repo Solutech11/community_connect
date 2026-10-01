@@ -1,5 +1,10 @@
-import { clearSessionCaches } from "../services/cache/session-cache";
-﻿import * as Notifications from "expo-notifications";
+import { restoreScreenCaches } from "../services/cache/screen-caches";
+import "../services/storage/screen-cache.storage";
+import {
+  clearSessionCaches,
+  flushSessionCacheStorage,
+} from "../services/cache/session-cache";
+import * as Notifications from "expo-notifications";
 import {
   createContext,
   useCallback,
@@ -169,8 +174,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       nextUser: AuthUser,
       startRoute: AuthenticatedStartRoute = "Home",
     ) => {
-      clearSessionCaches();
       sessionVersion.current += 1;
+      const version = sessionVersion.current;
+      const restored = await restoreScreenCaches(nextUser._id);
+      if (!restored || sessionVersion.current !== version) return;
       setAuthenticatedStartRoute(startRoute);
       setUser(nextUser);
       const token = apiClient.getAccessToken();
@@ -362,6 +369,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await authApi.logout();
     } finally {
       clearSessionState("Login");
+      await flushSessionCacheStorage();
     }
   }, [clearSessionState]);
 

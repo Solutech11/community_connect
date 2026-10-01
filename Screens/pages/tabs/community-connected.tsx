@@ -1,3 +1,4 @@
+import type { CommunityListData } from "../../types/screen-cache";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -19,7 +20,7 @@ import AppLoader from "../../components/ui/app-loader";
 import CacheRefreshNotice from "../../components/ui/cache-refresh-notice";
 import { useAuth } from "../../hooks/use-auth";
 import { useCachedState } from "../../hooks/use-cached-state";
-import { SessionCache } from "../../services/cache/session-cache";
+import { myCommunitiesCache, categoryOptionsCache, communityListCache } from "../../services/cache/screen-caches";
 import { communityImage } from "../../data/community-presentation";
 import { ApiError } from "../../services/api/client";
 import { communitiesApi } from "../../services/api/communities.api";
@@ -33,21 +34,13 @@ import type { RootStackParamList } from "../../types/navigation";
 type Community = GetCommunitiesResponse["data"]["communities"][number];
 type MyCommunity = GetUsersMeCommunitiesResponse["data"]["communities"][number];
 
-type CommunityListData = {
-  items: Community[];
-  page: number;
-  hasMore: boolean;
-};
 const emptyList: CommunityListData = {
   items: [],
   page: 1,
   hasMore: false,
 };
-const myCommunitiesCache = new SessionCache<MyCommunity[]>(1);
-const categoryOptionsCache = new SessionCache<string[]>(1);
 const emptyMyCommunities: MyCommunity[] = [];
 const emptyCategories: string[] = [];
-const communityListCache = new SessionCache<CommunityListData>(20);
 
 function money(kobo: number) {
   return new Intl.NumberFormat("en-NG", {

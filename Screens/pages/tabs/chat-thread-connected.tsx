@@ -1,5 +1,5 @@
 import { useCachedState } from "../../hooks/use-cached-state";
-import { SessionCache } from "../../services/cache/session-cache";
+import { messagesCache } from "../../services/cache/screen-caches";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useRef, useState } from "react";
@@ -32,6 +32,7 @@ import {
   chatSocket,
   type RealtimeMessage,
 } from "../../services/socket/chat-socket";
+import { socketLog } from "../../services/socket/logger";
 import type { GetChatConversationsIdMessagesResponse } from "../../types/api.generated";
 import type { RootStackParamList } from "../../types/navigation";
 import { colors, fonts } from "../../styles/theme";
@@ -40,7 +41,6 @@ type Props = NativeStackScreenProps<RootStackParamList, "ChatThread">;
 type Message =
   GetChatConversationsIdMessagesResponse["data"]["messages"][number];
 
-const messagesCache = new SessionCache<Message[]>(20);
 const emptyMessages: Message[] = [];
 
 function mergeMessages(current: Message[], incoming: Message[]) {
@@ -127,6 +127,10 @@ export default function ChatThreadConnectedScreen({
   useFocusEffect(
     useCallback(() => {
       const socket = chatSocket.current();
+      socketLog("screen:focus", {
+        conversationId,
+        connected: socket.connected,
+      });
       const controller = new AbortController();
       let active = true;
       let loaded = false;
@@ -144,7 +148,20 @@ export default function ChatThreadConnectedScreen({
         // A read-receipt failure must never prevent joining or receiving messages.
         void chatApi
           .markRead(conversationId, controller.signal)
-          .catch(() => undefined);
+          .catch((requestError: unknown) => {
+            if (active)
+              socketLog(
+                "screen:read:failed",
+                {
+                  conversationId,
+                  status:
+                    requestError instanceof ApiError
+                      ? requestError.status
+                      : undefined,
+                },
+                true,
+              );
+          });
       };
       const synchronize = async (initial = false): Promise<void> => {
         if (!active) return;
@@ -153,6 +170,11 @@ export default function ChatThreadConnectedScreen({
           return;
         }
         synchronizing = true;
+        let phase = "history";
+        socketLog("screen:sync:started", {
+          conversationId,
+          connected: socket.connected,
+        });
         if (initial) {
           setLoading(
             !user?._id ||
@@ -172,13 +194,19 @@ export default function ChatThreadConnectedScreen({
               mergeMessages(current, history.data.messages),
             );
             loaded = true;
+            socketLog("screen:history:loaded", {
+              conversationId,
+              count: history.data.messages.length,
+            });
           }
           if (socket.connected) {
+            phase = "join";
             await chatSocket.join(conversationId);
             if (!active) return;
             setRealtimeStatus("connected");
             setRealtimeError(null);
             // Catch messages missed between loading history and joining, or during a disconnect.
+            phase = "catchup";
             const latest = await chatApi.messages(
               conversationId,
               { limit: 50 },
@@ -188,12 +216,28 @@ export default function ChatThreadConnectedScreen({
             setMessages((current) =>
               mergeMessages(current, latest.data.messages),
             );
+            socketLog("screen:catchup:loaded", {
+              conversationId,
+              count: latest.data.messages.length,
+            });
           } else {
             setRealtimeStatus(socket.active ? "connecting" : "offline");
           }
           markRead();
         } catch (requestError) {
           if (!active) return;
+          socketLog(
+            "screen:sync:failed",
+            {
+              conversationId,
+              phase,
+              status:
+                requestError instanceof ApiError
+                  ? requestError.status
+                  : undefined,
+            },
+            true,
+          );
           const accessDenied =
             requestError instanceof ApiError &&
             [401, 403, 404].includes(requestError.status);
@@ -234,7 +278,13 @@ export default function ChatThreadConnectedScreen({
         setRealtimeError("Live updates are unavailable. Tap to reconnect.");
       };
       const onMessage = (message: RealtimeMessage) => {
-        if (!active || message.conversationId !== conversationId) return;
+        const accepted = active && message.conversationId === conversationId;
+        socketLog("screen:message:received", {
+          conversationId,
+          messageId: message._id,
+          accepted,
+        });
+        if (!accepted) return;
         setMessages((current) => mergeMessages(current, [message]));
         markRead();
       };
@@ -296,11 +346,13 @@ export default function ChatThreadConnectedScreen({
       const appStateSubscription = AppState.addEventListener(
         "change",
         (state) => {
+          socketLog("screen:app-state", { conversationId, phase: state });
           if (state === "active") onConnected();
         },
       );
       void synchronize(true);
       return () => {
+        socketLog("screen:blur", { conversationId });
         active = false;
         controller.abort();
         synchronizeRef.current = null;
@@ -322,6 +374,7 @@ export default function ChatThreadConnectedScreen({
   );
 
   const reconnect = () => {
+    socketLog("screen:retry", { conversationId });
     const token = apiClient.getAccessToken();
     if (token) chatSocket.connect(token);
     void loadMessages();
@@ -342,6 +395,10 @@ export default function ChatThreadConnectedScreen({
     if (!text || sending) return;
     setSending(true);
     setError(null);
+    socketLog("screen:send:started", {
+      conversationId,
+      connected: chatSocket.isConnected(),
+    });
     try {
       const response = await chatApi.sendMessage(conversationId, {
         clientMessageId: createIdempotencyKey(),
@@ -349,9 +406,22 @@ export default function ChatThreadConnectedScreen({
         text,
       });
       setMessages((current) => mergeMessages(current, [response.data.message]));
+      socketLog("screen:send:saved", {
+        conversationId,
+        messageId: response.data.message._id,
+      });
       setDraft("");
       chatSocket.stopTyping(conversationId);
     } catch (requestError) {
+      socketLog(
+        "screen:send:failed",
+        {
+          conversationId,
+          status:
+            requestError instanceof ApiError ? requestError.status : undefined,
+        },
+        true,
+      );
       setError(
         requestError instanceof ApiError
           ? requestError.message
@@ -448,7 +518,7 @@ export default function ChatThreadConnectedScreen({
           </Pressable>
         ) : null}
 
-        {loading ? (
+        {loading && !hasCachedMessages ? (
           <View style={styles.state}>
             <AppLoader color="#08ad54" />
             <Text style={styles.stateText}>Loading messages...</Text>

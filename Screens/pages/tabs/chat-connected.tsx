@@ -1,5 +1,5 @@
 import { useCachedState } from "../../hooks/use-cached-state";
-import { SessionCache } from "../../services/cache/session-cache";
+import { conversationsCache } from "../../services/cache/screen-caches";
 import CacheRefreshNotice from "../../components/ui/cache-refresh-notice";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -32,7 +32,6 @@ import { colors, fonts } from "../../styles/theme";
 type Conversation =
   GetChatConversationsResponse["data"]["conversations"][number];
 
-const conversationsCache = new SessionCache<Conversation[]>(1);
 const emptyConversations: Conversation[] = [];
 
 function otherParticipant(conversation: Conversation, currentUserId?: string) {

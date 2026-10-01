@@ -1,6 +1,7 @@
+import type { CommunityProfileMember as Member, CommunityProfileSnapshot } from "../../types/screen-cache";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCachedObjectState } from "../../hooks/use-cached-object-state";
-import { SessionCache } from "../../services/cache/session-cache";
+import { communityProfileCache } from "../../services/cache/screen-caches";
 import CacheRefreshNotice from "../../components/ui/cache-refresh-notice";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -48,19 +49,6 @@ import type { RootStackParamList } from "../../types/navigation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CommunityProfile">;
 type Community = GetCommunitiesIdResponse["data"]["community"];
-type Member = {
-  user: {
-    _id: string;
-    firstName: string;
-    lastName: string;
-    avatarUrl: string;
-    state: string;
-    lga: string;
-  };
-  communityRole: "owner" | "moderator" | "member";
-  status: string;
-  joinedAt: string;
-};
 type Announcement =
   GetCommunitiesIdAnnouncementsResponse["data"]["announcements"][number];
 type Post = GetCommunitiesIdPostsResponse["data"]["posts"][number];
@@ -71,22 +59,6 @@ type ViewerMembership =
 type ProfileTab = "About" | "Members" | "Rules" | "Updates";
 type UpdateTab = "posts" | "announcements";
 
-type CommunityProfileSnapshot = {
-  community: Community | null;
-  members: Member[];
-  memberPage: number;
-  moreMembers: boolean;
-  announcements: Announcement[];
-  posts: Post[];
-  postPage: number;
-  announcementPage: number;
-  morePosts: boolean;
-  moreAnnouncements: boolean;
-  communityRules: CommunityRules | null;
-  viewerMembership: ViewerMembership | null;
-  messagePermission: string;
-  memberListVisible: boolean;
-};
 const emptyProfile: CommunityProfileSnapshot = {
   community: null,
   members: [],
@@ -103,7 +75,6 @@ const emptyProfile: CommunityProfileSnapshot = {
   messagePermission: "everyone",
   memberListVisible: true,
 };
-const communityProfileCache = new SessionCache<CommunityProfileSnapshot>(15);
 
 const COMMUNITY_UPDATE_PAGE_SIZE = 20;
 

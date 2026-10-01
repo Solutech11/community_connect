@@ -1,7 +1,8 @@
+import type { RoomAttachment, RoomMessage, RoomSnapshot } from "../../types/screen-cache";
 import { mergeRefreshedMessages } from "../../hooks/merge-cached-messages";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCachedState } from "../../hooks/use-cached-state";
-import { SessionCache } from "../../services/cache/session-cache";
+import { roomCache } from "../../services/cache/screen-caches";
 import CacheRefreshNotice from "../../components/ui/cache-refresh-notice";
 import type { SetStateAction } from "react";
 import { Ionicons } from "@expo/vector-icons";
@@ -58,48 +59,14 @@ type CommunityRole = "owner" | "moderator" | "member" | null;
 type CommunityCallType = "voice" | "video";
 type ReactionIconName = keyof typeof Ionicons.glyphMap;
 
-type RoomAttachment = {
-  _id: string;
-  url: string;
-  type: "image" | "pdf" | "file";
-  name: string;
-  mimeType: string;
-  sizeBytes: number;
-};
 
-type RoomMessage = {
-  _id: string;
-  communityId: string;
-  author: {
-    _id: string;
-    firstName: string;
-    lastName: string;
-    avatarUrl: string;
-    communityRole: string;
-  };
-  text: string;
-  attachments: RoomAttachment[];
-  clientMessageId: string;
-  replyToMessageId: string | null;
-  createdAt: string;
-  editedAt: string | null;
-  pinnedAt: string | null;
-  reactions: Array<{ emoji: string; count: number; reactedByViewer: boolean }>;
-};
 
-type RoomSnapshot = {
-  community: Community | null;
-  messages: RoomMessage[];
-  olderCursor: string | null;
-  hasOlderMessages: boolean;
-};
 const emptyRoom: RoomSnapshot = {
   community: null,
   messages: [],
   olderCursor: null,
   hasOlderMessages: false,
 };
-const roomCache = new SessionCache<RoomSnapshot>(15);
 
 function reactionPresentation(reaction: string): {
   icon: ReactionIconName;

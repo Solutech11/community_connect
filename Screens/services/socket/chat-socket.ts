@@ -2,6 +2,7 @@ import { io, type Socket } from "socket.io-client";
 
 import type { PostChatConversationsIdMessagesResponse } from "../../types/api.generated";
 import { socketBaseUrl } from "../api/config";
+import { socketLog, socketErrorReason } from "./logger";
 
 export type RealtimeMessage =
   PostChatConversationsIdMessagesResponse["data"]["message"];
@@ -107,11 +108,82 @@ function ensureSocket(): Socket<ServerToClientEvents, ClientToServerEvents> {
     // Keep a stable instance for listeners even when authentication finishes later.
     // Creating the client does not connect it before a token is supplied.
     socket = io(socketBaseUrl + "/chat", {
-      transports: ["websocket", "polling"],
+      // Start with HTTP so live delivery remains available when WebSocket is blocked.
+      transports: ["polling", "websocket"],
+      tryAllTransports: true,
       autoConnect: false,
       reconnection: true,
       timeout: 10_000,
     });
+    const client = socket;
+    let endpoint = "invalid_socket_url";
+    try {
+      endpoint = new URL(socketBaseUrl).origin + "/chat";
+    } catch {}
+    socketLog("client:created", { endpoint });
+    client.io.on("open", () => {
+      const engine = client.io.engine;
+      engine.on("upgrade", (transport) =>
+        socketLog("transport:upgraded", {
+          transport: transport.name,
+        }),
+      );
+      engine.on("upgradeError", () =>
+        socketLog(
+          "transport:upgrade:failed",
+          {
+            transport: engine.transport.name,
+            reason: "continuing_on_current_transport",
+          },
+          true,
+        ),
+      );
+    });
+    client.on("connect", () =>
+      socketLog("connect", {
+        socketId: client.id,
+        transport: client.io.engine?.transport.name,
+      }),
+    );
+    client.on("socket:ready", () =>
+      socketLog("socket:ready", { socketId: client.id }),
+    );
+    client.on("connect_error", (error) =>
+      socketLog(
+        "connect_error",
+        {
+          reason: socketErrorReason(error),
+          connected: client.connected,
+        },
+        true,
+      ),
+    );
+    client.on("disconnect", (reason) =>
+      socketLog("disconnect", { reason }, true),
+    );
+    client.io.on("reconnect_attempt", (attempt) =>
+      socketLog("reconnect_attempt", { attempt }),
+    );
+    client.io.on("reconnect", (attempt) => socketLog("reconnect", { attempt }));
+    client.io.on("reconnect_error", (error) => {
+      console.log(error?.name, error?.message, error?.stack);
+      socketLog(
+        "reconnect_error",
+        {
+          reason: socketErrorReason(error),
+        },
+        true,
+      );
+    });
+    client.io.on("reconnect_failed", () =>
+      socketLog("reconnect_failed", {}, true),
+    );
+    client.on("message:new", (message) =>
+      socketLog("message:new", {
+        conversationId: message.conversationId,
+        messageId: message._id,
+      }),
+    );
   }
   return socket;
 }
@@ -145,6 +217,7 @@ function emitCommunityWithAck(
 export const chatSocket = {
   connect(accessToken: string) {
     const client = ensureSocket();
+    socketLog("connect:requested", { connected: client.connected });
     if (connectedAccessToken === accessToken) {
       if (!client.connected && !client.active) client.connect();
       return client;
@@ -164,6 +237,7 @@ export const chatSocket = {
   },
 
   disconnect() {
+    socketLog("disconnect:requested", { connected: socket?.connected });
     socket?.removeAllListeners();
     socket?.disconnect();
     socket = null;
@@ -172,7 +246,18 @@ export const chatSocket = {
 
   async join(conversationId: string): Promise<void> {
     const client = ensureSocket();
-    if (!client.connected) throw new Error("Live updates are disconnected.");
+    socketLog("conversation:join:requested", {
+      conversationId,
+      connected: client.connected,
+    });
+    if (!client.connected) {
+      socketLog(
+        "conversation:join:failed",
+        { conversationId, reason: "disconnected" },
+        true,
+      );
+      throw new Error("Live updates are disconnected.");
+    }
     await new Promise<void>((resolve, reject) => {
       client
         .timeout(10_000)
@@ -180,6 +265,15 @@ export const chatSocket = {
           "conversation:join",
           conversationId,
           (error: Error | null, joined: boolean) => {
+            socketLog(
+              "conversation:join:ack",
+              {
+                conversationId,
+                accepted: !error && joined === true,
+                reason: error ? "ack_timeout" : joined ? "joined" : "denied",
+              },
+              Boolean(error) || !joined,
+            );
             if (error)
               reject(
                 new Error(
@@ -199,6 +293,10 @@ export const chatSocket = {
   },
 
   leave(conversationId: string) {
+    socketLog("conversation:leave", {
+      conversationId,
+      connected: socket?.connected,
+    });
     socket?.emit("conversation:leave", conversationId);
   },
 
