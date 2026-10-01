@@ -1,4 +1,4 @@
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View, type TextInputProps } from 'react-native';
 
 import AppIcon, { AppIconName } from './app-icon';
 import { colors, fonts } from '../../styles/theme';
@@ -13,6 +13,7 @@ type Props = {
   value: string;
   onChangeText: (value: string) => void;
   keyboardType?: 'default' | 'email-address' | 'number-pad' | 'phone-pad';
+  autoCapitalize?: TextInputProps['autoCapitalize'];
   fieldHeight?: number;
   autoComplete?: 'off' | 'name' | 'family-name' | 'given-name' | 'username' | 'new-password'| 'password' | 'email' | 'name' | 'tel' | 'street-address' | 'postal-code' | 'cc-number' | 'cc-csc' | 'cc-exp' | 'cc-exp-month' | 'cc-exp-year';
 };
@@ -27,6 +28,7 @@ export default function FormField({
   value,
   onChangeText,
   keyboardType = 'default',
+  autoCapitalize,
   fieldHeight = 54,
   autoComplete="off"
 }: Props) {
@@ -59,6 +61,7 @@ export default function FormField({
           secureTextEntry={secureTextEntry}
           autoComplete={autoComplete}
           keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
           style={{
             flex: 1,
             color: colors.ink,

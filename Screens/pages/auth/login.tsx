@@ -146,6 +146,7 @@ export default function LoginScreen({ navigation }: Props) {
               placeholder="hello@example.com"
               icon="mail"
               keyboardType="email-address"
+              autoCapitalize="none"
               value={email}
               onChangeText={setEmail}
               fieldHeight={54}
@@ -157,6 +158,7 @@ export default function LoginScreen({ navigation }: Props) {
               rightIcon={passwordVisible ? 'eye' : 'eye-off'}
               onRightIconPress={() => setPasswordVisible((visible) => !visible)}
               secureTextEntry={!passwordVisible}
+              autoCapitalize="none"
               value={password}
               onChangeText={setPassword}
               fieldHeight={54}

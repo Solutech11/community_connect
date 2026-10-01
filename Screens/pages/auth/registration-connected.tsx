@@ -142,6 +142,7 @@ export default function RegistrationScreen({ navigation }: Props) {
           label="Email Address"
           placeholder="jane@example.com"
           autoComplete="email"
+          autoCapitalize="none"
           icon="mail"
           keyboardType="email-address"
           value={email}
@@ -160,6 +161,7 @@ export default function RegistrationScreen({ navigation }: Props) {
           label="Password"
           placeholder="Enter a strong password"
           autoComplete="new-password"
+          autoCapitalize="none"
           icon="lock-closed"
           rightIcon={passwordVisible ? "eye" : "eye-off"}
           onRightIconPress={() => setPasswordVisible((visible) => !visible)}

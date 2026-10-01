@@ -184,6 +184,7 @@ export default function VerifyEmailScreen({ navigation, route }: Props) {
             setNewPasswordVisible((visible) => !visible)
           }
           secureTextEntry={!newPasswordVisible}
+          autoCapitalize="none"
           value={newPassword}
           onChangeText={setNewPassword}
         />

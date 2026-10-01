@@ -271,7 +271,7 @@ export default function ChatThreadConnectedScreen({ navigation, route }: Props) 
           </ScrollView>
         )}
 
-        <SafeAreaView edges={["bottom"]} style={styles.composerSafe}>
+        <View style={styles.composerSafe}>
           <View style={styles.composer}>
             <TextInput
               editable={!sending && !loading}
@@ -286,7 +286,7 @@ export default function ChatThreadConnectedScreen({ navigation, route }: Props) 
               {sending ? <AppLoader color={colors.ink} /> : <Ionicons color={colors.ink} name="arrow-up" size={22} />}
             </Pressable>
           </View>
-        </SafeAreaView>
+        </View>
       </KeyboardAvoidingView>
 
       <AppAlertModal visible={Boolean(summary)} title="AI conversation summary" message={summary ?? ""} confirmText="Got it" onClose={() => setSummary(null)} />
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   myBubble: { backgroundColor: colors.lime, borderBottomRightRadius: 6, borderColor: "#10d563" },
   messageText: { color: colors.ink, fontFamily: fonts.medium, fontSize: 13, lineHeight: 20 },
   messageTime: { color: "#5c806b", fontFamily: fonts.medium, fontSize: 9, marginTop: 5, textAlign: "right" },
-  composerSafe: { backgroundColor: "#f6faf7", borderTopColor: "#e2eee5", borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: 13, paddingTop: 10 },
+  composerSafe: { backgroundColor: "#f6faf7", borderTopColor: "#e2eee5", borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: 13, paddingVertical: 10 },
   composer: { alignItems: "flex-end", backgroundColor: colors.white, borderColor: "#dce9df", borderRadius: 29, borderWidth: 1, elevation: 2, flexDirection: "row", gap: 7, padding: 5, shadowColor: "#174b2c", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.07, shadowRadius: 8 },
   input: { backgroundColor: "#f2f7f4", borderRadius: 24, color: colors.ink, flex: 1, fontFamily: fonts.medium, fontSize: 13, lineHeight: 19, marginLeft: 2, maxHeight: 110, minHeight: 44, paddingHorizontal: 14, paddingVertical: 11 },
   send: { alignItems: "center", backgroundColor: colors.lime, borderRadius: 23, height: 44, justifyContent: "center", width: 44 },

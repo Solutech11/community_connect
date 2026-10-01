@@ -1,8 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -211,6 +214,115 @@ function mapCommunityCall(value: unknown): CommunityCall | null {
   };
 }
 
+function CallConnectingIllustration({
+  type,
+}: {
+  type: CommunityCallType;
+}) {
+  const pulse = useRef(new Animated.Value(0)).current;
+  const ring = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const pulseAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 850,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    const ringAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ring, {
+          toValue: 1,
+          duration: 90,
+          useNativeDriver: true,
+        }),
+        Animated.timing(ring, {
+          toValue: -1,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.timing(ring, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.timing(ring, {
+          toValue: 0,
+          duration: 90,
+          useNativeDriver: true,
+        }),
+        Animated.delay(350),
+      ]),
+    );
+
+    pulseAnimation.start();
+    ringAnimation.start();
+    return () => {
+      pulseAnimation.stop();
+      ringAnimation.stop();
+    };
+  }, [pulse, ring]);
+
+  const pulseScale = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.72, 1.35],
+  });
+  const pulseOpacity = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.5, 0],
+  });
+  const ringRotation = ring.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ["-14deg", "14deg"],
+  });
+
+  return (
+    <View
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={
+        type === "video" ? "Connecting to video call" : "Connecting to voice call"
+      }
+      pointerEvents="none"
+      style={styles.callConnectingIllustration}
+    >
+      <Animated.View
+        style={[
+          styles.callIllustrationPulse,
+          {
+            opacity: pulseOpacity,
+            transform: [{ scale: pulseScale }],
+          },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.callIllustrationIcon,
+          { transform: [{ rotate: ringRotation }] },
+        ]}
+      >
+        <Ionicons
+          name={type === "video" ? "videocam" : "call"}
+          size={14}
+          color="#087b42"
+        />
+      </Animated.View>
+      <View style={styles.callIllustrationSparkle}>
+        <Ionicons name="sparkles" size={8} color="#21a85f" />
+      </View>
+    </View>
+  );
+}
+
 function isCommunityPayload(
   payload: Record<string, unknown>,
   communityId: string,
@@ -238,6 +350,37 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
   const [membershipRole, setMembershipRole] = useState<CommunityRole>(null);
   const [messagePermission, setMessagePermission] = useState("everyone");
   const [activeCall, setActiveCall] = useState<CommunityCall | null>(null);
+  const [startingCallType, setStartingCallType] =
+    useState<CommunityCallType | null>(null);
+  const startingCallRef = useRef(false);
+  const callTonePlayer = useAudioPlayer(
+    require("../../../assets/sounds/community-call-connecting.wav"),
+  );
+  const playCallConnectingTone = useCallback(async () => {
+    try {
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        interruptionMode: "mixWithOthers",
+      });
+      if (!startingCallRef.current) return;
+
+      callTonePlayer.volume = 0.28;
+      callTonePlayer.loop = true;
+      await callTonePlayer.seekTo(0);
+      if (startingCallRef.current) callTonePlayer.play();
+    } catch {
+      // Audio feedback is optional; it must not block call setup.
+    }
+  }, [callTonePlayer]);
+  const stopCallConnectingTone = useCallback(() => {
+    try {
+      callTonePlayer.loop = false;
+      callTonePlayer.pause();
+      void callTonePlayer.seekTo(0).catch(() => undefined);
+    } catch {
+      // The player may already be released if the screen is closing.
+    }
+  }, [callTonePlayer]);
   const [typingMembers, setTypingMembers] = useState<Record<string, string>>(
     {},
   );
@@ -260,6 +403,14 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
   const [notificationLevel, setNotificationLevel] = useState<
     "all" | "announcements" | "mentions" | "muted" | "unknown"
   >("unknown");
+
+  useEffect(
+    () => () => {
+      startingCallRef.current = false;
+      stopCallConnectingTone();
+    },
+    [stopCallConnectingTone],
+  );
   const [notificationMenuVisible, setNotificationMenuVisible] = useState(false);
   const [alert, setAlert] = useState<{ title: string; message: string } | null>(
     null,
@@ -706,7 +857,12 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
   const startOrJoinCall = async (
     preferredType: CommunityCallType = "voice",
   ) => {
+    if (startingCallRef.current) return;
+    startingCallRef.current = true;
+    setStartingCallType(preferredType);
+
     try {
+      await playCallConnectingTone();
       let call = activeCall;
       if (!call) {
         const activeResponse = await communitiesApi.activeCall(communityId);
@@ -757,6 +913,10 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
         message:
           error instanceof ApiError ? error.message : "Please try again.",
       });
+    } finally {
+      startingCallRef.current = false;
+      stopCallConnectingTone();
+      setStartingCallType(null);
     }
   };
 
@@ -838,19 +998,43 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
             </Pressable>
             <Pressable
               accessibilityLabel="Start or join voice call"
+              accessibilityState={{
+                busy: startingCallType === "voice",
+                disabled: startingCallType !== null,
+              }}
+              disabled={startingCallType !== null}
               hitSlop={4}
               onPress={() => void startOrJoinCall("voice")}
-              style={styles.headerIcon}
+              style={[
+                styles.headerIcon,
+                startingCallType !== null && styles.headerIconDisabled,
+              ]}
             >
-              <Ionicons name="call" size={19} color="#168b4d" />
+              {startingCallType === "voice" ? (
+                <CallConnectingIllustration type="voice" />
+              ) : (
+                <Ionicons name="call" size={19} color="#168b4d" />
+              )}
             </Pressable>
             <Pressable
               accessibilityLabel="Start or join video call"
+              accessibilityState={{
+                busy: startingCallType === "video",
+                disabled: startingCallType !== null,
+              }}
+              disabled={startingCallType !== null}
               hitSlop={4}
               onPress={() => void startOrJoinCall("video")}
-              style={styles.headerIcon}
+              style={[
+                styles.headerIcon,
+                startingCallType !== null && styles.headerIconDisabled,
+              ]}
             >
-              <Ionicons name="videocam" size={20} color="#168b4d" />
+              {startingCallType === "video" ? (
+                <CallConnectingIllustration type="video" />
+              ) : (
+                <Ionicons name="videocam" size={20} color="#168b4d" />
+              )}
             </Pressable>
             <Pressable
               accessibilityLabel="Community room options"
@@ -1001,8 +1185,12 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
               </View>
               {activeCall ? (
                 <Pressable
+                  disabled={startingCallType !== null}
                   onPress={() => void startOrJoinCall(activeCall.type)}
-                  style={styles.liveCallBanner}
+                  style={[
+                    styles.liveCallBanner,
+                    startingCallType !== null && styles.headerIconDisabled,
+                  ]}
                 >
                   <View style={styles.liveCallIcon}>
                     <Ionicons
@@ -1520,6 +1708,34 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     width: 38,
   },
+  callConnectingIllustration: {
+    alignItems: "center",
+    height: 26,
+    justifyContent: "center",
+    width: 26,
+  },
+  callIllustrationPulse: {
+    borderColor: "#45c779",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    height: 24,
+    position: "absolute",
+    width: 24,
+  },
+  callIllustrationIcon: {
+    alignItems: "center",
+    backgroundColor: "#e1f5e8",
+    borderRadius: 11,
+    height: 22,
+    justifyContent: "center",
+    width: 22,
+  },
+  callIllustrationSparkle: {
+    position: "absolute",
+    right: -1,
+    top: -1,
+  },
+  headerIconDisabled: { opacity: 0.6 },
   headerMenuIcon: { backgroundColor: "#f2f5f3" },
   menu: {
     backgroundColor: colors.white,

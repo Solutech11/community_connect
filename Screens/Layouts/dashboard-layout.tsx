@@ -7,6 +7,8 @@ import AiAssistantLauncher from "../components/ui/ai-assistant-launcher";
 type DashboardLayoutProps = {
   children: ReactNode;
   showAiAssistant?: boolean;
+  /** Keyboard-aware screens need layout and keyboard coordinates to match. */
+  scaleAndroid?: boolean;
 };
 
 const ANDROID_DESIGN_WIDTH = 420;
@@ -20,10 +22,11 @@ const MAX_ANDROID_SCALE = 0.92;
 export default function DashboardLayout({
   children,
   showAiAssistant = true,
+  scaleAndroid = true,
 }: DashboardLayoutProps) {
   const { height, width } = useWindowDimensions();
 
-  if (Platform.OS !== "android") {
+  if (Platform.OS !== "android" || !scaleAndroid) {
     return (
       <View style={styles.appFrame}>
         {children}
@@ -58,11 +61,14 @@ export default function DashboardLayout({
 
 export function withDashboardLayout<Props extends object>(
   Screen: ComponentType<Props>,
-  options: { showAiAssistant?: boolean } = {},
+  options: { showAiAssistant?: boolean; scaleAndroid?: boolean } = {},
 ) {
   function DashboardScreen(props: Props) {
     return (
-      <DashboardLayout showAiAssistant={options.showAiAssistant}>
+      <DashboardLayout
+        showAiAssistant={options.showAiAssistant}
+        scaleAndroid={options.scaleAndroid}
+      >
         <Screen {...props} />
       </DashboardLayout>
     );

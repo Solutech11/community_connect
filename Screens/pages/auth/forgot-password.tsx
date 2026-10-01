@@ -34,6 +34,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
           placeholder="hello@example.com"
           icon="mail"
           keyboardType="email-address"
+          autoCapitalize="none"
           value={email}
           onChangeText={setEmail}
         />

@@ -94,6 +94,7 @@ const DashboardNotifications = withDashboardLayout(NotificationsScreen);
 const DashboardFriends = withDashboardLayout(FriendsScreen);
 const DashboardChatThread = withDashboardLayout(ChatThreadScreen, {
   showAiAssistant: false,
+  scaleAndroid: false,
 });
 const DashboardAISessions = withDashboardLayout(AISessionsScreen);
 const DashboardSettings = withDashboardLayout(SettingsScreen);

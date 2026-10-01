@@ -195,6 +195,7 @@ export default function LoginScreen({ navigation }: Props) {
               label="Email Address"
               placeholder="hello@example.com"
               autoComplete="email"
+              autoCapitalize="none"
               icon="mail"
               keyboardType="email-address"
               value={email}
@@ -205,6 +206,7 @@ export default function LoginScreen({ navigation }: Props) {
               label="Password"
               placeholder="Enter your password"
               autoComplete="password"
+              autoCapitalize="none"
               icon="lock-closed"
               rightIcon={passwordVisible ? "eye" : "eye-off"}
               onRightIconPress={() => setPasswordVisible((visible) => !visible)}

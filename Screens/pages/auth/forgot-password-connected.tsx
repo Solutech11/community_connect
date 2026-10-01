@@ -52,7 +52,15 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
               Enter the email associated with your account and we will send a reset code.
             </Text>
           </View>
-          <FormField label="Email Address" placeholder="hello@example.com" icon="mail" keyboardType="email-address" value={email} onChangeText={setEmail} />
+          <FormField
+            label="Email Address"
+            placeholder="hello@example.com"
+            icon="mail"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
+          />
           <PrimaryButton label={submitting ? 'Sending...' : 'Send Reset Code'} disabled={submitting} onPress={submit} />
           <LinkText label="Remember password? Sign In" onPress={() => navigation.navigate('Login')} />
         </View>

@@ -82,7 +82,14 @@
       ],
       "@rnmapbox/maps",
       "@livekit/react-native-expo-plugin",
-      "@config-plugins/react-native-webrtc"
+      "@config-plugins/react-native-webrtc",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow Community Connect to use your microphone for community voice and video calls.",
+          "recordAudioAndroid": false
+        }
+      ]
     ],
     "extra": {
       "eas": {

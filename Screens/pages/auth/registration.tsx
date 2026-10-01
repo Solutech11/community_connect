@@ -49,6 +49,7 @@ export default function RegistrationScreen({ navigation }: Props) {
           placeholder="jane@example.com"
           icon="mail"
           keyboardType="email-address"
+          autoCapitalize="none"
           autoComplete="email"
           value={email}
           onChangeText={setEmail}
@@ -57,6 +58,7 @@ export default function RegistrationScreen({ navigation }: Props) {
           label="Password"
           placeholder="********"
           icon="lock-closed"
+          autoCapitalize="none"
           secureTextEntry
           value={password}
           onChangeText={setPassword}
