@@ -6,8 +6,11 @@ import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleShee
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppAlertModal from '../../components/ui/app-alert-modal';
+import AppSelectField from '../../components/ui/app-select-field';
 import ProfilePageHeader from '../../components/ui/profile-page-header';
 import { defaultProfileAvatarUrl } from '../../data/profile';
+import { hobbyTopics, interestOptions } from '../../data/personalization';
+import { getNigerianLgas, NIGERIAN_STATES, PROFILE_COUNTRIES } from '../../data/nigeria-locations';
 import { useAuth } from '../../hooks/use-auth';
 import { ApiError } from '../../services/api/client';
 import { MAX_PROFILE_TAGS, normalizeProfileTags } from '../../services/api/user-profile.mapper';
@@ -108,6 +111,32 @@ function asParticipationRole(value?: string): ParticipationRole {
   return value === 'organizer' ? 'organizer' : 'participant';
 }
 
+const interestChoices = interestOptions.map(({ label }) => label);
+
+function restoreTagOptions(values: readonly string[], options: readonly string[]) {
+  return Array.from(
+    new Set(
+      values
+        .map((value) => {
+          const normalized = normalizeProfileTags([value])[0];
+          return (
+            options.find((option) => normalizeProfileTags([option])[0] === normalized) ??
+            value.replace(/^#/, '').trim()
+          );
+        })
+        .filter(Boolean),
+    ),
+  );
+}
+
+function includeCurrentOptions(options: readonly string[], selected: readonly string[]) {
+  const available = new Set(options.map((option) => normalizeProfileTags([option])[0]));
+  return [
+    ...options,
+    ...selected.filter((value) => !available.has(normalizeProfileTags([value])[0])),
+  ];
+}
+
 export default function UpdateProfileScreen({ navigation }: Props) {
   const { user, refreshProfile } = useAuth();
   const [photo, setPhoto] = useState(user?.avatarUrl ?? fallbackPhoto);
@@ -120,8 +149,12 @@ export default function UpdateProfileScreen({ navigation }: Props) {
   const [country, setCountry] = useState(user?.country ?? 'Nigeria');
   const [state, setState] = useState(user?.state ?? '');
   const [lga, setLga] = useState(user?.lga ?? '');
-  const [interestsInput, setInterestsInput] = useState(user?.interests?.join(', ') ?? '');
-  const [hobbiesInput, setHobbiesInput] = useState(user?.hobbies?.join(', ') ?? '');
+  const [selectedInterests, setSelectedInterests] = useState(() =>
+    restoreTagOptions(user?.interests ?? [], interestChoices),
+  );
+  const [selectedHobbies, setSelectedHobbies] = useState(() =>
+    restoreTagOptions(user?.hobbies ?? [], hobbyTopics),
+  );
   const [preferredSetting, setPreferredSetting] = useState<PreferredSetting>(asPreferredSetting(user?.preferredSetting));
   const [preferredGroupSize, setPreferredGroupSize] = useState<PreferredGroupSize>(asPreferredGroupSize(user?.preferredGroupSize));
   const [participationRole, setParticipationRole] = useState<ParticipationRole>(asParticipationRole(user?.participationRole));
@@ -137,8 +170,8 @@ export default function UpdateProfileScreen({ navigation }: Props) {
     setCountry(user.country ?? 'Nigeria');
     setState(user.state ?? '');
     setLga(user.lga ?? '');
-    setInterestsInput(user.interests?.join(', ') ?? '');
-    setHobbiesInput(user.hobbies?.join(', ') ?? '');
+    setSelectedInterests(restoreTagOptions(user.interests ?? [], interestChoices));
+    setSelectedHobbies(restoreTagOptions(user.hobbies ?? [], hobbyTopics));
     setPreferredSetting(asPreferredSetting(user.preferredSetting));
     setPreferredGroupSize(asPreferredGroupSize(user.preferredGroupSize));
     setParticipationRole(asParticipationRole(user.participationRole));
@@ -173,8 +206,8 @@ export default function UpdateProfileScreen({ navigation }: Props) {
     const normalizedFirstName = firstName.trim();
     const normalizedLastName = lastName.trim();
     const normalizedPhone = phone.trim();
-    const interests = normalizeProfileTags(interestsInput.split(','));
-    const hobbies = normalizeProfileTags(hobbiesInput.split(','));
+    const interests = normalizeProfileTags(selectedInterests);
+    const hobbies = normalizeProfileTags(selectedHobbies);
 
     if (normalizedFirstName.length < 2 || normalizedLastName.length < 2) {
       setAlert({ title: 'Profile', message: 'First name and last name must each contain at least two characters.' });
@@ -231,6 +264,53 @@ export default function UpdateProfileScreen({ navigation }: Props) {
     }
   };
 
+  const isNigeria = country.trim().toLowerCase() === 'nigeria';
+  const countryOptions = Array.from(new Set([...PROFILE_COUNTRIES, country].filter(Boolean)));
+  const stateOptions = Array.from(
+    new Set([
+      ...(isNigeria ? NIGERIAN_STATES : []),
+      ...(state ? [state] : []),
+    ]),
+  );
+  const lgaOptions = Array.from(
+    new Set([
+      ...(isNigeria && state ? getNigerianLgas(state) : []),
+      ...(lga ? [lga] : []),
+    ]),
+  );
+  const interestOptionsWithCurrent = includeCurrentOptions(interestChoices, selectedInterests);
+  const hobbyOptionsWithCurrent = includeCurrentOptions(hobbyTopics, selectedHobbies);
+
+  const toggleInterest = (value: string) => {
+    if (selectedInterests.includes(value)) {
+      setSelectedInterests((current) => current.filter((item) => item !== value));
+      return;
+    }
+    if (selectedInterests.length >= MAX_PROFILE_TAGS) {
+      setAlert({
+        title: 'Too many selections',
+        message: `You can select up to ${MAX_PROFILE_TAGS} interests.`,
+      });
+      return;
+    }
+    setSelectedInterests((current) => [...current, value]);
+  };
+
+  const toggleHobby = (value: string) => {
+    if (selectedHobbies.includes(value)) {
+      setSelectedHobbies((current) => current.filter((item) => item !== value));
+      return;
+    }
+    if (selectedHobbies.length >= MAX_PROFILE_TAGS) {
+      setAlert({
+        title: 'Too many selections',
+        message: `You can select up to ${MAX_PROFILE_TAGS} hobbies.`,
+      });
+      return;
+    }
+    setSelectedHobbies((current) => [...current, value]);
+  };
+
   return (
     <>
       <SafeAreaView style={styles.safeArea} edges={[]}>
@@ -249,22 +329,75 @@ export default function UpdateProfileScreen({ navigation }: Props) {
             <Field label="Bio" value={bio} onChangeText={setBio} multiline editable={!submitting} />
             <Field label="Email Address" value={email} onChangeText={() => undefined} keyboardType="email-address" editable={false} />
             <Field label="Phone Number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" editable={!submitting} />
-            <Field label="Country" value={country} onChangeText={setCountry} editable={!submitting} />
-            <Field label="State" value={state} onChangeText={setState} editable={!submitting} />
-            <Field label="LGA" value={lga} onChangeText={setLga} editable={!submitting} />
-            <Field
-              label="Interests"
-              value={interestsInput}
-              onChangeText={setInterestsInput}
-              editable={!submitting}
-              placeholder="e.g. technology, music"
+            <AppSelectField
+              label="Country"
+              placeholder="Select country"
+              options={countryOptions}
+              value={country}
+              disabled={submitting}
+              onChange={(nextCountry) => {
+                if (nextCountry === country) return;
+                setCountry(nextCountry);
+                setState('');
+                setLga('');
+              }}
             />
-            <Field
+            <AppSelectField
+              label="State"
+              placeholder={isNigeria ? 'Select state' : 'Available for Nigeria'}
+              options={stateOptions}
+              value={state}
+              disabled={submitting || !isNigeria}
+              onChange={(nextState) => {
+                if (nextState === state) return;
+                setState(nextState);
+                setLga('');
+              }}
+            />
+            <AppSelectField
+              label="LGA"
+              placeholder={state ? 'Select LGA' : 'Select a state first'}
+              options={lgaOptions}
+              value={lga}
+              disabled={submitting || !isNigeria || !state}
+              onChange={setLga}
+            />
+            {!isNigeria ? (
+              <Text style={styles.locationHint}>
+                State and LGA options are currently available for Nigeria.
+              </Text>
+            ) : null}
+            <AppSelectField
+              label="Interests"
+              placeholder="Choose interests"
+              options={interestOptionsWithCurrent}
+              selectedValues={selectedInterests}
+              multiple
+              maxSelections={MAX_PROFILE_TAGS}
+              disabled={submitting}
+              onToggleSelected={toggleInterest}
+              onLimitReached={() =>
+                setAlert({
+                  title: 'Too many selections',
+                  message: `You can select up to ${MAX_PROFILE_TAGS} interests.`,
+                })
+              }
+            />
+            <AppSelectField
               label="Hobbies"
-              value={hobbiesInput}
-              onChangeText={setHobbiesInput}
-              editable={!submitting}
-              placeholder="e.g. photography, cooking"
+              placeholder="Choose hobbies"
+              options={hobbyOptionsWithCurrent}
+              selectedValues={selectedHobbies}
+              multiple
+              maxSelections={MAX_PROFILE_TAGS}
+              disabled={submitting}
+              onToggleSelected={toggleHobby}
+              onLimitReached={() =>
+                setAlert({
+                  title: 'Too many selections',
+                  message: `You can select up to ${MAX_PROFILE_TAGS} hobbies.`,
+                })
+              }
             />
             <ChoiceGroup
               label="Preferred Setting"
@@ -316,6 +449,7 @@ const styles = StyleSheet.create({
   photoAction: { alignItems: 'center', flexDirection: 'row', gap: 8, marginTop: 18 },
   photoText: { color: '#08ae55', fontFamily: fonts.bold, fontSize: 16 },
   fieldWrap: { marginTop: 16 },
+  locationHint: { color: colors.muted, fontFamily: fonts.medium, fontSize: 12, marginTop: 8, paddingHorizontal: 12 },
   label: { color: '#399760', fontFamily: fonts.bold, fontSize: 15, marginBottom: 10, paddingLeft: 12 },
   input: { backgroundColor: colors.white, borderRadius: 22, color: colors.ink, elevation: 2, fontFamily: fonts.medium, fontSize: 17, height: 56, paddingHorizontal: 24 },
   disabledInput: { opacity: 0.6 },
