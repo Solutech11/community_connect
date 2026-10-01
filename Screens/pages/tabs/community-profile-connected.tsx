@@ -260,108 +260,121 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
-      const [detailResponse, rulesResponse, mineResponse, pendingRequests] =
-        await Promise.all([
-          communitiesApi.get(communityId, signal),
-          communitiesApi.rules(communityId, signal),
-          communitiesApi.allMyCommunities(signal),
-          communitiesApi.allMyJoinRequests(signal),
-        ]);
-      if (signal?.aborted) return;
-      const nextCommunity = detailResponse.data.community;
-      const membership =
-        mineResponse.find((item) => item._id === communityId)
-          ?.viewerMembership ?? null;
-      setCommunity(nextCommunity);
-      setCommunityRules(rulesResponse.data.rules);
-      setViewerMembership(membership);
-      setMembershipChecked(true);
-      setJoinRequestPending(
-        pendingRequests.some(
-          (request) => request.communityId?._id === communityId,
-        ),
+      const hadCachedProfile = Boolean(
+        user?._id && communityProfileCache.read(user._id, communityId),
       );
-
-      if (membership?.status === "active") {
-        setLoadingUpdates(
-          !user?._id ||
-            communityProfileCache.read(user._id, communityId) === undefined,
+      try {
+        const [detailResponse, rulesResponse, mineResponse, pendingRequests] =
+          await Promise.all([
+            communitiesApi.get(communityId, signal),
+            communitiesApi.rules(communityId, signal),
+            communitiesApi.allMyCommunities(signal),
+            communitiesApi.allMyJoinRequests(signal),
+          ]);
+        if (signal?.aborted) return;
+        const nextCommunity = detailResponse.data.community;
+        const membership =
+          mineResponse.find((item) => item._id === communityId)
+            ?.viewerMembership ?? null;
+        setCommunity(nextCommunity);
+        setCommunityRules(rulesResponse.data.rules);
+        setViewerMembership(membership);
+        setMembershipChecked(true);
+        setJoinRequestPending(
+          pendingRequests.some(
+            (request) => request.communityId?._id === communityId,
+          ),
         );
-        try {
-          const [postsResponse, announcementResponse, settingsResponse] =
-            await Promise.all([
-              communitiesApi.posts(
-                communityId,
-                { page: 1, limit: COMMUNITY_UPDATE_PAGE_SIZE },
-                signal,
-              ),
-              communitiesApi.announcements(
-                communityId,
-                { page: 1, limit: COMMUNITY_UPDATE_PAGE_SIZE },
-                signal,
-              ),
-              communitiesApi.settings(communityId, signal),
-            ]);
-          if (signal?.aborted) return;
-          setPosts(postsResponse.data.posts);
-          setPostPage(1);
-          setMorePosts(
-            postsResponse.data.posts.length <
-              postsResponse.data.pagination.total,
-          );
-          setAnnouncements(announcementResponse.data.announcements);
-          setAnnouncementPage(1);
-          setMoreAnnouncements(
-            announcementResponse.data.announcements.length <
-              announcementResponse.data.pagination.total,
-          );
-          const canListMembers =
-            settingsResponse.data.settings.showMemberList ||
-            membership.role === "owner" ||
-            membership.role === "moderator";
-          setMemberListVisible(canListMembers);
-          if (canListMembers) {
-            const memberResponse = await communitiesApi.members(
-              communityId,
-              { page: 1, limit: 100 },
-              signal,
-            );
+
+        if (membership?.status === "active") {
+          setLoadingUpdates(!hadCachedProfile);
+          try {
+            const [postsResponse, announcementResponse, settingsResponse] =
+              await Promise.all([
+                communitiesApi.posts(
+                  communityId,
+                  { page: 1, limit: COMMUNITY_UPDATE_PAGE_SIZE },
+                  signal,
+                ),
+                communitiesApi.announcements(
+                  communityId,
+                  { page: 1, limit: COMMUNITY_UPDATE_PAGE_SIZE },
+                  signal,
+                ),
+                communitiesApi.settings(communityId, signal),
+              ]);
             if (signal?.aborted) return;
-            setMembers(
-              (memberResponse.data.members as unknown[])
-                .map(mapMember)
-                .filter((item): item is Member => item !== null),
+            setPosts(postsResponse.data.posts);
+            setPostPage(1);
+            setMorePosts(
+              postsResponse.data.posts.length <
+                postsResponse.data.pagination.total,
             );
-            setMemberPage(1);
-            setMoreMembers(
-              (memberResponse.data.pagination?.total ??
-                memberResponse.data.members.length) >
-                memberResponse.data.members.length,
+            setAnnouncements(announcementResponse.data.announcements);
+            setAnnouncementPage(1);
+            setMoreAnnouncements(
+              announcementResponse.data.announcements.length <
+                announcementResponse.data.pagination.total,
             );
-          } else {
-            setMembers([]);
-            setMoreMembers(false);
-            setActiveTab("About");
+            const canListMembers =
+              settingsResponse.data.settings.showMemberList ||
+              membership.role === "owner" ||
+              membership.role === "moderator";
+            setMemberListVisible(canListMembers);
+            if (canListMembers) {
+              const memberResponse = await communitiesApi.members(
+                communityId,
+                { page: 1, limit: 100 },
+                signal,
+              );
+              if (signal?.aborted) return;
+              setMembers(
+                (memberResponse.data.members as unknown[])
+                  .map(mapMember)
+                  .filter((item): item is Member => item !== null),
+              );
+              setMemberPage(1);
+              setMoreMembers(
+                (memberResponse.data.pagination?.total ??
+                  memberResponse.data.members.length) >
+                  memberResponse.data.members.length,
+              );
+            } else {
+              setMembers([]);
+              setMoreMembers(false);
+              setActiveTab("About");
+            }
+            setMessagePermission(
+              settingsResponse.data.settings.messagePermission,
+            );
+          } finally {
+            if (!signal?.aborted) setLoadingUpdates(false);
           }
-          setMessagePermission(
-            settingsResponse.data.settings.messagePermission,
-          );
-        } finally {
+        } else {
+          setMembers([]);
+          setMemberListVisible(false);
+          setMoreMembers(false);
+          setPosts([]);
+          setPostPage(1);
+          setMorePosts(false);
+          setAnnouncements([]);
+          setAnnouncementPage(1);
+          setMoreAnnouncements(false);
           setLoadingUpdates(false);
+          setMessagePermission("everyone");
+          setActiveTab("About");
         }
-      } else {
-        setMembers([]);
-        setMemberListVisible(false);
-        setMoreMembers(false);
-        setPosts([]);
-        setPostPage(1);
-        setMorePosts(false);
-        setAnnouncements([]);
-        setAnnouncementPage(1);
-        setMoreAnnouncements(false);
-        setLoadingUpdates(false);
-        setMessagePermission("everyone");
-        setActiveTab("About");
+      } catch (error) {
+        if (
+          !signal?.aborted &&
+          error instanceof ApiError &&
+          [401, 403, 404].includes(error.status)
+        ) {
+          if (user?._id)
+            communityProfileCache.invalidate(user._id, communityId);
+          setMembershipChecked(false);
+        }
+        throw error;
       }
     },
     [communityId, setters, user?._id],
