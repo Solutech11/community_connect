@@ -68,7 +68,7 @@ export type RootStackParamList = {
     communityId: string;
     callId: string;
     callType: "voice" | "video";
-    roomName: string;
+    communityName: string;
     participantToken: string;
     expiresAt: string;
     canEndCall: boolean;

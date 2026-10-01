@@ -36,7 +36,7 @@ type CallControlsProps = {
   canEndCall: boolean;
   connected: boolean;
   ending: boolean;
-  roomName: string;
+  communityName: string;
   onLeave: () => void;
   onRequestEnd: () => void;
 };
@@ -71,7 +71,7 @@ function CallControls({
   canEndCall,
   connected,
   ending,
-  roomName,
+  communityName,
   onLeave,
   onRequestEnd,
 }: CallControlsProps) {
@@ -145,7 +145,7 @@ function CallControls({
             style={styles.stageNamePill}
           >
             <Text numberOfLines={1} style={styles.stageName}>
-              {stageParticipant ? participantName(stageParticipant) : roomName}
+              {stageParticipant ? participantName(stageParticipant) : communityName}
             </Text>
             {pinnedParticipant ? (
               <Text style={styles.speakingText}>Follow speaker</Text>
@@ -187,7 +187,7 @@ function CallControls({
           </View>
           <Text style={styles.voiceTitle}>{connected ? 'You are connected' : 'Connecting your call'}</Text>
           <Text style={styles.voiceMeta}>
-            {participants.length} {participants.length === 1 ? 'person' : 'people'} in {roomName}
+            {participants.length} {participants.length === 1 ? 'person' : 'people'} in {communityName}
           </Text>
         </View>
       )}
@@ -199,7 +199,7 @@ function CallControls({
           </Pressable>
           <View style={styles.headerCopy}>
             <Text style={styles.headerTitle}>{callType === 'video' ? 'Video call' : 'Voice call'}</Text>
-            <Text numberOfLines={1} style={styles.headerMeta}>{roomName}</Text>
+            <Text numberOfLines={1} style={styles.headerMeta}>{communityName}</Text>
           </View>
           <View style={styles.connectionPill}>
             <View style={[styles.connectionDot, connected && styles.connectionDotActive]} />
@@ -286,7 +286,7 @@ function CallControls({
 }
 
 export default function CommunityCallScreen({ navigation, route }: Props) {
-  const { callId, callType, canEndCall, communityId, participantToken, roomName } = route.params;
+  const { callId, callType, canEndCall, communityId, participantToken, communityName } = route.params;
   const [connected, setConnected] = useState(false);
   const [ending, setEnding] = useState(false);
   const [endConfirmVisible, setEndConfirmVisible] = useState(false);
@@ -361,7 +361,7 @@ export default function CommunityCallScreen({ navigation, route }: Props) {
             canEndCall={canEndCall}
             connected={connected}
             ending={ending}
-            roomName={roomName}
+            communityName={communityName}
             onLeave={leaveCallScreen}
             onRequestEnd={() => setEndConfirmVisible(true)}
           />

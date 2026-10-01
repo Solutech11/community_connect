@@ -29,6 +29,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import AppLoader from "../../components/ui/app-loader";
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import AppReportSheet from "../../components/ui/app-report-sheet";
+import CommunityIncomingCall from "../../components/ui/community-incoming-call";
 import { communityImage, initials } from "../../data/community-presentation";
 import {
   communityMessageReportReasons,
@@ -383,10 +384,14 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
   const [membershipRole, setMembershipRole] = useState<CommunityRole>(null);
   const [messagePermission, setMessagePermission] = useState("everyone");
   const [activeCall, setActiveCall] = useState<CommunityCall | null>(null);
+  const [incomingCall, setIncomingCall] = useState<CommunityCall | null>(null);
   const [startingCallType, setStartingCallType] =
     useState<CommunityCallType | null>(null);
   const startingCallRef = useRef(false);
   const callTonePlayer = useAudioPlayer(
+    require("../../../assets/sounds/community-call-connecting.wav"),
+  );
+  const incomingCallTonePlayer = useAudioPlayer(
     require("../../../assets/sounds/community-call-connecting.wav"),
   );
   const playCallConnectingTone = useCallback(async () => {
@@ -414,6 +419,37 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
       // The player may already be released if the screen is closing.
     }
   }, [callTonePlayer]);
+  useEffect(() => {
+    if (!incomingCall) return;
+    let cancelled = false;
+    const startIncomingRing = async () => {
+      try {
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          interruptionMode: "mixWithOthers",
+        });
+        if (cancelled) return;
+        incomingCallTonePlayer.volume = 0.42;
+        incomingCallTonePlayer.loop = true;
+        await incomingCallTonePlayer.seekTo(0);
+        if (!cancelled) incomingCallTonePlayer.play();
+      } catch {
+        // The visual incoming-call controls remain available when muted.
+      }
+    };
+    void startIncomingRing();
+
+    return () => {
+      cancelled = true;
+      try {
+        incomingCallTonePlayer.loop = false;
+        incomingCallTonePlayer.pause();
+        void incomingCallTonePlayer.seekTo(0).catch(() => undefined);
+      } catch {
+        // The player may already be released if the room is closing.
+      }
+    };
+  }, [incomingCall, incomingCallTonePlayer]);
   const [typingMembers, setTypingMembers] = useState<Record<string, string>>(
     {},
   );
@@ -693,12 +729,19 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
         if (!isCommunityPayload(payload, communityId)) return;
         setActiveCall(mapCommunityCall(payload));
       };
-      const stopCallStarted =
-        chatSocket.onCommunityCallStarted(updateActiveCall);
+      const stopCallStarted = chatSocket.onCommunityCallStarted((payload) => {
+        updateActiveCall(payload);
+        const call = mapCommunityCall(payload);
+        if (call && call.startedBy !== user?._id) setIncomingCall(call);
+      });
       const stopCallUpdated =
         chatSocket.onCommunityCallUpdated(updateActiveCall);
       const stopCallEnded = chatSocket.onCommunityCallEnded((payload) => {
-        if (isCommunityPayload(payload, communityId)) setActiveCall(null);
+        if (!isCommunityPayload(payload, communityId)) return;
+        setActiveCall(null);
+        setIncomingCall((current) =>
+          current?._id === payload._id ? null : current,
+        );
       });
 
       return () => {
@@ -984,6 +1027,7 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
 
   const startOrJoinCall = async (
     preferredType: CommunityCallType = "voice",
+    incoming?: CommunityCall,
   ) => {
     if (startingCallRef.current) return;
     startingCallRef.current = true;
@@ -991,7 +1035,7 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
 
     try {
       await playCallConnectingTone();
-      let call = activeCall;
+      let call = incoming ?? activeCall;
       if (!call) {
         const activeResponse = await communitiesApi.activeCall(communityId);
         call = mapCommunityCall(activeResponse.data.call);
@@ -1030,7 +1074,7 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
         communityId,
         callId: call._id,
         callType: call.type,
-        roomName: response.data.roomName,
+        communityName: community?.name ?? "Community",
         participantToken: response.data.participantToken,
         expiresAt: response.data.expiresAt,
         canEndCall: canModerate || call.startedBy === user?._id,
@@ -1752,6 +1796,19 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
         message={alert?.message ?? ""}
         onClose={() => setAlert(null)}
       />
+      {incomingCall ? (
+        <CommunityIncomingCall
+          callType={incomingCall.type}
+          communityName={community?.name ?? "Community"}
+          joining={startingCallType !== null}
+          onDismiss={() => setIncomingCall(null)}
+          onJoin={() => {
+            const call = incomingCall;
+            setIncomingCall(null);
+            void startOrJoinCall(call.type, call);
+          }}
+        />
+      ) : null}
     </>
   );
 }
