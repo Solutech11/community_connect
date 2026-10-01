@@ -13,6 +13,7 @@ import { Track } from 'livekit-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -33,16 +34,65 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CommunityCall'>;
 type CallControlsProps = {
   callType: 'voice' | 'video';
   canEndCall: boolean;
+  connected: boolean;
   ending: boolean;
+  roomName: string;
   onLeave: () => void;
   onRequestEnd: () => void;
 };
 
-function CallControls({ callType, canEndCall, ending, onLeave, onRequestEnd }: CallControlsProps) {
+type ParticipantLabel = {
+  identity: string;
+  name?: string;
+};
+
+function participantName(participant: ParticipantLabel) {
+  return participant.name?.trim() || participant.identity || 'Community member';
+}
+
+function participantInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length > 1) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return parts[0]?.slice(0, 2).toUpperCase() || '?';
+}
+
+function ParticipantAvatar({ participant, size = 48 }: { participant: ParticipantLabel; size?: number }) {
+  const name = participantName(participant);
+
+  return (
+    <View style={[styles.participantAvatar, { width: size, height: size, borderRadius: size / 2 }]}>
+      <Text style={[styles.participantAvatarText, { fontSize: size * 0.34 }]}>{participantInitials(name)}</Text>
+    </View>
+  );
+}
+
+function CallControls({
+  callType,
+  canEndCall,
+  connected,
+  ending,
+  roomName,
+  onLeave,
+  onRequestEnd,
+}: CallControlsProps) {
   const { isCameraEnabled, isMicrophoneEnabled, localParticipant } = useLocalParticipant();
   const participants = useParticipants();
   const tracks = useTracks([Track.Source.Camera]);
   const [changingMedia, setChangingMedia] = useState(false);
+  const [pinnedIdentity, setPinnedIdentity] = useState<string | null>(null);
+
+  const cameraTracks = tracks.filter(isTrackReference);
+  const remoteParticipants = participants.filter((participant) => !participant.isLocal);
+  const remoteTracks = cameraTracks.filter((track) => !track.participant.isLocal);
+  const pinnedParticipant = remoteParticipants.find((participant) => participant.identity === pinnedIdentity);
+  const stageTrack = pinnedParticipant
+    ? remoteTracks.find((track) => track.participant.identity === pinnedParticipant.identity)
+    : remoteTracks.find((track) => track.participant.isSpeaking) ?? remoteTracks[0];
+  const stageParticipant = pinnedParticipant ?? stageTrack?.participant ?? remoteParticipants[0];
+  const localTrack = cameraTracks.find((track) => track.participant.isLocal);
+  const otherParticipants = remoteParticipants.filter(
+    (participant) => participant.identity !== stageParticipant?.identity,
+  );
 
   const toggleMicrophone = async () => {
     setChangingMedia(true);
@@ -62,49 +112,175 @@ function CallControls({ callType, canEndCall, ending, onLeave, onRequestEnd }: C
     }
   };
 
-  const cameraTracks = tracks.filter(isTrackReference);
-
   return (
     <View style={styles.callBody}>
       {callType === 'video' ? (
-        <View style={styles.videoGrid}>
-          {cameraTracks.length > 0 ? cameraTracks.slice(0, 4).map((track) => (
-            <VideoTrack key={`${track.participant.identity}-${track.source}`} trackRef={track} style={styles.videoTile} />
-          )) : (
+        <View style={styles.videoStage}>
+          {stageTrack ? (
+            <VideoTrack trackRef={stageTrack} style={styles.stageVideo} />
+          ) : (
             <View style={styles.videoPlaceholder}>
-              <Ionicons name="videocam-off-outline" size={42} color="#b5d8c4" />
-              <Text style={styles.placeholderText}>Waiting for cameras</Text>
+              {stageParticipant ? (
+                <ParticipantAvatar participant={stageParticipant} size={104} />
+              ) : (
+                <View style={styles.waitingIcon}>
+                  <Ionicons name="people-outline" size={36} color={colors.lime} />
+                </View>
+              )}
+              <Text style={styles.placeholderTitle}>
+                {stageParticipant ? participantName(stageParticipant) + ' is here' : 'Your call is ready'}
+              </Text>
+              <Text style={styles.placeholderText}>
+                {stageParticipant ? 'Camera is off' : 'Waiting for others to join'}
+              </Text>
             </View>
           )}
+
+          <View pointerEvents="none" style={styles.stageShade} />
+          <Pressable
+            accessibilityLabel={pinnedParticipant ? 'Follow the active speaker' : 'Current video participant'}
+            accessibilityRole="button"
+            disabled={!pinnedParticipant}
+            onPress={() => setPinnedIdentity(null)}
+            style={styles.stageNamePill}
+          >
+            <Text numberOfLines={1} style={styles.stageName}>
+              {stageParticipant ? participantName(stageParticipant) : roomName}
+            </Text>
+            {pinnedParticipant ? (
+              <Text style={styles.speakingText}>Follow speaker</Text>
+            ) : stageTrack?.participant.isSpeaking ? (
+              <View style={styles.speakingIndicator}>
+                <View style={styles.speakingDot} />
+                <Text style={styles.speakingText}>Speaking</Text>
+              </View>
+            ) : null}
+          </Pressable>
+
+          <View style={styles.selfPreview}>
+            {localTrack && isCameraEnabled ? (
+              <VideoTrack trackRef={localTrack} style={styles.previewVideo} />
+            ) : (
+              <View style={styles.previewOff}>
+                <ParticipantAvatar participant={{ identity: 'You', name: 'You' }} size={42} />
+                <Text style={styles.previewOffText}>{isCameraEnabled ? 'Starting camera' : 'Camera off'}</Text>
+              </View>
+            )}
+            <View style={styles.previewLabel}><Text style={styles.previewLabelText}>You</Text></View>
+          </View>
         </View>
       ) : (
         <View style={styles.voiceStage}>
-          <View style={styles.voiceIcon}><Ionicons name="call" color={colors.lime} size={45} /></View>
-          <Text style={styles.voiceTitle}>Voice call in progress</Text>
-          <Text style={styles.voiceMeta}>{participants.length} participant{participants.length === 1 ? '' : 's'} connected</Text>
+          <View style={styles.voiceHaloOuter}>
+            <View style={styles.voiceHaloInner}>
+              <View style={styles.voiceAvatarCluster}>
+                {participants.slice(0, 3).map((participant, index) => (
+                  <View key={participant.identity} style={[styles.voiceAvatarWrap, index > 0 && styles.voiceAvatarOverlap]}>
+                    <ParticipantAvatar participant={participant} size={76} />
+                  </View>
+                ))}
+                {participants.length === 0 ? (
+                  <View style={styles.voiceIcon}><Ionicons name="call" color={colors.lime} size={38} /></View>
+                ) : null}
+              </View>
+            </View>
+          </View>
+          <Text style={styles.voiceTitle}>{connected ? 'You are connected' : 'Connecting your call'}</Text>
+          <Text style={styles.voiceMeta}>
+            {participants.length} {participants.length === 1 ? 'person' : 'people'} in {roomName}
+          </Text>
         </View>
       )}
 
-      <View style={styles.controls}>
-        <Pressable disabled={changingMedia} onPress={() => void toggleMicrophone()} style={[styles.controlButton, !isMicrophoneEnabled && styles.controlButtonMuted]}>
-          <Ionicons name={isMicrophoneEnabled ? 'mic' : 'mic-off'} color={colors.white} size={22} />
-        </Pressable>
-        {callType === 'video' ? (
-          <Pressable disabled={changingMedia} onPress={() => void toggleCamera()} style={[styles.controlButton, !isCameraEnabled && styles.controlButtonMuted]}>
-            <Ionicons name={isCameraEnabled ? 'videocam' : 'videocam-off'} color={colors.white} size={22} />
+      <View pointerEvents="box-none" style={styles.overlay}>
+        <View style={styles.topBar}>
+          <Pressable accessibilityLabel="Return to community" onPress={onLeave} style={styles.backIcon}>
+            <Ionicons name="chevron-back" color={colors.white} size={25} />
           </Pressable>
-        ) : null}
-        {canEndCall ? (
-          <Pressable disabled={ending} onPress={onRequestEnd} style={[styles.endButton, ending && styles.disabled]}>
-            {ending ? <AppLoader color={colors.white} /> : <Ionicons name="stop" color={colors.white} size={21} />}
-          </Pressable>
-        ) : (
-          <Pressable onPress={onLeave} style={styles.leaveButton}>
-            <Ionicons name="call" color={colors.white} size={21} />
-          </Pressable>
-        )}
+          <View style={styles.headerCopy}>
+            <Text style={styles.headerTitle}>{callType === 'video' ? 'Video call' : 'Voice call'}</Text>
+            <Text numberOfLines={1} style={styles.headerMeta}>{roomName}</Text>
+          </View>
+          <View style={styles.connectionPill}>
+            <View style={[styles.connectionDot, connected && styles.connectionDotActive]} />
+            <Text style={styles.connectionText}>{connected ? 'LIVE' : 'CONNECTING'}</Text>
+          </View>
+        </View>
+
+        <View style={styles.bottomControls}>
+          {callType === 'video' && otherParticipants.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.participantRail}
+            >
+              {otherParticipants.map((participant) => {
+                const track = remoteTracks.find((item) => item.participant.identity === participant.identity);
+
+                return (
+                  <Pressable
+                    accessibilityLabel={'Show ' + participantName(participant)}
+                    accessibilityRole="button"
+                    key={participant.identity}
+                    onPress={() => setPinnedIdentity(participant.identity)}
+                    style={styles.participantTile}
+                  >
+                    {track ? (
+                      <VideoTrack trackRef={track} style={styles.participantTileVideo} />
+                    ) : (
+                      <View style={styles.participantTileOff}>
+                        <ParticipantAvatar participant={participant} size={38} />
+                      </View>
+                    )}
+                    <View style={styles.participantTileNameWrap}>
+                      <Text numberOfLines={1} style={styles.participantTileName}>{participantName(participant)}</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          ) : null}
+
+          <View style={styles.controlsDock}>
+            <View style={styles.controlGroup}>
+              <Pressable
+                accessibilityLabel={isMicrophoneEnabled ? 'Mute microphone' : 'Unmute microphone'}
+                disabled={changingMedia}
+                onPress={() => void toggleMicrophone()}
+                style={[styles.controlButton, !isMicrophoneEnabled && styles.controlButtonMuted]}
+              >
+                <Ionicons name={isMicrophoneEnabled ? 'mic' : 'mic-off'} color={colors.white} size={22} />
+              </Pressable>
+              <Text style={styles.controlLabel}>{isMicrophoneEnabled ? 'Mute' : 'Unmute'}</Text>
+            </View>
+            {callType === 'video' ? (
+              <View style={styles.controlGroup}>
+                <Pressable
+                  accessibilityLabel={isCameraEnabled ? 'Turn camera off' : 'Turn camera on'}
+                  disabled={changingMedia}
+                  onPress={() => void toggleCamera()}
+                  style={[styles.controlButton, !isCameraEnabled && styles.controlButtonMuted]}
+                >
+                  <Ionicons name={isCameraEnabled ? 'videocam' : 'videocam-off'} color={colors.white} size={22} />
+                </Pressable>
+                <Text style={styles.controlLabel}>{isCameraEnabled ? 'Camera' : 'Camera off'}</Text>
+              </View>
+            ) : null}
+            <View style={styles.controlGroup}>
+              <Pressable
+                accessibilityLabel={canEndCall ? 'End call for everyone' : 'Leave call'}
+                disabled={ending}
+                onPress={canEndCall ? onRequestEnd : onLeave}
+                style={[styles.endButton, ending && styles.disabled]}
+              >
+                {ending ? <AppLoader color={colors.white} /> : <Ionicons name="call" color={colors.white} size={23} />}
+              </Pressable>
+              <Text style={styles.controlLabel}>{canEndCall ? 'End call' : 'Leave'}</Text>
+            </View>
+          </View>
+          {canEndCall ? <Text style={styles.controlHint}>This ends the call for everyone</Text> : null}
+        </View>
       </View>
-      <Text style={styles.controlHint}>{canEndCall ? 'End call for everyone' : 'Leave call'}</Text>
     </View>
   );
 }
@@ -168,11 +344,6 @@ export default function CommunityCallScreen({ navigation, route }: Props) {
   return (
     <>
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <View style={styles.header}>
-          <Pressable onPress={leaveCallScreen} style={styles.backIcon}><Ionicons name="chevron-back" color={colors.white} size={27} /></Pressable>
-          <View style={styles.headerCopy}><Text style={styles.headerTitle}>{callType === 'video' ? 'Community video call' : 'Community voice call'}</Text><Text numberOfLines={1} style={styles.headerMeta}>{roomName}</Text></View>
-          <View style={[styles.connectionDot, connected && styles.connectionDotActive]} />
-        </View>
         <LiveKitRoom
           audio
           connect
@@ -188,7 +359,9 @@ export default function CommunityCallScreen({ navigation, route }: Props) {
           <CallControls
             callType={callType}
             canEndCall={canEndCall}
+            connected={connected}
             ending={ending}
+            roomName={roomName}
             onLeave={leaveCallScreen}
             onRequestEnd={() => setEndConfirmVisible(true)}
           />
@@ -208,29 +381,61 @@ export default function CommunityCallScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  safe: { backgroundColor: '#06170f', flex: 1 },
-  header: { alignItems: 'center', flexDirection: 'row', minHeight: 72, paddingHorizontal: 16 },
-  backIcon: { alignItems: 'center', height: 42, justifyContent: 'center', width: 42 },
-  headerCopy: { flex: 1, marginLeft: 8 },
-  headerTitle: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 17 },
-  headerMeta: { color: '#9fc6ad', fontFamily: fonts.medium, fontSize: 10, marginTop: 3 },
-  connectionDot: { backgroundColor: '#718178', borderRadius: 6, height: 12, width: 12 },
+  safe: { backgroundColor: '#07120d', flex: 1 },
+  callBody: { backgroundColor: '#07120d', flex: 1 },
+  videoStage: { backgroundColor: '#0b1a12', flex: 1, overflow: 'hidden' },
+  stageVideo: { height: '100%', width: '100%' },
+  stageShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(4, 14, 9, 0.12)' },
+  stageNamePill: { alignItems: 'center', backgroundColor: 'rgba(5, 16, 10, 0.58)', borderColor: 'rgba(255,255,255,0.12)', borderRadius: 18, borderWidth: 1, flexDirection: 'row', gap: 8, left: 14, maxWidth: '56%', paddingHorizontal: 12, paddingVertical: 9, position: 'absolute', top: 70 },
+  stageName: { color: colors.white, flexShrink: 1, fontFamily: fonts.bold, fontSize: 12 },
+  speakingIndicator: { alignItems: 'center', flexDirection: 'row', gap: 5 },
+  speakingDot: { backgroundColor: colors.lime, borderRadius: 4, height: 7, width: 7 },
+  speakingText: { color: '#dcf3e4', fontFamily: fonts.medium, fontSize: 9 },
+  videoPlaceholder: { alignItems: 'center', backgroundColor: '#0d1d14', flex: 1, justifyContent: 'center' },
+  waitingIcon: { alignItems: 'center', backgroundColor: '#163221', borderRadius: 42, height: 84, justifyContent: 'center', width: 84 },
+  placeholderTitle: { color: colors.white, fontFamily: fonts.bold, fontSize: 16, marginTop: 18 },
+  placeholderText: { color: '#a5b9ac', fontFamily: fonts.medium, fontSize: 12, marginTop: 7 },
+  participantAvatar: { alignItems: 'center', backgroundColor: '#bee876', borderColor: 'rgba(255,255,255,0.28)', borderWidth: 1, justifyContent: 'center' },
+  participantAvatarText: { color: '#18301f', fontFamily: fonts.extraBold },
+  selfPreview: { backgroundColor: '#183024', borderColor: 'rgba(255,255,255,0.78)', borderRadius: 20, borderWidth: 1.5, height: 146, overflow: 'hidden', position: 'absolute', right: 15, top: 66, width: 102 },
+  previewVideo: { height: '100%', width: '100%' },
+  previewOff: { alignItems: 'center', backgroundColor: '#1b3526', flex: 1, justifyContent: 'center' },
+  previewOffText: { color: '#e3f2e8', fontFamily: fonts.medium, fontSize: 9, marginTop: 6 },
+  previewLabel: { backgroundColor: 'rgba(4,14,9,0.7)', borderRadius: 9, bottom: 7, left: 7, paddingHorizontal: 7, paddingVertical: 4, position: 'absolute' },
+  previewLabelText: { color: colors.white, fontFamily: fonts.bold, fontSize: 9 },
+  overlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'space-between', paddingBottom: 12, paddingHorizontal: 14, paddingTop: 5 },
+  topBar: { alignItems: 'center', flexDirection: 'row', minHeight: 50 },
+  backIcon: { alignItems: 'center', backgroundColor: 'rgba(6,18,11,0.5)', borderColor: 'rgba(255,255,255,0.14)', borderRadius: 22, borderWidth: 1, height: 42, justifyContent: 'center', width: 42 },
+  headerCopy: { flex: 1, marginLeft: 10 },
+  headerTitle: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 16 },
+  headerMeta: { color: '#d1e0d5', fontFamily: fonts.medium, fontSize: 10, marginTop: 2 },
+  connectionPill: { alignItems: 'center', backgroundColor: 'rgba(6,18,11,0.52)', borderColor: 'rgba(255,255,255,0.14)', borderRadius: 15, borderWidth: 1, flexDirection: 'row', gap: 6, paddingHorizontal: 10, paddingVertical: 8 },
+  connectionDot: { backgroundColor: '#f2b75c', borderRadius: 4, height: 7, width: 7 },
   connectionDotActive: { backgroundColor: colors.lime },
-  callBody: { flex: 1, justifyContent: 'space-between', padding: 20 },
-  videoGrid: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  videoTile: { backgroundColor: '#173326', borderRadius: 20, flexGrow: 1, height: 240, minWidth: '46%' },
-  videoPlaceholder: { alignItems: 'center', backgroundColor: '#10281c', borderRadius: 28, flex: 1, justifyContent: 'center' },
-  placeholderText: { color: '#b5d8c4', fontFamily: fonts.medium, fontSize: 13, marginTop: 12 },
-  voiceStage: { alignItems: 'center', flex: 1, justifyContent: 'center' },
-  voiceIcon: { alignItems: 'center', backgroundColor: '#103725', borderRadius: 52, height: 104, justifyContent: 'center', width: 104 },
-  voiceTitle: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 23, marginTop: 20 },
-  voiceMeta: { color: '#a3c5b1', fontFamily: fonts.medium, fontSize: 13, marginTop: 8 },
-  controls: { alignItems: 'center', flexDirection: 'row', gap: 16, justifyContent: 'center', paddingTop: 22 },
-  controlButton: { alignItems: 'center', backgroundColor: '#244c36', borderRadius: 30, height: 60, justifyContent: 'center', width: 60 },
-  controlButtonMuted: { backgroundColor: '#56645c' },
-  leaveButton: { alignItems: 'center', backgroundColor: '#d83f47', borderRadius: 30, height: 60, justifyContent: 'center', transform: [{ rotate: '135deg' }], width: 60 },
-  endButton: { alignItems: 'center', backgroundColor: '#d83f47', borderRadius: 30, height: 60, justifyContent: 'center', width: 60 },
-  controlHint: { color: '#8fb7a0', fontFamily: fonts.medium, fontSize: 11, marginTop: 12, textAlign: 'center' },
+  connectionText: { color: colors.white, fontFamily: fonts.bold, fontSize: 9, letterSpacing: 0.5 },
+  bottomControls: { alignItems: 'center', gap: 10, justifyContent: 'flex-end' },
+  participantRail: { alignItems: 'center', gap: 8, paddingBottom: 2, paddingHorizontal: 2 },
+  participantTile: { backgroundColor: '#14291d', borderColor: 'rgba(255,255,255,0.2)', borderRadius: 15, borderWidth: 1, height: 78, overflow: 'hidden', width: 68 },
+  participantTileVideo: { height: '100%', width: '100%' },
+  participantTileOff: { alignItems: 'center', flex: 1, justifyContent: 'center' },
+  participantTileNameWrap: { backgroundColor: 'rgba(4,14,9,0.68)', bottom: 0, left: 0, paddingHorizontal: 5, paddingVertical: 4, position: 'absolute', right: 0 },
+  participantTileName: { color: colors.white, fontFamily: fonts.medium, fontSize: 8, textAlign: 'center' },
+  controlsDock: { alignItems: 'center', alignSelf: 'center', backgroundColor: 'rgba(10,25,17,0.9)', borderColor: 'rgba(255,255,255,0.14)', borderRadius: 32, borderWidth: 1, flexDirection: 'row', gap: 20, justifyContent: 'center', maxWidth: 330, paddingHorizontal: 24, paddingTop: 11, paddingBottom: 9, width: '100%' },
+  controlGroup: { alignItems: 'center', gap: 5, minWidth: 54 },
+  controlButton: { alignItems: 'center', backgroundColor: '#284536', borderRadius: 28, height: 52, justifyContent: 'center', width: 52 },
+  controlButtonMuted: { backgroundColor: '#56625a' },
+  endButton: { alignItems: 'center', backgroundColor: '#e3484f', borderRadius: 31, height: 58, justifyContent: 'center', width: 58 },
+  controlLabel: { color: '#f1f7f3', fontFamily: fonts.medium, fontSize: 9 },
+  controlHint: { color: '#d4e3d9', fontFamily: fonts.medium, fontSize: 10, marginTop: 1, textAlign: 'center' },
+  voiceStage: { alignItems: 'center', flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
+  voiceHaloOuter: { alignItems: 'center', borderColor: 'rgba(190,232,118,0.1)', borderRadius: 142, borderWidth: 1, height: 250, justifyContent: 'center', width: 250 },
+  voiceHaloInner: { alignItems: 'center', backgroundColor: 'rgba(190,232,118,0.05)', borderColor: 'rgba(190,232,118,0.2)', borderRadius: 118, borderWidth: 1, height: 210, justifyContent: 'center', width: 210 },
+  voiceAvatarCluster: { alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+  voiceAvatarWrap: { borderColor: '#173022', borderRadius: 41, borderWidth: 3 },
+  voiceAvatarOverlap: { marginLeft: -18 },
+  voiceIcon: { alignItems: 'center', backgroundColor: '#183a27', borderRadius: 44, height: 88, justifyContent: 'center', width: 88 },
+  voiceTitle: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 22, marginTop: 25, textAlign: 'center' },
+  voiceMeta: { color: '#a9c4b2', fontFamily: fonts.medium, fontSize: 13, marginTop: 9, textAlign: 'center' },
   disabled: { opacity: 0.55 },
   errorState: { alignItems: 'center', flex: 1, justifyContent: 'center', padding: 32 },
   errorTitle: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 22, marginTop: 16 },

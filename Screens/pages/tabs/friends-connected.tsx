@@ -1,8 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -11,203 +10,201 @@ import {
   TextInput,
   View,
 } from "react-native";
-import AppLoader from "../../components/ui/app-loader";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppAlertModal from "../../components/ui/app-alert-modal";
+import AppLoader from "../../components/ui/app-loader";
 import AppReportSheet from "../../components/ui/app-report-sheet";
+import PersonCard from "../../components/ui/person-card";
+import ProfilePageHeader from "../../components/ui/profile-page-header";
 import {
   toGeneralReportReason,
   type ReportReason,
 } from "../../data/report-options";
 import { useAuth } from "../../hooks/use-auth";
-import { chatApi } from "../../services/api/chat.api";
-import { ApiError } from "../../services/api/client";
-import { friendsApi } from "../../services/api/friends.api";
-import { usersApi } from "../../services/api/users.api";
+import { useFriends, type FriendsTab } from "../../hooks/use-friends";
+import { matchesFriendSearch } from "../../services/api/friends.mapper";
 import { colors, fonts } from "../../styles/theme";
-import type {
-  GetFriendsRequestsResponse,
-  GetFriendsResponse,
-  GetFriendsSuggestionsResponse,
-} from "../../types/api.generated";
+import type { FriendConnection, FriendPerson } from "../../types/friends";
 import type { RootStackParamList } from "../../types/navigation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Friends">;
-type Friendship = GetFriendsResponse["data"]["friendships"][number];
-type Request = GetFriendsRequestsResponse["data"]["requests"][number];
-type Suggestion = GetFriendsSuggestionsResponse["data"]["users"][number];
-type Tab = "Friends" | "Requests" | "Discover";
-
-const AVATAR =
-  "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=200&q=80";
-
-function shortMember(id: string) {
-  return `Member ${id.slice(-6).toUpperCase()}`;
-}
+const tabs: FriendsTab[] = ["Friends", "Requests", "Discover"];
 
 export default function FriendsConnectedScreen({ navigation }: Props) {
   const { user } = useAuth();
-  const [tab, setTab] = useState<Tab>("Friends");
+  const connections = useFriends(user?._id ?? "");
+  const [tab, setTab] = useState<FriendsTab>("Friends");
   const [query, setQuery] = useState("");
-  const [friendships, setFriendships] = useState<Friendship[]>([]);
-  const [requests, setRequests] = useState<Request[]>([]);
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [pendingId, setPendingId] = useState<string | null>(null);
-  const [reportTarget, setReportTarget] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
-  const [notice, setNotice] = useState<{
-    title: string;
-    message: string;
-  } | null>(null);
-
-  const load = useCallback(async (refresh = false) => {
-    refresh ? setRefreshing(true) : setLoading(true);
-    try {
-      const [friendsResponse, requestsResponse, suggestionsResponse] =
-        await Promise.all([
-          friendsApi.list(),
-          friendsApi.requests(),
-          friendsApi.suggestions(),
-        ]);
-      setFriendships(friendsResponse.data.friendships);
-      setRequests(requestsResponse.data.requests);
-      setSuggestions(suggestionsResponse.data.users);
-    } catch (error) {
-      setNotice({
-        title: "Friends unavailable",
-        message:
-          error instanceof ApiError
-            ? error.message
-            : "Unable to load your connections.",
-      });
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const normalized = query.trim().toLowerCase();
-  const visibleSuggestions = useMemo(
-    () =>
-      suggestions.filter((item) =>
-        `${item.firstName} ${item.lastName} ${item.state} ${item.interests.join(" ")}`
-          .toLowerCase()
-          .includes(normalized),
-      ),
-    [normalized, suggestions],
+  const [removeTarget, setRemoveTarget] = useState<FriendConnection | null>(
+    null,
   );
+  const [reportTarget, setReportTarget] = useState<FriendPerson | null>(null);
+  const disabled = Boolean(connections.pendingId);
+  const error = connections.errors[tab];
 
-  const perform = async (
-    id: string,
-    action: () => Promise<unknown>,
-    success: string,
-  ) => {
-    if (pendingId) return;
-    setPendingId(id);
-    try {
-      await action();
-      setNotice({ title: "Done", message: success });
-      await load(true);
-    } catch (error) {
-      setNotice({
-        title: "Action failed",
-        message:
-          error instanceof ApiError ? error.message : "Please try again.",
-      });
-    } finally {
-      setPendingId(null);
-    }
+  const friends = useMemo(
+    () =>
+      connections.friends.filter((item) =>
+        matchesFriendSearch(item.person, query),
+      ),
+    [connections.friends, query],
+  );
+  const requests = useMemo(
+    () =>
+      connections.requests.filter((item) =>
+        matchesFriendSearch(item.person, query),
+      ),
+    [connections.requests, query],
+  );
+  const discover = useMemo(
+    () =>
+      connections.discover.filter((person) =>
+        matchesFriendSearch(person, query),
+      ),
+    [connections.discover, query],
+  );
+  const count =
+    tab === "Friends"
+      ? friends.length
+      : tab === "Requests"
+        ? requests.length
+        : discover.length;
+  const total = {
+    Friends: connections.friends.length,
+    Requests: connections.requests.length,
+    Discover: connections.discover.length,
   };
 
-  const openChat = async (friendship: Friendship) => {
-    const participantId =
-      friendship.requesterId === user?._id
-        ? friendship.addresseeId
-        : friendship.requesterId;
-    setPendingId(friendship._id);
-    try {
-      const response = await chatApi.createConversation({
-        type: "direct",
-        participantIds: [participantId],
-      });
-      navigation.navigate("ChatThread", {
-        conversationId: response.data.conversation._id,
-        image: AVATAR,
-        name: shortMember(participantId),
-        online: false,
-      });
-    } catch (error) {
-      setNotice({
-        title: "Chat unavailable",
-        message:
-          error instanceof ApiError
-            ? error.message
-            : "Unable to open this conversation.",
-      });
-    } finally {
-      setPendingId(null);
-    }
+  const findPeople = () => {
+    setTab("Discover");
+    setQuery("");
+  };
+  const openChat = async (person: FriendPerson) => {
+    const conversation = await connections.startChat(person);
+    if (!conversation) return;
+    navigation.navigate("ChatThread", {
+      conversationId: conversation._id,
+      name: person.name,
+      image: person.avatarUrl,
+      online: false,
+    });
   };
 
-  const submitUserReport = async (reason: ReportReason, details: string) => {
+  const submitReport = async (reason: ReportReason, details: string) => {
     if (!reportTarget) return;
-    try {
-      const response = await usersApi.report(reportTarget.id, {
-        reason: toGeneralReportReason(reason),
-        ...(details ? { details } : {}),
-      });
-      setNotice({ title: "Report submitted", message: response.message });
-    } catch (error) {
-      setNotice({
-        title: "Unable to report",
-        message:
-          error instanceof ApiError ? error.message : "Please try again.",
-      });
-    }
+    await connections.report(reportTarget, {
+      reason: toGeneralReportReason(reason),
+      ...(details.trim() ? { details: details.trim() } : {}),
+    });
   };
+
+  const reportAction = (person: FriendPerson) => ({
+    label: "Report member",
+    icon: "flag-outline" as const,
+    onPress: () => setReportTarget(person),
+  });
 
   return (
     <>
-      <SafeAreaView edges={["top"]} style={styles.safe}>
-        <View style={styles.header}>
-          <Pressable onPress={navigation.goBack} style={styles.back}>
-            <Ionicons color={colors.ink} name="chevron-back" size={25} />
-          </Pressable>
-          <Text style={styles.title}>Friends</Text>
-          <View style={styles.back} />
-        </View>
+      <SafeAreaView edges={["bottom"]} style={styles.safe}>
+        <ProfilePageHeader
+          title="Friends"
+          onBack={() => navigation.goBack()}
+          onRightPress={findPeople}
+          rightIcon="person-add-outline"
+          rightAccessibilityLabel="Find new friends"
+        />
         <ScrollView
           contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           refreshControl={
             <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => void load(true)}
+              refreshing={connections.refreshing}
+              onRefresh={() => void connections.refresh()}
+              tintColor={colors.moss}
             />
           }
           showsVerticalScrollIndicator={false}
         >
+          <View style={styles.hero}>
+            <View style={styles.heroTop}>
+              <View style={styles.heroCopy}>
+                <Text style={styles.eyebrow}>YOUR PEOPLE</Text>
+                <Text style={styles.heroTitle}>Better with friends.</Text>
+                <Text style={styles.heroText}>
+                  Grow your circle. Keep the good conversations going.
+                </Text>
+              </View>
+              <View style={styles.heroIcon}>
+                <Ionicons name="people" size={29} color={colors.moss} />
+              </View>
+            </View>
+            <View style={styles.stats}>
+              <View style={styles.stat}>
+                <Text style={styles.statNumber}>
+                  {connections.loaded ? total.Friends : "..."}
+                </Text>
+                <Text style={styles.statLabel}>
+                  {total.Friends === 1 ? "friend" : "friends"}
+                </Text>
+              </View>
+              <View style={styles.statDivider} />
+              <Pressable
+                accessibilityLabel="View incoming requests"
+                onPress={() => setTab("Requests")}
+                style={styles.stat}
+              >
+                <Text style={styles.statNumber}>
+                  {connections.loaded ? total.Requests : "..."}
+                </Text>
+                <Text style={styles.statLabel}>
+                  {total.Requests === 1 ? "request" : "requests"}
+                </Text>
+                <Ionicons name="arrow-forward" size={13} color={colors.moss} />
+              </Pressable>
+            </View>
+          </View>
+
           <View style={styles.search}>
-            <Ionicons color="#32965d" name="search" size={20} />
+            <Ionicons name="search-outline" size={19} color="#658372" />
             <TextInput
+              accessibilityLabel={
+                tab === "Discover"
+                  ? "Search available suggestions"
+                  : "Search " + tab.toLowerCase()
+              }
+              autoCapitalize="none"
+              autoCorrect={false}
               onChangeText={setQuery}
-              placeholder="Search people"
-              placeholderTextColor="#718078"
+              placeholder={
+                tab === "Discover"
+                  ? "Search these suggestions"
+                  : "Search by name or interest"
+              }
+              placeholderTextColor="#84958c"
+              returnKeyType="search"
               style={styles.searchInput}
               value={query}
             />
-          </View>
-          <View style={styles.tabs}>
-            {(["Friends", "Requests", "Discover"] as Tab[]).map((item) => (
+            {query ? (
               <Pressable
+                accessibilityLabel="Clear search"
+                hitSlop={8}
+                onPress={() => setQuery("")}
+                style={styles.clearSearch}
+              >
+                <Ionicons name="close-circle" size={18} color="#8d9e94" />
+              </Pressable>
+            ) : null}
+          </View>
+
+          <View accessibilityRole="tablist" style={styles.tabs}>
+            {tabs.map((item) => (
+              <Pressable
+                accessibilityRole="tab"
+                accessibilityState={{ selected: tab === item }}
                 key={item}
                 onPress={() => setTab(item)}
                 style={[styles.tab, tab === item && styles.tabActive]}
@@ -217,382 +214,431 @@ export default function FriendsConnectedScreen({ navigation }: Props) {
                 >
                   {item}
                 </Text>
-                {item === "Requests" && requests.length ? (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{requests.length}</Text>
+                {item === "Requests" && total.Requests > 0 ? (
+                  <View style={styles.tabCount}>
+                    <Text style={styles.tabCountText}>{total.Requests}</Text>
                   </View>
                 ) : null}
               </Pressable>
             ))}
           </View>
 
-          {loading ? (
-            <View style={styles.state}>
-              <AppLoader color="#08ad54" />
+          <View style={styles.sectionHeading}>
+            <Text style={styles.sectionTitle}>
+              {tab === "Friends"
+                ? "Your circle"
+                : tab === "Requests"
+                  ? "Waiting to connect"
+                  : "Meet someone new"}
+            </Text>
+            {connections.loaded ? (
+              <Text style={styles.sectionCount}>{count}</Text>
+            ) : null}
+          </View>
+          <Text style={styles.sectionCopy}>
+            {tab === "Friends"
+              ? "A familiar face is just a message away."
+              : tab === "Requests"
+                ? "People who would like to be your friend."
+                : "A few Community Connect members to get to know."}
+          </Text>
+
+          {error ? (
+            <View style={styles.errorCard}>
+              <Ionicons
+                name="cloud-offline-outline"
+                size={24}
+                color="#8b6244"
+              />
+              <View style={styles.errorCopy}>
+                <Text style={styles.errorTitle}>People need a moment</Text>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+              <Pressable
+                accessibilityLabel="Retry loading people"
+                disabled={connections.refreshing || disabled}
+                onPress={() => void connections.refresh()}
+                style={styles.retry}
+              >
+                <Text style={styles.retryText}>
+                  {connections.refreshing ? "Loading" : "Retry"}
+                </Text>
+              </Pressable>
             </View>
           ) : null}
 
-          {!loading && tab === "Friends" ? (
-            friendships.length ? (
-              friendships.map((friendship) => {
-                const participantId =
-                  friendship.requesterId === user?._id
-                    ? friendship.addresseeId
-                    : friendship.requesterId;
-                return (
-                  <View key={friendship._id} style={styles.person}>
-                    <Image source={{ uri: AVATAR }} style={styles.avatar} />
-                    <View style={styles.personCopy}>
-                      <Text style={styles.name}>
-                        {shortMember(participantId)}
-                      </Text>
-                      <Text style={styles.meta}>Connected member</Text>
-                    </View>
-                    <Pressable
-                      disabled={Boolean(pendingId)}
-                      onPress={() => void openChat(friendship)}
-                      style={styles.iconAction}
-                    >
-                      {pendingId === friendship._id ? (
-                        <AppLoader color="#078d45" />
-                      ) : (
-                        <Ionicons
-                          color="#078d45"
-                          name="chatbubble-outline"
-                          size={20}
-                        />
-                      )}
-                    </Pressable>
-                    <Pressable
-                      disabled={Boolean(pendingId)}
-                      onPress={() =>
-                        void perform(
-                          friendship._id,
-                          () => friendsApi.remove(friendship._id),
-                          "Friend removed.",
-                        )
-                      }
-                      style={styles.iconAction}
-                    >
-                      <Ionicons
-                        color="#9d4b4b"
-                        name="person-remove-outline"
-                        size={20}
-                      />
-                    </Pressable>
-                    <Pressable
-                      onPress={() =>
-                        setReportTarget({
-                          id: participantId,
-                          name: shortMember(participantId),
-                        })
-                      }
-                      style={styles.iconAction}
-                    >
-                      <Ionicons color="#9d4b4b" name="flag-outline" size={19} />
-                    </Pressable>
-                  </View>
-                );
-              })
-            ) : (
-              <Empty
-                icon="people-outline"
-                title="No friends yet"
-                copy="Discover members with shared interests."
-              />
-            )
-          ) : null}
+          {connections.loading ? (
+            <View style={styles.loading}>
+              <AppLoader color={colors.moss} />
+              <Text style={styles.loadingText}>Finding your people...</Text>
+            </View>
+          ) : (
+            <View style={styles.list}>
+              {tab === "Friends"
+                ? friends.map((connection) => (
+                    <PersonCard
+                      key={connection.relationshipId}
+                      name={connection.person.name}
+                      avatarUrl={connection.person.avatarUrl}
+                      location={connection.person.location}
+                      interests={connection.person.interests}
+                      caption="Connected with you"
+                      disabled={disabled}
+                      actions={[
+                        {
+                          label: "Message",
+                          icon: "chatbubble-outline",
+                          primary: true,
+                          busy:
+                            connections.pendingId ===
+                              connection.relationshipId ||
+                            connections.pendingId === connection.person.userId,
+                          onPress: () => void openChat(connection.person),
+                        },
+                      ]}
+                      menuActions={[
+                        {
+                          label: "Remove friend",
+                          icon: "person-remove-outline",
+                          destructive: true,
+                          onPress: () => setRemoveTarget(connection),
+                        },
+                        reportAction(connection.person),
+                      ]}
+                    />
+                  ))
+                : null}
+              {tab === "Requests"
+                ? requests.map((connection) => (
+                    <PersonCard
+                      key={connection.relationshipId}
+                      name={connection.person.name}
+                      avatarUrl={connection.person.avatarUrl}
+                      location={connection.person.location}
+                      interests={connection.person.interests}
+                      caption="Sent you a friend request"
+                      disabled={disabled}
+                      actions={[
+                        {
+                          label: "Accept",
+                          icon: "checkmark",
+                          primary: true,
+                          busy:
+                            connections.pendingId === connection.relationshipId,
+                          onPress: () =>
+                            void connections.respond(connection, "accept"),
+                        },
+                        {
+                          label: "Decline",
+                          onPress: () =>
+                            void connections.respond(connection, "decline"),
+                        },
+                      ]}
+                      menuActions={[reportAction(connection.person)]}
+                    />
+                  ))
+                : null}
+              {tab === "Discover"
+                ? discover.map((person) => (
+                    <PersonCard
+                      key={person.userId}
+                      name={person.name}
+                      avatarUrl={person.avatarUrl}
+                      location={person.location}
+                      interests={person.interests}
+                      caption="Community Connect member"
+                      disabled={disabled}
+                      actions={[
+                        {
+                          label: "Add friend",
+                          icon: "person-add-outline",
+                          primary: true,
+                          busy: connections.pendingId === person.userId,
+                          onPress: () => void connections.sendRequest(person),
+                        },
+                      ]}
+                      menuActions={[reportAction(person)]}
+                    />
+                  ))
+                : null}
 
-          {!loading && tab === "Requests" ? (
-            requests.length ? (
-              requests.map((request) => {
-                const memberId =
-                  request.requesterId === user?._id
-                    ? request.addresseeId
-                    : request.requesterId;
-                const incoming = request.addresseeId === user?._id;
-                return (
-                  <View key={request._id} style={styles.person}>
-                    <Image source={{ uri: AVATAR }} style={styles.avatar} />
-                    <View style={styles.personCopy}>
-                      <Text style={styles.name}>{shortMember(memberId)}</Text>
-                      <Text style={styles.meta}>
-                        {incoming ? "Sent you a request" : "Request sent"}
-                      </Text>
-                    </View>
-                    {incoming ? (
-                      <>
-                        <Pressable
-                          disabled={Boolean(pendingId)}
-                          onPress={() =>
-                            void perform(
-                              request._id,
-                              () =>
-                                friendsApi.respondToRequest(request._id, {
-                                  action: "accept",
-                                }),
-                              "Friend request accepted.",
-                            )
-                          }
-                          style={styles.accept}
-                        >
-                          <Ionicons
-                            color={colors.ink}
-                            name="checkmark"
-                            size={20}
-                          />
-                        </Pressable>
-                        <Pressable
-                          disabled={Boolean(pendingId)}
-                          onPress={() =>
-                            void perform(
-                              request._id,
-                              () =>
-                                friendsApi.respondToRequest(request._id, {
-                                  action: "reject",
-                                }),
-                              "Friend request rejected.",
-                            )
-                          }
-                          style={styles.iconAction}
-                        >
-                          <Ionicons color="#9d4b4b" name="close" size={20} />
-                        </Pressable>
-                      </>
-                    ) : null}
-                    <Pressable
-                      onPress={() =>
-                        setReportTarget({
-                          id: memberId,
-                          name: shortMember(memberId),
-                        })
+              {count === 0 && !error ? (
+                <View style={styles.empty}>
+                  <View style={styles.emptyIcon}>
+                    <Ionicons
+                      name={
+                        query.trim()
+                          ? "search-outline"
+                          : tab === "Friends"
+                            ? "people-outline"
+                            : tab === "Requests"
+                              ? "mail-open-outline"
+                              : "compass-outline"
                       }
-                      style={styles.iconAction}
-                    >
-                      <Ionicons color="#9d4b4b" name="flag-outline" size={19} />
-                    </Pressable>
+                      size={29}
+                      color={colors.moss}
+                    />
                   </View>
-                );
-              })
-            ) : (
-              <Empty
-                icon="mail-open-outline"
-                title="No pending requests"
-                copy="New friend requests will appear here."
-              />
-            )
-          ) : null}
-
-          {!loading && tab === "Discover" ? (
-            visibleSuggestions.length ? (
-              visibleSuggestions.map((suggestion) => (
-                <View key={suggestion._id} style={styles.person}>
-                  <Image source={{ uri: AVATAR }} style={styles.avatar} />
-                  <View style={styles.personCopy}>
-                    <Text style={styles.name}>
-                      {suggestion.firstName} {suggestion.lastName}
-                    </Text>
-                    <Text numberOfLines={1} style={styles.meta}>
-                      {[
-                        suggestion.lga,
-                        suggestion.state,
-                        ...suggestion.interests,
-                      ]
-                        .filter(Boolean)
-                        .join(" - ")}
-                    </Text>
-                  </View>
-                  <Pressable
-                    disabled={Boolean(pendingId)}
-                    onPress={() =>
-                      void perform(
-                        suggestion._id,
-                        () => friendsApi.sendRequest(suggestion._id),
-                        "Friend request sent.",
-                      )
-                    }
-                    style={styles.add}
-                  >
-                    {pendingId === suggestion._id ? (
-                      <AppLoader color={colors.ink} />
-                    ) : (
+                  <Text style={styles.emptyTitle}>
+                    {query.trim()
+                      ? "No matches here"
+                      : tab === "Friends"
+                        ? "Your circle starts here"
+                        : tab === "Requests"
+                          ? "You're all caught up"
+                          : "More connections will come"}
+                  </Text>
+                  <Text style={styles.emptyCopy}>
+                    {query.trim()
+                      ? "Try another name or interest."
+                      : tab === "Friends"
+                        ? "Find a familiar interest and turn it into a friendship."
+                        : tab === "Requests"
+                          ? "New incoming friend requests will appear here."
+                          : "Refresh to check for available suggestions."}
+                  </Text>
+                  {tab === "Friends" && !query.trim() ? (
+                    <Pressable onPress={findPeople} style={styles.emptyAction}>
+                      <Text style={styles.emptyActionText}>Find people</Text>
                       <Ionicons
+                        name="arrow-forward"
+                        size={16}
                         color={colors.ink}
-                        name="person-add-outline"
-                        size={20}
                       />
-                    )}
-                  </Pressable>
-                  <Pressable
-                    onPress={() =>
-                      setReportTarget({
-                        id: suggestion._id,
-                        name: `${suggestion.firstName} ${suggestion.lastName}`.trim(),
-                      })
-                    }
-                    style={styles.iconAction}
-                  >
-                    <Ionicons color="#9d4b4b" name="flag-outline" size={19} />
-                  </Pressable>
+                    </Pressable>
+                  ) : null}
                 </View>
-              ))
-            ) : (
-              <Empty
-                icon="search-outline"
-                title="No suggestions found"
-                copy="Try a different search."
-              />
-            )
-          ) : null}
+              ) : null}
+            </View>
+          )}
         </ScrollView>
       </SafeAreaView>
+
+      <AppAlertModal
+        visible={Boolean(removeTarget)}
+        title="Remove this friend?"
+        message={
+          "Remove " +
+          (removeTarget?.person.name || "this person") +
+          " from your friends? You can send a new request later."
+        }
+        confirmText="Remove friend"
+        onClose={() => setRemoveTarget(null)}
+        onConfirm={() => {
+          const target = removeTarget;
+          setRemoveTarget(null);
+          if (target) void connections.remove(target);
+        }}
+      />
       <AppReportSheet
-        description={`Tell us why ${reportTarget?.name || "this member"} should be reviewed. Your report is confidential.`}
+        description={
+          "Tell us why " +
+          (reportTarget?.name || "this member") +
+          " should be reviewed. Your report is confidential."
+        }
         minimumDetailsLength={10}
         onClose={() => setReportTarget(null)}
-        onSubmit={submitUserReport}
+        onSubmit={submitReport}
         title="Report Member"
         visible={Boolean(reportTarget)}
       />
       <AppAlertModal
-        visible={Boolean(notice)}
-        title={notice?.title ?? ""}
-        message={notice?.message ?? ""}
-        onClose={() => setNotice(null)}
+        visible={Boolean(connections.notice)}
+        title={connections.notice?.title ?? ""}
+        message={connections.notice?.message ?? ""}
+        onClose={connections.clearNotice}
       />
     </>
   );
 }
 
-function Empty({
-  icon,
-  title,
-  copy,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  copy: string;
-}) {
-  return (
-    <View style={styles.state}>
-      <Ionicons color="#70a888" name={icon} size={38} />
-      <Text style={styles.emptyTitle}>{title}</Text>
-      <Text style={styles.meta}>{copy}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   safe: { backgroundColor: colors.paper, flex: 1 },
-  header: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 18,
-  },
-  back: {
-    alignItems: "center",
-    height: 42,
-    justifyContent: "center",
-    width: 42,
-  },
-  title: { color: colors.ink, fontFamily: fonts.extraBold, fontSize: 22 },
   content: { padding: 20, paddingBottom: 100 },
+  hero: {
+    backgroundColor: "#e8f7ed",
+    borderColor: "#daeddf",
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 19,
+  },
+  heroTop: { alignItems: "center", flexDirection: "row", gap: 14 },
+  heroCopy: { flex: 1 },
+  eyebrow: {
+    color: "#487a57",
+    fontFamily: fonts.extraBold,
+    fontSize: 9,
+    letterSpacing: 1.8,
+  },
+  heroTitle: {
+    color: colors.ink,
+    fontFamily: fonts.extraBold,
+    fontSize: 24,
+    lineHeight: 30,
+    marginTop: 7,
+  },
+  heroText: {
+    color: "#698071",
+    fontFamily: fonts.medium,
+    fontSize: 11,
+    lineHeight: 18,
+    marginTop: 7,
+  },
+  heroIcon: {
+    alignItems: "center",
+    backgroundColor: "#d6eddf",
+    borderRadius: 25,
+    height: 50,
+    justifyContent: "center",
+    width: 50,
+  },
+  stats: {
+    alignItems: "center",
+    borderTopColor: "#d4e8db",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    gap: 17,
+    marginTop: 16,
+    paddingTop: 13,
+  },
+  stat: { alignItems: "center", flexDirection: "row", gap: 6 },
+  statNumber: { color: colors.moss, fontFamily: fonts.extraBold, fontSize: 17 },
+  statLabel: { color: "#68816f", fontFamily: fonts.medium, fontSize: 11 },
+  statDivider: { backgroundColor: "#c8ded0", height: 15, width: 1 },
   search: {
     alignItems: "center",
     backgroundColor: colors.white,
-    borderRadius: 20,
+    borderColor: "#e2ece5",
+    borderRadius: 18,
+    borderWidth: 1,
     flexDirection: "row",
-    gap: 9,
+    gap: 10,
+    marginTop: 19,
     paddingHorizontal: 14,
   },
   searchInput: {
     color: colors.ink,
     flex: 1,
     fontFamily: fonts.medium,
+    fontSize: 12,
     height: 48,
   },
+  clearSearch: {
+    alignItems: "center",
+    height: 32,
+    justifyContent: "center",
+    width: 24,
+  },
   tabs: {
-    backgroundColor: "#e7f1ec",
-    borderRadius: 20,
+    backgroundColor: "#eaf1ed",
+    borderRadius: 18,
     flexDirection: "row",
-    marginVertical: 18,
+    marginTop: 14,
     padding: 4,
   },
   tab: {
     alignItems: "center",
-    borderRadius: 17,
+    borderRadius: 14,
     flex: 1,
     flexDirection: "row",
-    gap: 4,
+    gap: 5,
     justifyContent: "center",
-    paddingVertical: 10,
+    minHeight: 42,
   },
-  tabActive: { backgroundColor: colors.white },
-  tabText: { color: "#658075", fontFamily: fonts.bold, fontSize: 11 },
-  tabTextActive: { color: colors.ink },
-  badge: {
+  tabActive: { backgroundColor: colors.forest },
+  tabText: { color: "#708178", fontFamily: fonts.bold, fontSize: 11 },
+  tabTextActive: { color: colors.white },
+  tabCount: {
     alignItems: "center",
     backgroundColor: colors.lime,
-    borderRadius: 9,
-    height: 18,
+    borderRadius: 8,
     justifyContent: "center",
-    minWidth: 18,
+    minWidth: 17,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
   },
-  badgeText: { color: colors.ink, fontFamily: fonts.extraBold, fontSize: 9 },
-  person: {
+  tabCountText: { color: colors.ink, fontFamily: fonts.extraBold, fontSize: 8 },
+  sectionHeading: {
     alignItems: "center",
-    backgroundColor: colors.white,
-    borderRadius: 20,
     flexDirection: "row",
-    marginBottom: 10,
-    padding: 12,
+    gap: 8,
+    marginTop: 25,
   },
-  avatar: { borderRadius: 24, height: 48, width: 48 },
-  personCopy: { flex: 1, marginLeft: 11 },
-  name: { color: colors.ink, fontFamily: fonts.bold, fontSize: 13 },
-  meta: {
-    color: "#718078",
+  sectionTitle: {
+    color: colors.ink,
+    fontFamily: fonts.extraBold,
+    fontSize: 17,
+  },
+  sectionCount: { color: "#6a8271", fontFamily: fonts.bold, fontSize: 12 },
+  sectionCopy: {
+    color: "#819087",
     fontFamily: fonts.medium,
     fontSize: 10,
+    lineHeight: 17,
+    marginBottom: 16,
     marginTop: 4,
   },
-  iconAction: {
+  list: { gap: 12 },
+  errorCard: {
     alignItems: "center",
-    backgroundColor: "#eef6f2",
+    backgroundColor: "#fcf5e9",
     borderRadius: 18,
-    height: 36,
-    justifyContent: "center",
-    marginLeft: 6,
-    width: 36,
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 14,
+    padding: 14,
   },
-  accept: {
-    alignItems: "center",
-    backgroundColor: colors.lime,
-    borderRadius: 18,
-    height: 36,
-    justifyContent: "center",
-    marginLeft: 6,
-    width: 36,
+  errorCopy: { flex: 1 },
+  errorTitle: { color: "#745738", fontFamily: fonts.bold, fontSize: 12 },
+  errorText: {
+    color: "#8d775c",
+    fontFamily: fonts.medium,
+    fontSize: 10,
+    lineHeight: 16,
+    marginTop: 3,
   },
-  add: {
+  retry: {
     alignItems: "center",
-    backgroundColor: colors.lime,
-    borderRadius: 20,
-    height: 40,
     justifyContent: "center",
-    width: 40,
+    minHeight: 42,
+    paddingHorizontal: 5,
   },
-  state: {
+  retryText: { color: colors.moss, fontFamily: fonts.bold, fontSize: 11 },
+  loading: { alignItems: "center", gap: 12, paddingVertical: 56 },
+  loadingText: { color: colors.muted, fontFamily: fonts.medium, fontSize: 12 },
+  empty: { alignItems: "center", paddingHorizontal: 16, paddingVertical: 36 },
+  emptyIcon: {
     alignItems: "center",
-    backgroundColor: colors.white,
-    borderRadius: 22,
-    padding: 28,
+    backgroundColor: colors.paleGreen,
+    borderRadius: 28,
+    height: 56,
+    justifyContent: "center",
+    width: 56,
   },
   emptyTitle: {
     color: colors.ink,
-    fontFamily: fonts.bold,
-    fontSize: 16,
-    marginTop: 10,
+    fontFamily: fonts.extraBold,
+    fontSize: 17,
+    marginTop: 16,
+    textAlign: "center",
   },
+  emptyCopy: {
+    color: "#86968c",
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    lineHeight: 20,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  emptyAction: {
+    alignItems: "center",
+    backgroundColor: colors.lime,
+    borderRadius: 24,
+    flexDirection: "row",
+    gap: 9,
+    marginTop: 20,
+    minHeight: 44,
+    paddingHorizontal: 20,
+  },
+  emptyActionText: { color: colors.ink, fontFamily: fonts.bold, fontSize: 12 },
 });
