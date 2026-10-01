@@ -854,6 +854,9 @@ export const NIGERIAN_LGAS_BY_STATE = {
 
 export type NigerianState = keyof typeof NIGERIAN_LGAS_BY_STATE;
 
+// Location selectors currently have complete state and LGA coverage for Nigeria.
+export const PROFILE_COUNTRIES = ['Nigeria'] as const;
+
 export const NIGERIAN_STATES = Object.keys(
   NIGERIAN_LGAS_BY_STATE,
 ) as NigerianState[];

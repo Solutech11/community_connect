@@ -18,8 +18,14 @@ type AppSelectSheetProps = {
   title: string;
   options: string[];
   value: string;
+  selectedValues?: readonly string[];
+  multiple?: boolean;
+  maxSelections?: number;
+  disabled?: boolean;
   onClose: () => void;
   onSelect: (value: string) => void;
+  onToggle?: (value: string) => void;
+  onLimitReached?: () => void;
   allowCustomValue?: boolean;
 };
 
@@ -28,8 +34,14 @@ export default function AppSelectSheet({
   title,
   options,
   value,
+  selectedValues = [],
+  multiple = false,
+  maxSelections,
+  disabled = false,
   onClose,
   onSelect,
+  onToggle,
+  onLimitReached,
   allowCustomValue = false,
 }: AppSelectSheetProps) {
   const [query, setQuery] = useState("");
@@ -50,6 +62,20 @@ export default function AppSelectSheet({
   };
 
   const select = (option: string) => {
+    if (multiple) {
+      const alreadySelected = selectedValues.includes(option);
+      if (
+        !alreadySelected &&
+        maxSelections !== undefined &&
+        selectedValues.length >= maxSelections
+      ) {
+        onLimitReached?.();
+        return;
+      }
+      onToggle?.(option);
+      return;
+    }
+
     setQuery("");
     onSelect(option);
     onClose();
@@ -58,6 +84,7 @@ export default function AppSelectSheet({
   const customValue = query.trim();
   const canUseCustomValue =
     allowCustomValue &&
+    !multiple &&
     customValue.length > 1 &&
     !options.some(
       (option) => option.toLowerCase() === customValue.toLowerCase(),
@@ -80,6 +107,12 @@ export default function AppSelectSheet({
           <View style={styles.handle} />
           <View style={styles.heading}>
             <Text style={styles.title}>{title}</Text>
+            {multiple ? (
+              <Text style={styles.selectionCount}>
+                {selectedValues.length}
+                {maxSelections ? `/${maxSelections}` : ""} selected
+              </Text>
+            ) : null}
             <Pressable hitSlop={10} onPress={close} style={styles.closeButton}>
               <Ionicons color={colors.ink} name="close" size={24} />
             </Pressable>
@@ -95,7 +128,7 @@ export default function AppSelectSheet({
               value={query}
             />
           </View>
-          {canUseCustomValue ? (
+          {canUseCustomValue && !disabled ? (
             <Pressable
               onPress={() => select(customValue)}
               style={styles.customOption}
@@ -110,17 +143,29 @@ export default function AppSelectSheet({
             data={filteredOptions}
             keyExtractor={(item) => item}
             keyboardShouldPersistTaps="handled"
-            ListEmptyComponent={
-              <Text style={styles.empty}>
-                Start typing to add your local government area.
-              </Text>
-            }
+            ListEmptyComponent={<Text style={styles.empty}>No matching options found.</Text>}
+            style={styles.optionsList}
             renderItem={({ item }) => {
-              const selected = item === value;
+              const selected = multiple
+                ? selectedValues.includes(item)
+                : item === value;
+              const atSelectionLimit = Boolean(
+                multiple &&
+                  maxSelections &&
+                  selectedValues.length >= maxSelections &&
+                  !selected,
+              );
               return (
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected, disabled }}
+                  disabled={disabled}
                   onPress={() => select(item)}
-                  style={[styles.option, selected && styles.optionSelected]}
+                  style={[
+                    styles.option,
+                    selected && styles.optionSelected,
+                    (disabled || atSelectionLimit) && styles.optionDisabled,
+                  ]}
                 >
                   <Text
                     style={[
@@ -142,6 +187,16 @@ export default function AppSelectSheet({
             }}
             showsVerticalScrollIndicator={false}
           />
+          {multiple ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={disabled}
+              onPress={close}
+              style={[styles.doneButton, disabled && styles.optionDisabled]}
+            >
+              <Text style={styles.doneButtonText}>Done</Text>
+            </Pressable>
+          ) : null}
         </SafeAreaView>
       </View>
     </Modal>
@@ -180,6 +235,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: fonts.extraBold,
     fontSize: 21,
+  },
+  selectionCount: {
+    color: colors.muted,
+    fontFamily: fonts.semiBold,
+    fontSize: 12,
+    marginRight: 12,
   },
   closeButton: {
     alignItems: "center",
@@ -231,6 +292,9 @@ const styles = StyleSheet.create({
     minHeight: 54,
     paddingHorizontal: 8,
   },
+  optionsList: {
+    flex: 1,
+  },
   optionSelected: {
     backgroundColor: "#f0fbf5",
     borderRadius: 16,
@@ -245,6 +309,23 @@ const styles = StyleSheet.create({
   optionTextSelected: {
     color: "#078f43",
     fontFamily: fonts.bold,
+  },
+  optionDisabled: {
+    opacity: 0.45,
+  },
+  doneButton: {
+    alignItems: "center",
+    backgroundColor: colors.lime,
+    borderRadius: 24,
+    justifyContent: "center",
+    marginBottom: 12,
+    marginTop: 6,
+    minHeight: 50,
+  },
+  doneButtonText: {
+    color: colors.ink,
+    fontFamily: fonts.extraBold,
+    fontSize: 15,
   },
   empty: {
     color: colors.muted,
