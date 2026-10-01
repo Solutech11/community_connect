@@ -23,6 +23,11 @@ export function navigateFromNotification(data: Record<string, unknown>) {
     }
   } else if (route === "Wallet") navigationRef.navigate("Wallet");
   else if (route === "Friends") navigationRef.navigate("Friends");
+  else if (route === "RoommateConnection") {
+    if (typeof data.connectionId === "string" && mongoIdPattern.test(data.connectionId)) {
+      navigationRef.navigate("RoommateConnection", { connectionId: data.connectionId });
+    } else navigationRef.navigate("RoommateConnections");
+  }
   else if (
     route === "EventDetails" &&
     typeof data.eventId === "string" &&

@@ -1,3 +1,4 @@
+import { clearSessionCaches } from "../services/cache/session-cache";
 ﻿import * as Notifications from "expo-notifications";
 import {
   createContext,
@@ -168,6 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       nextUser: AuthUser,
       startRoute: AuthenticatedStartRoute = "Home",
     ) => {
+      clearSessionCaches();
       sessionVersion.current += 1;
       setAuthenticatedStartRoute(startRoute);
       setUser(nextUser);
@@ -181,6 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (startRoute: UnauthenticatedStartRoute = "Login") => {
       setUnauthenticatedStartRoute(startRoute);
       sessionVersion.current += 1;
+      clearSessionCaches();
       chatSocket.disconnect();
       pushTokenRef.current = null;
       setUser(null);
@@ -199,6 +202,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribeToken();
     };
   }, [clearSessionState, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const client = chatSocket.current();
+    const version = sessionVersion.current;
+    let active = true;
+    let refreshing = false;
+    let recoveryAttempted = false;
+    const recoverAuthentication = (error: Error) => {
+      if (error.message !== "Unauthorized" || refreshing || recoveryAttempted)
+        return;
+      refreshing = true;
+      recoveryAttempted = true;
+      // Reuse the HTTP client's single-flight refresh and token rotation rules.
+      void apiClient
+        .restoreSession()
+        .then((token) => {
+          if (active && sessionVersion.current === version)
+            chatSocket.connect(token);
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          refreshing = false;
+        });
+    };
+    const connected = () => {
+      recoveryAttempted = false;
+    };
+    const subscription = AppState.addEventListener("change", (state) => {
+      const token = apiClient.getAccessToken();
+      if (state === "active" && token) chatSocket.connect(token);
+    });
+    client.on("connect_error", recoverAuthentication);
+    client.on("connect", connected);
+    return () => {
+      active = false;
+      subscription.remove();
+      client.off("connect_error", recoverAuthentication);
+      client.off("connect", connected);
+    };
+  }, [user?._id]);
 
   useEffect(() => {
     if (!user || Platform.OS === "web") return;

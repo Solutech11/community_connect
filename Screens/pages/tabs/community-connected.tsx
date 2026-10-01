@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
+  AppState,
   Image,
   Pressable,
   RefreshControl,
@@ -15,7 +16,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import AppLoader from "../../components/ui/app-loader";
-import AppAlertModal from "../../components/ui/app-alert-modal";
+import CacheRefreshNotice from "../../components/ui/cache-refresh-notice";
+import { useAuth } from "../../hooks/use-auth";
+import { useCachedState } from "../../hooks/use-cached-state";
+import { SessionCache } from "../../services/cache/session-cache";
 import { communityImage } from "../../data/community-presentation";
 import { ApiError } from "../../services/api/client";
 import { communitiesApi } from "../../services/api/communities.api";
@@ -28,6 +32,22 @@ import type { RootStackParamList } from "../../types/navigation";
 
 type Community = GetCommunitiesResponse["data"]["communities"][number];
 type MyCommunity = GetUsersMeCommunitiesResponse["data"]["communities"][number];
+
+type CommunityListData = {
+  items: Community[];
+  page: number;
+  hasMore: boolean;
+};
+const emptyList: CommunityListData = {
+  items: [],
+  page: 1,
+  hasMore: false,
+};
+const myCommunitiesCache = new SessionCache<MyCommunity[]>(1);
+const categoryOptionsCache = new SessionCache<string[]>(1);
+const emptyMyCommunities: MyCommunity[] = [];
+const emptyCategories: string[] = [];
+const communityListCache = new SessionCache<CommunityListData>(20);
 
 function money(kobo: number) {
   return new Intl.NumberFormat("en-NG", {
@@ -47,92 +67,160 @@ function hash(value: string) {
 export default function CommunityScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [items, setItems] = useState<Community[]>([]);
-  const [myCommunities, setMyCommunities] = useState<MyCommunity[]>([]);
+  const { user } = useAuth();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("For You");
-  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
+  const cacheKey = JSON.stringify([query.trim(), category]);
+  const [list, setList, hasCachedList] = useCachedState(
+    communityListCache,
+    user?._id,
+    cacheKey,
+    emptyList,
+  );
+  const { items, page, hasMore } = list;
+  const [myCommunities, setMyCommunities] = useCachedState(
+    myCommunitiesCache,
+    user?._id,
+    "memberships",
+    emptyMyCommunities,
+  );
+  const [availableCategories, setAvailableCategories] = useCachedState(
+    categoryOptionsCache,
+    user?._id,
+    "categories",
+    emptyCategories,
+  );
+  const [loading, setLoading] = useState(!hasCachedList);
   const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const requestEpoch = useRef(0);
 
   const requestCommunities = useCallback(
-    async (signal?: AbortSignal) => {
-      const [response, mine] = await Promise.all([
-        communitiesApi.list(
-          {
-            page: 1,
-            limit: 50,
-            ...(query.trim() ? { search: query.trim() } : {}),
-            ...(category !== "For You" ? { category } : {}),
-          },
-          signal,
-        ),
-        communitiesApi.allMyCommunities(signal),
-      ]);
-      setItems(response.data.communities);
-      setPage(1);
-      setHasMore(
-        response.data.communities.length < response.data.pagination.total,
-      );
-      setMyCommunities(mine);
-      setAvailableCategories((current) =>
-        Array.from(
-          new Set([
-            ...current,
-            ...response.data.communities
-              .map((item) => item.category)
-              .filter(Boolean),
-          ]),
-        ),
-      );
+    async (refresh = false) => {
+      if (!user?._id) return;
+      const epoch = ++requestEpoch.current;
+      setLoading(communityListCache.read(user._id, cacheKey) === undefined);
+      if (refresh) setRefreshing(true);
+      setErrorMessage(null);
+      try {
+        await communityListCache.request(user._id, cacheKey, async (signal) => {
+          const [response, mine] = await Promise.all([
+            communitiesApi.list(
+              {
+                page: 1,
+                limit: 50,
+                ...(query.trim() ? { search: query.trim() } : {}),
+                ...(category !== "For You" ? { category } : {}),
+              },
+              signal,
+            ),
+            communitiesApi.allMyCommunities(signal),
+          ]);
+          setMyCommunities(mine);
+          setAvailableCategories((current) =>
+            Array.from(
+              new Set([
+                ...current,
+                ...response.data.communities
+                  .map((item) => item.category)
+                  .filter(Boolean),
+              ]),
+            ),
+          );
+          const previous = communityListCache.read(user._id, cacheKey);
+          const loadedPage = Math.max(
+            1,
+            Math.min(
+              previous?.page ?? 1,
+              Math.ceil(response.data.pagination.total / 50),
+            ),
+          );
+          const remainingPages = await Promise.all(
+            Array.from({ length: loadedPage - 1 }, (_, index) =>
+              communitiesApi.list(
+                {
+                  page: index + 2,
+                  limit: 50,
+                  ...(query.trim() ? { search: query.trim() } : {}),
+                  ...(category !== "For You" ? { category } : {}),
+                },
+                signal,
+              ),
+            ),
+          );
+          const allItems = [
+            ...response.data.communities,
+            ...remainingPages.flatMap((page) => page.data.communities),
+          ];
+          return {
+            items: [
+              ...new Map(allItems.map((item) => [item._id, item])).values(),
+            ],
+            page: loadedPage,
+            hasMore: loadedPage * 50 < response.data.pagination.total,
+          };
+        });
+      } catch (error) {
+        if (epoch !== requestEpoch.current) return;
+        if (error instanceof ApiError && [401, 403, 404].includes(error.status))
+          communityListCache.invalidate(user._id, cacheKey);
+        setErrorMessage(
+          error instanceof ApiError
+            ? error.message
+            : "Unable to refresh communities. Pull down or retry.",
+        );
+      } finally {
+        if (epoch === requestEpoch.current) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      }
     },
-    [category, query],
+    [
+      cacheKey,
+      category,
+      query,
+      user?._id,
+      setMyCommunities,
+      setAvailableCategories,
+    ],
   );
 
-  useEffect(() => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      setLoading(true);
-      requestCommunities(controller.signal)
-        .catch((error: unknown) => {
-          if (error instanceof ApiError && error.code === "REQUEST_CANCELLED")
-            return;
-          setErrorMessage(
-            error instanceof ApiError
-              ? error.message
-              : "Unable to load communities.",
-          );
-        })
-        .finally(() => setLoading(false));
-    }, 300);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [requestCommunities]);
-
-  const refresh = async () => {
-    setRefreshing(true);
-    try {
-      await requestCommunities();
-    } catch (error) {
-      setErrorMessage(
-        error instanceof ApiError
-          ? error.message
-          : "Unable to refresh communities.",
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(
+        !user?._id || communityListCache.read(user._id, cacheKey) === undefined,
       );
-    } finally {
-      setRefreshing(false);
-    }
-  };
+      setErrorMessage(null);
+      const refreshInBackground = () => void requestCommunities();
+      const timer = setTimeout(refreshInBackground, 300);
+      const appState = AppState.addEventListener("change", (state) => {
+        if (state === "active") refreshInBackground();
+      });
+      return () => {
+        clearTimeout(timer);
+        appState.remove();
+        requestEpoch.current += 1;
+      };
+    }, [requestCommunities]),
+  );
+
+  const refresh = () => requestCommunities(true);
 
   const loadMore = async () => {
-    if (loading || loadingMore || !hasMore) return;
+    if (
+      !user?._id ||
+      loading ||
+      loadingMoreRef.current ||
+      communityListCache.isPending(user._id, cacheKey) ||
+      !hasMore
+    )
+      return;
+    loadingMoreRef.current = true;
     setLoadingMore(true);
+    const epoch = requestEpoch.current;
     try {
       const nextPage = page + 1;
       const response = await communitiesApi.list({
@@ -141,22 +229,28 @@ export default function CommunityScreen() {
         ...(query.trim() ? { search: query.trim() } : {}),
         ...(category !== "For You" ? { category } : {}),
       });
-      setItems((current) => {
-        const ids = new Set(current.map((item) => item._id));
-        return [
+      if (epoch !== requestEpoch.current) return;
+      setList((current) => {
+        const ids = new Set(current.items.map((item) => item._id));
+        return {
           ...current,
-          ...response.data.communities.filter((item) => !ids.has(item._id)),
-        ];
+          items: [
+            ...current.items,
+            ...response.data.communities.filter((item) => !ids.has(item._id)),
+          ],
+          page: nextPage,
+          hasMore: nextPage * 50 < response.data.pagination.total,
+        };
       });
-      setPage(nextPage);
-      setHasMore(nextPage * 50 < response.data.pagination.total);
     } catch (error) {
-      setErrorMessage(
-        error instanceof ApiError
-          ? error.message
-          : "Unable to load more communities.",
-      );
+      if (epoch === requestEpoch.current)
+        setErrorMessage(
+          error instanceof ApiError
+            ? error.message
+            : "Unable to load more communities.",
+        );
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMore(false);
     }
   };
@@ -297,7 +391,13 @@ export default function CommunityScreen() {
           <Text style={styles.discoverTitle}>
             {query ? "Search Results" : "Discover Communities"}
           </Text>
-          {loading ? (
+          {errorMessage ? (
+            <CacheRefreshNotice
+              message={errorMessage}
+              onRetry={() => void requestCommunities()}
+            />
+          ) : null}
+          {loading && !hasCachedList ? (
             <View style={styles.stateCard}>
               <AppLoader color="#08b657" />
               <Text style={styles.stateText}>
@@ -305,7 +405,7 @@ export default function CommunityScreen() {
               </Text>
             </View>
           ) : null}
-          {!loading && items.length === 0 ? (
+          {!loading && !errorMessage && items.length === 0 ? (
             <View style={styles.stateCard}>
               <Ionicons name="people-outline" size={34} color="#69ad86" />
               <Text style={styles.emptyTitle}>No communities found</Text>
@@ -317,7 +417,7 @@ export default function CommunityScreen() {
           ) : null}
 
           <View style={styles.list}>
-            {!loading &&
+            {(!loading || hasCachedList) &&
               items.map((item) => {
                 const joined = myCommunityIds.has(item._id);
                 return (
@@ -395,12 +495,6 @@ export default function CommunityScreen() {
           ) : null}
         </ScrollView>
       </SafeAreaView>
-      <AppAlertModal
-        visible={Boolean(errorMessage)}
-        title="Communities unavailable"
-        message={errorMessage ?? ""}
-        onClose={() => setErrorMessage(null)}
-      />
     </>
   );
 }

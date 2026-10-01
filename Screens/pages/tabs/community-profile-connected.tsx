@@ -1,6 +1,10 @@
+import { useFocusEffect } from "@react-navigation/native";
+import { useCachedObjectState } from "../../hooks/use-cached-object-state";
+import { SessionCache } from "../../services/cache/session-cache";
+import CacheRefreshNotice from "../../components/ui/cache-refresh-notice";
 import { Ionicons } from "@expo/vector-icons";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Image,
   ImageBackground,
@@ -67,6 +71,40 @@ type ViewerMembership =
 type ProfileTab = "About" | "Members" | "Rules" | "Updates";
 type UpdateTab = "posts" | "announcements";
 
+type CommunityProfileSnapshot = {
+  community: Community | null;
+  members: Member[];
+  memberPage: number;
+  moreMembers: boolean;
+  announcements: Announcement[];
+  posts: Post[];
+  postPage: number;
+  announcementPage: number;
+  morePosts: boolean;
+  moreAnnouncements: boolean;
+  communityRules: CommunityRules | null;
+  viewerMembership: ViewerMembership | null;
+  messagePermission: string;
+  memberListVisible: boolean;
+};
+const emptyProfile: CommunityProfileSnapshot = {
+  community: null,
+  members: [],
+  memberPage: 1,
+  moreMembers: false,
+  announcements: [],
+  posts: [],
+  postPage: 1,
+  announcementPage: 1,
+  morePosts: false,
+  moreAnnouncements: false,
+  communityRules: null,
+  viewerMembership: null,
+  messagePermission: "everyone",
+  memberListVisible: true,
+};
+const communityProfileCache = new SessionCache<CommunityProfileSnapshot>(15);
+
 const COMMUNITY_UPDATE_PAGE_SIZE = 20;
 
 function readableDate(value: string) {
@@ -125,7 +163,11 @@ function CommunityUpdateCard({
         <View style={styles.updateIcon}>
           <Ionicons
             color="#078d45"
-            name={kind === "announcements" ? "megaphone-outline" : "chatbubble-outline"}
+            name={
+              kind === "announcements"
+                ? "megaphone-outline"
+                : "chatbubble-outline"
+            }
             size={18}
           />
         </View>
@@ -152,33 +194,56 @@ function CommunityUpdateCard({
 export default function CommunityProfileScreen({ navigation, route }: Props) {
   const { user } = useAuth();
   const communityId = route.params.communityId;
-  const [community, setCommunity] = useState<Community | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [memberPage, setMemberPage] = useState(1);
-  const [moreMembers, setMoreMembers] = useState(false);
+  const [snapshot, setters, hasCachedProfile] = useCachedObjectState(
+    communityProfileCache,
+    user?._id,
+    communityId,
+    emptyProfile,
+  );
+  const {
+    community,
+    members,
+    memberPage,
+    moreMembers,
+    announcements,
+    posts,
+    postPage,
+    announcementPage,
+    morePosts,
+    moreAnnouncements,
+    communityRules,
+    viewerMembership,
+    messagePermission,
+    memberListVisible,
+  } = snapshot;
+  const {
+    community: setCommunity,
+    members: setMembers,
+    memberPage: setMemberPage,
+    moreMembers: setMoreMembers,
+    announcements: setAnnouncements,
+    posts: setPosts,
+    postPage: setPostPage,
+    announcementPage: setAnnouncementPage,
+    morePosts: setMorePosts,
+    moreAnnouncements: setMoreAnnouncements,
+    communityRules: setCommunityRules,
+    viewerMembership: setViewerMembership,
+    messagePermission: setMessagePermission,
+    memberListVisible: setMemberListVisible,
+  } = setters;
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [membershipChecked, setMembershipChecked] = useState(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
   const [activeUpdateTab, setActiveUpdateTab] =
     useState<UpdateTab>("announcements");
-  const [postPage, setPostPage] = useState(1);
-  const [announcementPage, setAnnouncementPage] = useState(1);
-  const [morePosts, setMorePosts] = useState(false);
-  const [moreAnnouncements, setMoreAnnouncements] = useState(false);
   const [loadingUpdates, setLoadingUpdates] = useState(false);
   const [loadingMorePosts, setLoadingMorePosts] = useState(false);
   const [loadingMoreAnnouncements, setLoadingMoreAnnouncements] =
     useState(false);
-  const [communityRules, setCommunityRules] = useState<CommunityRules | null>(
-    null,
-  );
-  const [viewerMembership, setViewerMembership] =
-    useState<ViewerMembership | null>(null);
-  const [messagePermission, setMessagePermission] = useState("everyone");
-  const [memberListVisible, setMemberListVisible] = useState(true);
   const [activeTab, setActiveTab] = useState<ProfileTab>("About");
   const [memberSearch, setMemberSearch] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!hasCachedProfile);
   const [submitting, setSubmitting] = useState(false);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [authorizationUrl, setAuthorizationUrl] = useState<string | null>(null);
@@ -202,6 +267,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
           communitiesApi.allMyCommunities(signal),
           communitiesApi.allMyJoinRequests(signal),
         ]);
+      if (signal?.aborted) return;
       const nextCommunity = detailResponse.data.community;
       const membership =
         mineResponse.find((item) => item._id === communityId)
@@ -209,6 +275,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
       setCommunity(nextCommunity);
       setCommunityRules(rulesResponse.data.rules);
       setViewerMembership(membership);
+      setMembershipChecked(true);
       setJoinRequestPending(
         pendingRequests.some(
           (request) => request.communityId?._id === communityId,
@@ -216,7 +283,10 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
       );
 
       if (membership?.status === "active") {
-        setLoadingUpdates(true);
+        setLoadingUpdates(
+          !user?._id ||
+            communityProfileCache.read(user._id, communityId) === undefined,
+        );
         try {
           const [postsResponse, announcementResponse, settingsResponse] =
             await Promise.all([
@@ -232,6 +302,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
               ),
               communitiesApi.settings(communityId, signal),
             ]);
+          if (signal?.aborted) return;
           setPosts(postsResponse.data.posts);
           setPostPage(1);
           setMorePosts(
@@ -255,6 +326,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
               { page: 1, limit: 100 },
               signal,
             );
+            if (signal?.aborted) return;
             setMembers(
               (memberResponse.data.members as unknown[])
                 .map(mapMember)
@@ -292,31 +364,47 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
         setActiveTab("About");
       }
     },
-    [communityId],
+    [communityId, setters, user?._id],
   );
 
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-    load(controller.signal)
-      .catch((error: unknown) => {
-        if (error instanceof ApiError && error.code === "REQUEST_CANCELLED")
-          return;
-        setAlert({
-          title: "Community unavailable",
-          message:
+  useFocusEffect(
+    useCallback(() => {
+      const controller = new AbortController();
+      setLoading(
+        !user?._id ||
+          communityProfileCache.read(user._id, communityId) === undefined,
+      );
+      setMembershipChecked(false);
+      setRefreshError(null);
+      load(controller.signal)
+        .catch((error: unknown) => {
+          if (controller.signal.aborted) return;
+          if (
+            error instanceof ApiError &&
+            [401, 403, 404].includes(error.status)
+          ) {
+            if (user?._id)
+              communityProfileCache.invalidate(user._id, communityId);
+            setMembershipChecked(false);
+          }
+          const message =
             error instanceof ApiError
               ? error.message
-              : "Unable to load this community.",
+              : "Unable to refresh this community. Showing your last loaded content.";
+          if (user?._id && communityProfileCache.read(user._id, communityId))
+            setRefreshError(message);
+          else setAlert({ title: "Community unavailable", message });
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setLoading(false);
         });
-      })
-      .finally(() => setLoading(false));
-    return () => {
-      controller.abort();
-      updateRequestsRef.current.forEach((request) => request.abort());
-      updateRequestsRef.current.clear();
-    };
-  }, [load]);
+      return () => {
+        controller.abort();
+        updateRequestsRef.current.forEach((request) => request.abort());
+        updateRequestsRef.current.clear();
+      };
+    }, [load, communityId, user?._id]),
+  );
 
   const joined = viewerMembership?.status === "active";
   const ownerId =
@@ -325,7 +413,8 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
       : community?.ownerId?._id;
   const isOwner =
     viewerMembership?.role === "owner" || Boolean(user && ownerId === user._id);
-  const canModerate = isOwner || viewerMembership?.role === "moderator";
+  const canModerate =
+    membershipChecked && (isOwner || viewerMembership?.role === "moderator");
   const activeRules = communityRules?.rules?.length
     ? communityRules.rules
     : DEFAULT_COMMUNITY_GUIDELINES;
@@ -397,10 +486,14 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
     updateRequestsRef.current.add(controller);
     try {
       const nextPage = postPage + 1;
-      const response = await communitiesApi.posts(communityId, {
-        page: nextPage,
-        limit: COMMUNITY_UPDATE_PAGE_SIZE,
-      }, controller.signal);
+      const response = await communitiesApi.posts(
+        communityId,
+        {
+          page: nextPage,
+          limit: COMMUNITY_UPDATE_PAGE_SIZE,
+        },
+        controller.signal,
+      );
       if (controller.signal.aborted) return;
       setPosts((current) => {
         const ids = new Set(current.map((item) => item._id));
@@ -411,8 +504,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
       });
       setPostPage(nextPage);
       setMorePosts(
-        nextPage * COMMUNITY_UPDATE_PAGE_SIZE <
-          response.data.pagination.total,
+        nextPage * COMMUNITY_UPDATE_PAGE_SIZE < response.data.pagination.total,
       );
     } catch (error) {
       if (controller.signal.aborted) return;
@@ -434,10 +526,14 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
     updateRequestsRef.current.add(controller);
     try {
       const nextPage = announcementPage + 1;
-      const response = await communitiesApi.announcements(communityId, {
-        page: nextPage,
-        limit: COMMUNITY_UPDATE_PAGE_SIZE,
-      }, controller.signal);
+      const response = await communitiesApi.announcements(
+        communityId,
+        {
+          page: nextPage,
+          limit: COMMUNITY_UPDATE_PAGE_SIZE,
+        },
+        controller.signal,
+      );
       if (controller.signal.aborted) return;
       setAnnouncements((current) => {
         const ids = new Set(current.map((item) => item._id));
@@ -448,8 +544,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
       });
       setAnnouncementPage(nextPage);
       setMoreAnnouncements(
-        nextPage * COMMUNITY_UPDATE_PAGE_SIZE <
-          response.data.pagination.total,
+        nextPage * COMMUNITY_UPDATE_PAGE_SIZE < response.data.pagination.total,
       );
     } catch (error) {
       if (controller.signal.aborted) return;
@@ -512,7 +607,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
     };
 
   const joinOrVerify = async () => {
-    if (!community || submitting) return;
+    if (!community || submitting || !membershipChecked) return;
     if (orderNumber) {
       const result = await verifyMembershipPayment();
       if (!result.verified) {
@@ -568,7 +663,10 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
           }
         }
       } else if (community.membershipType === "free") {
-        const response = await communitiesApi.createJoinRequest(community._id, {});
+        const response = await communitiesApi.createJoinRequest(
+          community._id,
+          {},
+        );
         if (response.data.membership?.status === "active") {
           await load();
           setAlert({ title: "Joined community", message: response.message });
@@ -610,7 +708,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
   };
 
   const leave = async () => {
-    if (!community || submitting) return;
+    if (!community || submitting || !membershipChecked) return;
     setLeaveConfirmVisible(false);
     setSubmitting(true);
     try {
@@ -738,6 +836,21 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
+          {refreshError ? (
+            <CacheRefreshNotice
+              message={refreshError}
+              onRetry={() => {
+                setRefreshError(null);
+                void load().catch((error: unknown) =>
+                  setRefreshError(
+                    error instanceof ApiError
+                      ? error.message
+                      : "Unable to refresh this community.",
+                  ),
+                );
+              }}
+            />
+          ) : null}
           <ImageBackground source={{ uri: cover }} style={styles.hero}>
             <View style={styles.heroShade} />
             <Pressable
@@ -832,7 +945,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
 
             {joined ? (
               <Pressable
-                disabled={submitting}
+                disabled={submitting || !membershipChecked}
                 onPress={() =>
                   navigation.navigate("CommunityRoom", { communityId })
                 }
@@ -843,7 +956,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
               </Pressable>
             ) : (
               <Pressable
-                disabled={submitting}
+                disabled={submitting || !membershipChecked}
                 onPress={
                   joinRequestPending
                     ? () => {
@@ -879,7 +992,7 @@ export default function CommunityProfileScreen({ navigation, route }: Props) {
             )}
             {!joined && joinRequestPending ? (
               <Pressable
-                disabled={submitting}
+                disabled={submitting || !membershipChecked}
                 onPress={() => void refreshJoinStatus()}
                 style={styles.checkStatusButton}
               >

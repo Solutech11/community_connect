@@ -43,7 +43,15 @@ export type CreateEventDraft = {
   endTime: string;
   tickets: CreateEventTicket[];
 };
+import type { RoommateCandidate } from "./roommates";
 export type RootStackParamList = {
+  RoommateIntro: undefined;
+  RoommateSetup: undefined;
+  RoommateDiscover: undefined;
+  RoommateCandidate: { candidate: RoommateCandidate };
+  RoommateConnections: undefined;
+  RoommateConnection: { connectionId: string };
+  RoommateBlocks: undefined;
   OnboardingWelcome: undefined;
   Login: undefined;
   Register: undefined;

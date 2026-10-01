@@ -4865,7 +4865,963 @@ export type PostWebhooksPaystackResponse = {
   "received": true;
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+export type GetRoommatesQuestionsBody = never;
+
+export type GetRoommatesQuestionsQuery = {
+
+};
+
+export type GetRoommatesQuestionsPath = {
+
+};
+
+export type GetRoommatesQuestionsHeaders = {
+
+};
+
+export type GetRoommatesQuestionsResponse = {
+  "success": boolean;
+  "message": string;
+  "data": {
+  "version": number;
+  "options": {
+  "housingMode": Array<string>;
+  "gender": Array<string>;
+  "cleanliness": Array<string>;
+  "sleepSchedule": Array<string>;
+  "guests": Array<string>;
+  "socialPreference": Array<string>;
+};
+  "currency": string;
+  "rentPeriod": string;
+  "eligibility": string;
+};
+};
+
+export type GetRoommatesProfilesMeBody = never;
+
+export type GetRoommatesProfilesMeQuery = {
+
+};
+
+export type GetRoommatesProfilesMePath = {
+
+};
+
+export type GetRoommatesProfilesMeHeaders = {
+
+};
+
+export type GetRoommatesProfilesMeResponse = {
+  "success": boolean;
+  "message": string;
+  "data": {
+  "profile": ({
+  "_id": string;
+  "userId": string;
+  "visibility": "draft" | "discoverable" | "paused" | "paired";
+  "questionnaireVersion": number;
+  "activeConnectionId": (string) | null;
+  "adultConfirmed"?: true;
+  "housingMode"?: "seeking" | "hosting";
+  "state"?: string;
+  "lgas"?: Array<string>;
+  "minAnnualRentKobo"?: number;
+  "maxAnnualRentKobo"?: number;
+  "moveInFrom"?: string;
+  "moveInTo"?: string;
+  "gender"?: "woman" | "man" | "non_binary" | "undisclosed";
+  "acceptableGenders"?: Array<"woman" | "man" | "non_binary" | "undisclosed">;
+  "cleanliness"?: "relaxed" | "balanced" | "very_tidy";
+  "sleepSchedule"?: "early" | "flexible" | "late";
+  "guests"?: "rarely" | "sometimes" | "often";
+  "socialPreference"?: "quiet" | "balanced" | "social";
+  "smokes"?: boolean;
+  "acceptsSmoking"?: boolean;
+  "hasPets"?: boolean;
+  "acceptsPets"?: boolean;
+  "description"?: string;
+}) | null;
+};
+};
+
+export type PutRoommatesProfilesMeBody = {
+  "adultConfirmed"?: true;
+  "housingMode"?: "seeking" | "hosting";
+  "state"?: string;
+  "lgas"?: Array<string>;
+  "minAnnualRentKobo"?: number;
+  "maxAnnualRentKobo"?: number;
+  "moveInFrom"?: string;
+  "moveInTo"?: string;
+  "gender"?: "woman" | "man" | "non_binary" | "undisclosed";
+  "acceptableGenders"?: Array<"woman" | "man" | "non_binary" | "undisclosed">;
+  "cleanliness"?: "relaxed" | "balanced" | "very_tidy";
+  "sleepSchedule"?: "early" | "flexible" | "late";
+  "guests"?: "rarely" | "sometimes" | "often";
+  "socialPreference"?: "quiet" | "balanced" | "social";
+  "smokes"?: boolean;
+  "acceptsSmoking"?: boolean;
+  "hasPets"?: boolean;
+  "acceptsPets"?: boolean;
+  "description"?: string;
+};
+
+export type PutRoommatesProfilesMeQuery = {
+
+};
+
+export type PutRoommatesProfilesMePath = {
+
+};
+
+export type PutRoommatesProfilesMeHeaders = {
+
+};
+
+export type PutRoommatesProfilesMeResponse = {
+  "success": boolean;
+  "message": string;
+  "data": {
+  "profile": {
+  "_id": string;
+  "userId": string;
+  "visibility": "draft" | "discoverable" | "paused" | "paired";
+  "questionnaireVersion": number;
+  "activeConnectionId": (string) | null;
+  "adultConfirmed"?: true;
+  "housingMode"?: "seeking" | "hosting";
+  "state"?: string;
+  "lgas"?: Array<string>;
+  "minAnnualRentKobo"?: number;
+  "maxAnnualRentKobo"?: number;
+  "moveInFrom"?: string;
+  "moveInTo"?: string;
+  "gender"?: "woman" | "man" | "non_binary" | "undisclosed";
+  "acceptableGenders"?: Array<"woman" | "man" | "non_binary" | "undisclosed">;
+  "cleanliness"?: "relaxed" | "balanced" | "very_tidy";
+  "sleepSchedule"?: "early" | "flexible" | "late";
+  "guests"?: "rarely" | "sometimes" | "often";
+  "socialPreference"?: "quiet" | "balanced" | "social";
+  "smokes"?: boolean;
+  "acceptsSmoking"?: boolean;
+  "hasPets"?: boolean;
+  "acceptsPets"?: boolean;
+  "description"?: string;
+};
+};
+};
+
+export type PatchRoommatesProfilesMeVisibilityBody = {
+  "visibility": "discoverable" | "paused";
+};
+
+export type PatchRoommatesProfilesMeVisibilityQuery = {
+
+};
+
+export type PatchRoommatesProfilesMeVisibilityPath = {
+
+};
+
+export type PatchRoommatesProfilesMeVisibilityHeaders = {
+
+};
+
+export type PatchRoommatesProfilesMeVisibilityResponse = {
+  "success": boolean;
+  "message": string;
+  "data": {
+  "profile": {
+  "_id": string;
+  "userId": string;
+  "visibility": "draft" | "discoverable" | "paused" | "paired";
+  "questionnaireVersion": number;
+  "activeConnectionId": (string) | null;
+  "adultConfirmed"?: true;
+  "housingMode"?: "seeking" | "hosting";
+  "state"?: string;
+  "lgas"?: Array<string>;
+  "minAnnualRentKobo"?: number;
+  "maxAnnualRentKobo"?: number;
+  "moveInFrom"?: string;
+  "moveInTo"?: string;
+  "gender"?: "woman" | "man" | "non_binary" | "undisclosed";
+  "acceptableGenders"?: Array<"woman" | "man" | "non_binary" | "undisclosed">;
+  "cleanliness"?: "relaxed" | "balanced" | "very_tidy";
+  "sleepSchedule"?: "early" | "flexible" | "late";
+  "guests"?: "rarely" | "sometimes" | "often";
+  "socialPreference"?: "quiet" | "balanced" | "social";
+  "smokes"?: boolean;
+  "acceptsSmoking"?: boolean;
+  "hasPets"?: boolean;
+  "acceptsPets"?: boolean;
+  "description"?: string;
+};
+};
+};
+
+export type GetRoommatesCandidatesBody = never;
+
+export type GetRoommatesCandidatesQuery = {
+  "page"?: number;
+  "limit"?: number;
+};
+
+export type GetRoommatesCandidatesPath = {
+
+};
+
+export type GetRoommatesCandidatesHeaders = {
+
+};
+
+export type GetRoommatesCandidatesResponse = {
+  "success": boolean;
+  "message": string;
+  "data": {
+  "candidates": Array<{
+  "user": {
+  "_id": string;
+  "firstName": string;
+  "lastName": string;
+  "avatarUrl"?: string;
+  "bio"?: string;
+  "interests": Array<string>;
+  "hobbies": Array<string>;
+};
+  "profile": {
+  "_id": string;
+  "userId": string;
+  "visibility": "draft" | "discoverable" | "paused" | "paired";
+  "questionnaireVersion": number;
+  "activeConnectionId": (string) | null;
+  "adultConfirmed"?: true;
+  "housingMode"?: "seeking" | "hosting";
+  "state"?: string;
+  "lgas"?: Array<string>;
+  "minAnnualRentKobo"?: number;
+  "maxAnnualRentKobo"?: number;
+  "moveInFrom"?: string;
+  "moveInTo"?: string;
+  "gender"?: "woman" | "man" | "non_binary" | "undisclosed";
+  "acceptableGenders"?: Array<"woman" | "man" | "non_binary" | "undisclosed">;
+  "cleanliness"?: "relaxed" | "balanced" | "very_tidy";
+  "sleepSchedule"?: "early" | "flexible" | "late";
+  "guests"?: "rarely" | "sometimes" | "often";
+  "socialPreference"?: "quiet" | "balanced" | "social";
+  "smokes"?: boolean;
+  "acceptsSmoking"?: boolean;
+  "hasPets"?: boolean;
+  "acceptsPets"?: boolean;
+  "description"?: string;
+};
+  "score": number;
+  "reasons": Array<string>;
+}>;
+  "page": number;
+  "limit": number;
+  "total": number;
+};
+};
+
+export type PutRoommatesDecisionsUserIdBody = {
+  "action": "like" | "pass";
+};
+
+export type PutRoommatesDecisionsUserIdQuery = {
+
+};
+
+export type PutRoommatesDecisionsUserIdPath = {
+  "userId": string;
+};
+
+export type PutRoommatesDecisionsUserIdHeaders = {
+
+};
+
+export type PutRoommatesDecisionsUserIdResponse = {
+  "success": boolean;
+  "message": string;
+  "data": {
+  "matched": boolean;
+  "connectionId": (string) | null;
+};
+};
+
+export type GetRoommatesConnectionsBody = never;
+
+export type GetRoommatesConnectionsQuery = {
+  "page"?: number;
+  "limit"?: number;
+};
+
+export type GetRoommatesConnectionsPath = {
+
+};
+
+export type GetRoommatesConnectionsHeaders = {
+
+};
+
+export type GetRoommatesConnectionsResponse = {
+  "success": boolean;
+  "message": string;
+  "data": {
+  "connections": Array<{
+  "_id": string;
+  "status": "active" | "paired" | "closed";
+  "user": {
+  "_id": string;
+  "firstName": string;
+  "lastName": string;
+  "avatarUrl"?: string;
+  "bio"?: string;
+  "interests": Array<string>;
+  "hobbies": Array<string>;
+};
+  "profile": ({
+  "_id": string;
+  "userId": string;
+  "visibility": "draft" | "discoverable" | "paused" | "paired";
+  "questionnaireVersion": number;
+  "activeConnectionId": (string) | null;
+  "adultConfirmed"?: true;
+  "housingMode"?: "seeking" | "hosting";
+  "state"?: string;
+  "lgas"?: Array<string>;
+  "minAnnualRentKobo"?: number;
+  "maxAnnualRentKobo"?: number;
+  "moveInFrom"?: string;
+  "moveInTo"?: string;
+  "gender"?: "woman" | "man" | "non_binary" | "undisclosed";
+  "acceptableGenders"?: Array<"woman" | "man" | "non_binary" | "undisclosed">;
+  "cleanliness"?: "relaxed" | "balanced" | "very_tidy";
+  "sleepSchedule"?: "early" | "flexible" | "late";
+  "guests"?: "rarely" | "sometimes" | "often";
+  "socialPreference"?: "quiet" | "balanced" | "social";
+  "smokes"?: boolean;
+  "acceptsSmoking"?: boolean;
+  "hasPets"?: boolean;
+  "acceptsPets"?: boolean;
+  "description"?: string;
+}) | null;
+  "conversationId": (string) | null;
+  "friendship": ({
+  "_id": string;
+  "status": "pending" | "accepted" | "declined" | "blocked";
+  "requesterId": string;
+  "addresseeId": string;
+}) | null;
+  "pairingRequest": ({
+  "_id": string;
+  "status": "pending" | "accepted" | "declined" | "cancelled" | "closed";
+  "requesterId": string;
+  "recipientId": string;
+}) | null;
+  "myContactFields": Array<"phone" | "email">;
+  "otherHasConsented": boolean;
+  "pairedAt": (string) | null;
+  "updatedAt": string;
+}>;
+  "page": number;
+  "limit": number;
+  "total": number;
+};
+};
+
+export type GetRoommatesConnectionsIdBody = never;
+
+export type GetRoommatesConnectionsIdQuery = {
+
+};
+
+export type GetRoommatesConnectionsIdPath = {
+  "id": string;
+};
+
+export type GetRoommatesConnectionsIdHeaders = {
+
+};
+
+export type GetRoommatesConnectionsIdResponse = {
+  "success": boolean;
+  "message": string;
+  "data": {
+  "connection": {
+  "_id": string;
+  "status": "active" | "paired" | "closed";
+  "user": {
+  "_id": string;
+  "firstName": string;
+  "lastName": string;
+  "avatarUrl"?: string;
+  "bio"?: string;
+  "interests": Array<string>;
+  "hobbies": Array<string>;
+};
+  "profile": ({
+  "_id": string;
+  "userId": string;
+  "visibility": "draft" | "discoverable" | "paused" | "paired";
+  "questionnaireVersion": number;
+  "activeConnectionId": (string) | null;
+  "adultConfirmed"?: true;
+  "housingMode"?: "seeking" | "hosting";
+  "state"?: string;
+  "lgas"?: Array<string>;
+  "minAnnualRentKobo"?: number;
+  "maxAnnualRentKobo"?: number;
+  "moveInFrom"?: string;
+  "moveInTo"?: string;
+  "gender"?: "woman" | "man" | "non_binary" | "undisclosed";
+  "acceptableGenders"?: Array<"woman" | "man" | "non_binary" | "undisclosed">;
+  "cleanliness"?: "relaxed" | "balanced" | "very_tidy";
+  "sleepSchedule"?: "early" | "flexible" | "late";
+  "guests"?: "rarely" | "sometimes" | "often";
+  "socialPreference"?: "quiet" | "balanced" | "social";
+  "smokes"?: boolean;
+  "acceptsSmoking"?: boolean;
+  "hasPets"?: boolean;
+  "acceptsPets"?: boolean;
+  "description"?: string;
+}) | null;
+  "conversationId": (string) | null;
+  "friendship": ({
+  "_id": string;
+  "status": "pending" | "accepted" | "declined" | "blocked";
+  "requesterId": string;
+  "addresseeId": string;
+}) | null;
+  "pairingRequest": ({
+  "_id": string;
+  "status": "pending" | "accepted" | "declined" | "cancelled" | "closed";
+  "requesterId": string;
+  "recipientId": string;
+}) | null;
+  "myContactFields": Array<"phone" | "email">;
+  "otherHasConsented": boolean;
+  "pairedAt": (string) | null;
+  "updatedAt": string;
+};
+};
+};
+
+export type DeleteRoommatesConnectionsIdBody = never;
+
+export type DeleteRoommatesConnectionsIdQuery = {
+
+};
+
+export type DeleteRoommatesConnectionsIdPath = {
+  "id": string;
+};
+
+export type DeleteRoommatesConnectionsIdHeaders = {
+
+};
+
+export type DeleteRoommatesConnectionsIdResponse = {
+  "success": boolean;
+  "message": string;
+  "data": {
+  "ended": boolean;
+};
+};
+
+export type PutRoommatesConnectionsIdContactConsentsMeBody = {
+  "fields": Array<"phone" | "email">;
+};
+
+export type PutRoommatesConnectionsIdContactConsentsMeQuery = {
+
+};
+
+export type PutRoommatesConnectionsIdContactConsentsMePath = {
+  "id": string;
+};
+
+export type PutRoommatesConnectionsIdContactConsentsMeHeaders = {
+
+};
+
+export type PutRoommatesConnectionsIdContactConsentsMeResponse = {
+  "success": boolean;
+  "message": string;
+  "data": {
+  "consented": boolean;
+};
+};
+
+export type DeleteRoommatesConnectionsIdContactConsentsMeBody = never;
+
+export type DeleteRoommatesConnectionsIdContactConsentsMeQuery = {
+
+};
+
+export type DeleteRoommatesConnectionsIdContactConsentsMePath = {
+  "id": string;
+};
+
+export type DeleteRoommatesConnectionsIdContactConsentsMeHeaders = {
+
+};
+
+export type DeleteRoommatesConnectionsIdContactConsentsMeResponse = {
+  "success": boolean;
+  "message": string;
+  "data": {
+  "consented": boolean;
+};
+};
+
+export type GetRoommatesConnectionsIdContactsBody = never;
+
+export type GetRoommatesConnectionsIdContactsQuery = {
+
+};
+
+export type GetRoommatesConnectionsIdContactsPath = {
+  "id": string;
+};
+
+export type GetRoommatesConnectionsIdContactsHeaders = {
+
+};
+
+export type GetRoommatesConnectionsIdContactsResponse = {
+  "success": boolean;
+  "message": string;
+  "data": {
+  "contacts": {
+  "phone"?: string;
+  "email"?: string;
+};
+};
+};
+
+export type PostRoommatesConnectionsIdRequestsBody = never;
+
+export type PostRoommatesConnectionsIdRequestsQuery = {
+
+};
+
+export type PostRoommatesConnectionsIdRequestsPath = {
+  "id": string;
+};
+
+export type PostRoommatesConnectionsIdRequestsHeaders = {
+
+};
+
+export type PostRoommatesConnectionsIdRequestsResponse = {
+  "success": boolean;
+  "message": string;
+  "data": {
+  "requestId": string;
+};
+};
+
+export type PatchRoommatesConnectionsIdRequestsRequestIdBody = {
+  "action": "accept" | "decline" | "cancel";
+};
+
+export type PatchRoommatesConnectionsIdRequestsRequestIdQuery = {
+
+};
+
+export type PatchRoommatesConnectionsIdRequestsRequestIdPath = {
+  "id": string;
+  "requestId": string;
+};
+
+export type PatchRoommatesConnectionsIdRequestsRequestIdHeaders = {
+
+};
+
+export type PatchRoommatesConnectionsIdRequestsRequestIdResponse = {
+  "success": boolean;
+  "message": string;
+  "data": {
+  "status": "accepted" | "declined" | "cancelled";
+};
+};
+
+export type DeleteRoommatesConnectionsIdPairingBody = never;
+
+export type DeleteRoommatesConnectionsIdPairingQuery = {
+
+};
+
+export type DeleteRoommatesConnectionsIdPairingPath = {
+  "id": string;
+};
+
+export type DeleteRoommatesConnectionsIdPairingHeaders = {
+
+};
+
+export type DeleteRoommatesConnectionsIdPairingResponse = {
+  "success": boolean;
+  "message": string;
+  "data": {
+  "ended": boolean;
+};
+};
+
+export type GetUsersMeBlocksBody = never;
+
+export type GetUsersMeBlocksQuery = {
+  "page"?: number;
+  "limit"?: number;
+};
+
+export type GetUsersMeBlocksPath = {
+
+};
+
+export type GetUsersMeBlocksHeaders = {
+
+};
+
+export type GetUsersMeBlocksResponse = {
+  "success": boolean;
+  "message": string;
+  "data": {
+  "blocks": Array<{
+  "_id": string;
+  "userId": string;
+  "targetId": ({
+  "_id": string;
+  "firstName": string;
+  "lastName": string;
+  "avatarUrl"?: string;
+}) | null;
+  "createdAt": string;
+  "updatedAt": string;
+}>;
+  "page": number;
+  "limit": number;
+  "total": number;
+};
+};
+
+export type PutUsersMeBlocksUserIdBody = never;
+
+export type PutUsersMeBlocksUserIdQuery = {
+
+};
+
+export type PutUsersMeBlocksUserIdPath = {
+  "userId": string;
+};
+
+export type PutUsersMeBlocksUserIdHeaders = {
+
+};
+
+export type PutUsersMeBlocksUserIdResponse = {
+  "success": boolean;
+  "message": string;
+  "data": {
+  "blocked": boolean;
+};
+};
+
+export type DeleteUsersMeBlocksUserIdBody = never;
+
+export type DeleteUsersMeBlocksUserIdQuery = {
+
+};
+
+export type DeleteUsersMeBlocksUserIdPath = {
+  "userId": string;
+};
+
+export type DeleteUsersMeBlocksUserIdHeaders = {
+
+};
+
+export type DeleteUsersMeBlocksUserIdResponse = {
+  "success": boolean;
+  "message": string;
+  "data": {
+  "blocked": boolean;
+};
+};
+
 export interface ApiOperationMap {
+  "delete__users_me_blocks_userId_": {
+    method: "DELETE";
+    path: "/users/me/blocks/{userId}";
+    authenticated: true;
+    body: DeleteUsersMeBlocksUserIdBody;
+    query: DeleteUsersMeBlocksUserIdQuery;
+    pathParams: DeleteUsersMeBlocksUserIdPath;
+    headers: DeleteUsersMeBlocksUserIdHeaders;
+    response: DeleteUsersMeBlocksUserIdResponse;
+  };
+  "put__users_me_blocks_userId_": {
+    method: "PUT";
+    path: "/users/me/blocks/{userId}";
+    authenticated: true;
+    body: PutUsersMeBlocksUserIdBody;
+    query: PutUsersMeBlocksUserIdQuery;
+    pathParams: PutUsersMeBlocksUserIdPath;
+    headers: PutUsersMeBlocksUserIdHeaders;
+    response: PutUsersMeBlocksUserIdResponse;
+  };
+  "get__users_me_blocks": {
+    method: "GET";
+    path: "/users/me/blocks";
+    authenticated: true;
+    body: GetUsersMeBlocksBody;
+    query: GetUsersMeBlocksQuery;
+    pathParams: GetUsersMeBlocksPath;
+    headers: GetUsersMeBlocksHeaders;
+    response: GetUsersMeBlocksResponse;
+  };
+  "delete__roommates_connections_id_pairing": {
+    method: "DELETE";
+    path: "/roommates/connections/{id}/pairing";
+    authenticated: true;
+    body: DeleteRoommatesConnectionsIdPairingBody;
+    query: DeleteRoommatesConnectionsIdPairingQuery;
+    pathParams: DeleteRoommatesConnectionsIdPairingPath;
+    headers: DeleteRoommatesConnectionsIdPairingHeaders;
+    response: DeleteRoommatesConnectionsIdPairingResponse;
+  };
+  "patch__roommates_connections_id_requests_requestId_": {
+    method: "PATCH";
+    path: "/roommates/connections/{id}/requests/{requestId}";
+    authenticated: true;
+    body: PatchRoommatesConnectionsIdRequestsRequestIdBody;
+    query: PatchRoommatesConnectionsIdRequestsRequestIdQuery;
+    pathParams: PatchRoommatesConnectionsIdRequestsRequestIdPath;
+    headers: PatchRoommatesConnectionsIdRequestsRequestIdHeaders;
+    response: PatchRoommatesConnectionsIdRequestsRequestIdResponse;
+  };
+  "post__roommates_connections_id_requests": {
+    method: "POST";
+    path: "/roommates/connections/{id}/requests";
+    authenticated: true;
+    body: PostRoommatesConnectionsIdRequestsBody;
+    query: PostRoommatesConnectionsIdRequestsQuery;
+    pathParams: PostRoommatesConnectionsIdRequestsPath;
+    headers: PostRoommatesConnectionsIdRequestsHeaders;
+    response: PostRoommatesConnectionsIdRequestsResponse;
+  };
+  "get__roommates_connections_id_contacts": {
+    method: "GET";
+    path: "/roommates/connections/{id}/contacts";
+    authenticated: true;
+    body: GetRoommatesConnectionsIdContactsBody;
+    query: GetRoommatesConnectionsIdContactsQuery;
+    pathParams: GetRoommatesConnectionsIdContactsPath;
+    headers: GetRoommatesConnectionsIdContactsHeaders;
+    response: GetRoommatesConnectionsIdContactsResponse;
+  };
+  "delete__roommates_connections_id_contact_consents_me": {
+    method: "DELETE";
+    path: "/roommates/connections/{id}/contact-consents/me";
+    authenticated: true;
+    body: DeleteRoommatesConnectionsIdContactConsentsMeBody;
+    query: DeleteRoommatesConnectionsIdContactConsentsMeQuery;
+    pathParams: DeleteRoommatesConnectionsIdContactConsentsMePath;
+    headers: DeleteRoommatesConnectionsIdContactConsentsMeHeaders;
+    response: DeleteRoommatesConnectionsIdContactConsentsMeResponse;
+  };
+  "put__roommates_connections_id_contact_consents_me": {
+    method: "PUT";
+    path: "/roommates/connections/{id}/contact-consents/me";
+    authenticated: true;
+    body: PutRoommatesConnectionsIdContactConsentsMeBody;
+    query: PutRoommatesConnectionsIdContactConsentsMeQuery;
+    pathParams: PutRoommatesConnectionsIdContactConsentsMePath;
+    headers: PutRoommatesConnectionsIdContactConsentsMeHeaders;
+    response: PutRoommatesConnectionsIdContactConsentsMeResponse;
+  };
+  "delete__roommates_connections_id_": {
+    method: "DELETE";
+    path: "/roommates/connections/{id}";
+    authenticated: true;
+    body: DeleteRoommatesConnectionsIdBody;
+    query: DeleteRoommatesConnectionsIdQuery;
+    pathParams: DeleteRoommatesConnectionsIdPath;
+    headers: DeleteRoommatesConnectionsIdHeaders;
+    response: DeleteRoommatesConnectionsIdResponse;
+  };
+  "get__roommates_connections_id_": {
+    method: "GET";
+    path: "/roommates/connections/{id}";
+    authenticated: true;
+    body: GetRoommatesConnectionsIdBody;
+    query: GetRoommatesConnectionsIdQuery;
+    pathParams: GetRoommatesConnectionsIdPath;
+    headers: GetRoommatesConnectionsIdHeaders;
+    response: GetRoommatesConnectionsIdResponse;
+  };
+  "get__roommates_connections": {
+    method: "GET";
+    path: "/roommates/connections";
+    authenticated: true;
+    body: GetRoommatesConnectionsBody;
+    query: GetRoommatesConnectionsQuery;
+    pathParams: GetRoommatesConnectionsPath;
+    headers: GetRoommatesConnectionsHeaders;
+    response: GetRoommatesConnectionsResponse;
+  };
+  "put__roommates_decisions_userId_": {
+    method: "PUT";
+    path: "/roommates/decisions/{userId}";
+    authenticated: true;
+    body: PutRoommatesDecisionsUserIdBody;
+    query: PutRoommatesDecisionsUserIdQuery;
+    pathParams: PutRoommatesDecisionsUserIdPath;
+    headers: PutRoommatesDecisionsUserIdHeaders;
+    response: PutRoommatesDecisionsUserIdResponse;
+  };
+  "get__roommates_candidates": {
+    method: "GET";
+    path: "/roommates/candidates";
+    authenticated: true;
+    body: GetRoommatesCandidatesBody;
+    query: GetRoommatesCandidatesQuery;
+    pathParams: GetRoommatesCandidatesPath;
+    headers: GetRoommatesCandidatesHeaders;
+    response: GetRoommatesCandidatesResponse;
+  };
+  "patch__roommates_profiles_me_visibility": {
+    method: "PATCH";
+    path: "/roommates/profiles/me/visibility";
+    authenticated: true;
+    body: PatchRoommatesProfilesMeVisibilityBody;
+    query: PatchRoommatesProfilesMeVisibilityQuery;
+    pathParams: PatchRoommatesProfilesMeVisibilityPath;
+    headers: PatchRoommatesProfilesMeVisibilityHeaders;
+    response: PatchRoommatesProfilesMeVisibilityResponse;
+  };
+  "put__roommates_profiles_me": {
+    method: "PUT";
+    path: "/roommates/profiles/me";
+    authenticated: true;
+    body: PutRoommatesProfilesMeBody;
+    query: PutRoommatesProfilesMeQuery;
+    pathParams: PutRoommatesProfilesMePath;
+    headers: PutRoommatesProfilesMeHeaders;
+    response: PutRoommatesProfilesMeResponse;
+  };
+  "get__roommates_profiles_me": {
+    method: "GET";
+    path: "/roommates/profiles/me";
+    authenticated: true;
+    body: GetRoommatesProfilesMeBody;
+    query: GetRoommatesProfilesMeQuery;
+    pathParams: GetRoommatesProfilesMePath;
+    headers: GetRoommatesProfilesMeHeaders;
+    response: GetRoommatesProfilesMeResponse;
+  };
+  "get__roommates_questions": {
+    method: "GET";
+    path: "/roommates/questions";
+    authenticated: true;
+    body: GetRoommatesQuestionsBody;
+    query: GetRoommatesQuestionsQuery;
+    pathParams: GetRoommatesQuestionsPath;
+    headers: GetRoommatesQuestionsHeaders;
+    response: GetRoommatesQuestionsResponse;
+  };
   "post__auth_register": {
     method: "POST";
     path: "/auth/register";

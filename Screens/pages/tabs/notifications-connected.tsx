@@ -24,9 +24,10 @@ import type { RootStackParamList } from '../../types/navigation';
 type Props = NativeStackScreenProps<RootStackParamList, 'Notifications'>;
 type NotificationDto = GetNotificationsResponse['data']['notifications'][number];
 type NotificationView = NotificationDto & { readAt?: string };
-type NotificationFilter = 'All' | 'Events' | 'Communities' | 'Friends';
+type NotificationFilter = 'All' | 'Events' | 'Communities' | 'Friends' | 'Roommates';
 
 function categoryFor(type: string): Exclude<NotificationFilter, 'All'> {
+  if (/^roommate_/i.test(type)) return 'Roommates';
   if (/friend|connection|request/i.test(type)) return 'Friends';
   if (/community|group|member/i.test(type)) return 'Communities';
   return 'Events';
@@ -87,7 +88,12 @@ export default function NotificationsScreen({ navigation }: Props) {
 
   const openNotification = (item: NotificationView) => {
     lightTap();
-    setSelectedNotification(item);
+    if (item.type.startsWith('roommate_')) {
+      const data = item.data as Record<string, unknown>;
+      if (typeof data.connectionId === 'string' && /^[a-fA-F0-9]{24}$/.test(data.connectionId)) {
+        navigation.navigate('RoommateConnection', { connectionId: data.connectionId });
+      }
+    } else setSelectedNotification(item);
     if (wasRead(item) || readRequests.current.has(item._id)) return;
 
     const optimisticReadAt = new Date().toISOString();
@@ -143,7 +149,7 @@ export default function NotificationsScreen({ navigation }: Props) {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.filters}>
-            {(['All', 'Events', 'Communities', 'Friends'] as NotificationFilter[]).map((item) => (
+            {(['All', 'Events', 'Communities', 'Friends', 'Roommates'] as NotificationFilter[]).map((item) => (
               <Pressable key={item} onPress={() => setFilter(item)} style={[styles.filter, filter === item && styles.filterActive]}>
                 <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>{item}</Text>
               </Pressable>
@@ -156,7 +162,7 @@ export default function NotificationsScreen({ navigation }: Props) {
             {visible.map((item) => (
               <Pressable key={item._id} onPress={() => openNotification(item)} style={[styles.card, !wasRead(item) && styles.cardUnread]}>
                 <View style={styles.iconWrap}>
-                  <Ionicons color="#08b657" name={categoryFor(item.type) === 'Friends' ? 'person-add' : categoryFor(item.type) === 'Communities' ? 'people' : 'calendar'} size={22} />
+                  <Ionicons color="#08b657" name={categoryFor(item.type) === 'Roommates' ? 'home-outline' : categoryFor(item.type) === 'Friends' ? 'person-add' : categoryFor(item.type) === 'Communities' ? 'people' : 'calendar'} size={22} />
                 </View>
                 <View style={styles.copy}>
                   <Text style={styles.messageStrong}>{item.title}</Text>
@@ -189,11 +195,13 @@ export default function NotificationsScreen({ navigation }: Props) {
                   <Ionicons
                     color="#08b657"
                     name={
-                      categoryFor(selectedNotification.type) === 'Friends'
-                        ? 'person-add'
-                        : categoryFor(selectedNotification.type) === 'Communities'
-                          ? 'people'
-                          : 'calendar'
+                      categoryFor(selectedNotification.type) === 'Roommates'
+                        ? 'home-outline'
+                        : categoryFor(selectedNotification.type) === 'Friends'
+                          ? 'person-add'
+                          : categoryFor(selectedNotification.type) === 'Communities'
+                            ? 'people'
+                            : 'calendar'
                     }
                     size={22}
                   />

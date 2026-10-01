@@ -158,6 +158,11 @@ export default function ProfileScreen() {
               },
               {
                 icon: "people-outline",
+                label: "Roommates",
+                onPress: () => navigation.navigate("RoommateDiscover"),
+              },
+              {
+                icon: "people-outline",
                 label: "Friends",
                 onPress: () => navigation.navigate("Friends"),
               },

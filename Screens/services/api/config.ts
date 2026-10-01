@@ -1,5 +1,4 @@
 const DEFAULT_API_URL = "http://192.168.1.10:5000/api/v1";
-const DEFAULT_SOCKET_URL = "http://192.168.1.10:5000";
 
 function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, "");
@@ -10,7 +9,8 @@ export const apiBaseUrl = trimTrailingSlash(
 );
 
 export const socketBaseUrl = trimTrailingSlash(
-  process.env.EXPO_PUBLIC_SOCKET_URL?.trim() || DEFAULT_SOCKET_URL,
+  process.env.EXPO_PUBLIC_SOCKET_URL?.trim() ||
+    apiBaseUrl.replace(/\/api\/v\d+$/i, ""),
 );
 
 // LiveKit URL is public; access is protected by the short-lived token issued by the backend.

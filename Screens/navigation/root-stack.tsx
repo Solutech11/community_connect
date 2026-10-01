@@ -19,6 +19,13 @@ import CreateEventReviewScreen from "../pages/tabs/create-event-review";
 import TicketScannerScreen from "../pages/tabs/ticket-scanner";
 import NotificationsScreen from "../pages/tabs/notifications-connected";
 import FriendsScreen from "../pages/tabs/friends-connected";
+import RoommateIntro from "../pages/roommates/intro";
+import RoommateSetup from "../pages/roommates/setup";
+import RoommateDiscover from "../pages/roommates/discover";
+import RoommateCandidate from "../pages/roommates/candidate";
+import RoommateConnections from "../pages/roommates/connections";
+import RoommateConnection from "../pages/roommates/connection";
+import RoommateBlocks from "../pages/roommates/blocks";
 import ChatThreadScreen from "../pages/tabs/chat-thread-connected";
 import AIChatScreen from "../pages/tabs/ai-chat-connected";
 import AISessionsScreen from "../pages/tabs/ai-sessions";
@@ -92,6 +99,13 @@ const DashboardCreateEventReview = withDashboardLayout(CreateEventReviewScreen);
 const DashboardTicketScanner = withDashboardLayout(TicketScannerScreen);
 const DashboardNotifications = withDashboardLayout(NotificationsScreen);
 const DashboardFriends = withDashboardLayout(FriendsScreen);
+const DashboardRoommateIntro = withDashboardLayout(RoommateIntro, { showAiAssistant: false });
+const DashboardRoommateSetup = withDashboardLayout(RoommateSetup, { showAiAssistant: false });
+const DashboardRoommateDiscover = withDashboardLayout(RoommateDiscover, { showAiAssistant: false });
+const DashboardRoommateCandidate = withDashboardLayout(RoommateCandidate, { showAiAssistant: false });
+const DashboardRoommateConnections = withDashboardLayout(RoommateConnections, { showAiAssistant: false });
+const DashboardRoommateConnection = withDashboardLayout(RoommateConnection, { showAiAssistant: false });
+const DashboardRoommateBlocks = withDashboardLayout(RoommateBlocks, { showAiAssistant: false });
 const DashboardChatThread = withDashboardLayout(ChatThreadScreen, {
   showAiAssistant: false,
   scaleAndroid: false,
@@ -282,6 +296,13 @@ export default function RootStackNavigator({
             component={DashboardNotifications}
             options={{ animation: "slide_from_right" }}
           />
+          <Stack.Screen name="RoommateIntro" component={DashboardRoommateIntro} />
+          <Stack.Screen name="RoommateSetup" component={DashboardRoommateSetup} />
+          <Stack.Screen name="RoommateDiscover" component={DashboardRoommateDiscover} />
+          <Stack.Screen name="RoommateCandidate" component={DashboardRoommateCandidate} />
+          <Stack.Screen name="RoommateConnections" component={DashboardRoommateConnections} />
+          <Stack.Screen name="RoommateConnection" component={DashboardRoommateConnection} />
+          <Stack.Screen name="RoommateBlocks" component={DashboardRoommateBlocks} />
           <Stack.Screen
             name="Friends"
             component={DashboardFriends}

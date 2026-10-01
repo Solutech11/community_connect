@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import RoommateHomeBanner from "../../components/ui/roommate-home-banner";
 import AppAlertModal from "../../components/ui/app-alert-modal";
 import TicketStatusBadge from "../../components/ui/ticket-status-badge";
 import { useAuth } from "../../hooks/use-auth";
@@ -218,6 +219,7 @@ export default function HomeScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
+          <RoommateHomeBanner onPress={() => navigation.navigate("RoommateDiscover")} />
           <View style={styles.search}>
             <Ionicons name="search" size={23} color="#279d61" />
             <TextInput

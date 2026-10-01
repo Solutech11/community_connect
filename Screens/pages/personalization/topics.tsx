@@ -65,7 +65,7 @@ export default function PersonalizationTopicsScreen({ navigation }: Props) {
         message: 'Your hobbies and preferences have been saved.',
         tone: 'success',
       });
-      navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'Home' }] }));
+      navigation.dispatch(CommonActions.reset({ index: 1, routes: [{ name: 'Home' }, { name: 'RoommateIntro' }] }));
     } catch (error) {
       notify({
         title: 'Unable to finish setup',

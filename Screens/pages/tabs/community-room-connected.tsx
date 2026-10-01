@@ -1,3 +1,9 @@
+import { mergeRefreshedMessages } from "../../hooks/merge-cached-messages";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCachedState } from "../../hooks/use-cached-state";
+import { SessionCache } from "../../services/cache/session-cache";
+import CacheRefreshNotice from "../../components/ui/cache-refresh-notice";
+import type { SetStateAction } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
@@ -80,6 +86,20 @@ type RoomMessage = {
   pinnedAt: string | null;
   reactions: Array<{ emoji: string; count: number; reactedByViewer: boolean }>;
 };
+
+type RoomSnapshot = {
+  community: Community | null;
+  messages: RoomMessage[];
+  olderCursor: string | null;
+  hasOlderMessages: boolean;
+};
+const emptyRoom: RoomSnapshot = {
+  community: null,
+  messages: [],
+  olderCursor: null,
+  hasOlderMessages: false,
+};
+const roomCache = new SessionCache<RoomSnapshot>(15);
 
 function reactionPresentation(reaction: string): {
   icon: ReactionIconName;
@@ -214,11 +234,7 @@ function mapCommunityCall(value: unknown): CommunityCall | null {
   };
 }
 
-function CallConnectingIllustration({
-  type,
-}: {
-  type: CommunityCallType;
-}) {
+function CallConnectingIllustration({ type }: { type: CommunityCallType }) {
   const pulse = useRef(new Animated.Value(0)).current;
   const ring = useRef(new Animated.Value(0)).current;
 
@@ -290,7 +306,9 @@ function CallConnectingIllustration({
       accessible
       accessibilityRole="image"
       accessibilityLabel={
-        type === "video" ? "Connecting to video call" : "Connecting to voice call"
+        type === "video"
+          ? "Connecting to video call"
+          : "Connecting to voice call"
       }
       pointerEvents="none"
       style={styles.callConnectingIllustration}
@@ -342,10 +360,25 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
   const communityId = route.params.communityId;
   const scrollRef = useRef<ScrollView>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [community, setCommunity] = useState<Community | null>(null);
-  const [messages, setMessages] = useState<RoomMessage[]>([]);
-  const [olderCursor, setOlderCursor] = useState<string | null>(null);
-  const [hasOlderMessages, setHasOlderMessages] = useState(false);
+  const [room, setRoom, hasCachedRoom] = useCachedState(
+    roomCache,
+    user?._id,
+    communityId,
+    emptyRoom,
+  );
+  const { community, messages, olderCursor, hasOlderMessages } = room;
+  const setMessages = useCallback(
+    (next: SetStateAction<RoomMessage[]>) => {
+      setRoom((current) => ({
+        ...current,
+        messages: typeof next === "function" ? next(current.messages) : next,
+      }));
+    },
+    [setRoom],
+  );
+  const [accessChecked, setAccessChecked] = useState(false);
+  const [roomRefreshError, setRoomRefreshError] = useState<string | null>(null);
+  const roomRequestEpoch = useRef(0);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [membershipRole, setMembershipRole] = useState<CommunityRole>(null);
   const [messagePermission, setMessagePermission] = useState("everyone");
@@ -387,7 +420,7 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
   const [draft, setDraft] = useState("");
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [pickedImage, setPickedImage] = useState<PickedImage | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!hasCachedRoom);
   const [refreshing, setRefreshing] = useState(false);
   const [sending, setSending] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -434,24 +467,34 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
 
   const canModerate =
     membershipRole === "owner" || membershipRole === "moderator";
-  const canSendMessages = messagePermission !== "moderators" || canModerate;
+  const canSendMessages =
+    accessChecked &&
+    membershipRole !== null &&
+    (messagePermission !== "moderators" || canModerate);
   const hasSendableContent = Boolean(draft.trim() || pickedImage);
 
-  const upsertMessage = useCallback((next: RoomMessage) => {
-    setMessages((current) => {
-      const index = current.findIndex((message) => message._id === next._id);
-      if (index < 0)
-        return [...current, next].sort((left, right) =>
-          left.createdAt.localeCompare(right.createdAt),
-        );
-      const copy = [...current];
-      copy[index] = next;
-      return copy;
-    });
-  }, []);
+  const upsertMessage = useCallback(
+    (next: RoomMessage) => {
+      setMessages((current) => {
+        const index = current.findIndex((message) => message._id === next._id);
+        if (index < 0)
+          return [...current, next].sort((left, right) =>
+            left.createdAt.localeCompare(right.createdAt),
+          );
+        const copy = [...current];
+        copy[index] = next;
+        return copy;
+      });
+    },
+    [setMessages],
+  );
 
   const load = useCallback(
     async (signal?: AbortSignal, scrollToLatest = false) => {
+      const epoch = roomRequestEpoch.current;
+      const atRequestStart = user?._id
+        ? (roomCache.read(user._id, communityId)?.messages ?? [])
+        : [];
       const [
         detail,
         messageResponse,
@@ -464,17 +507,56 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
         communitiesApi.settings(communityId, signal),
         communitiesApi.allMyCommunities(signal),
         communitiesApi.activeCall(communityId, signal),
-      ]);
+      ]).catch((error: unknown) => {
+        if (
+          !signal?.aborted &&
+          epoch === roomRequestEpoch.current &&
+          error instanceof ApiError &&
+          [401, 403, 404].includes(error.status)
+        ) {
+          if (user?._id) roomCache.invalidate(user._id, communityId);
+          setAccessChecked(false);
+          setMembershipRole(null);
+        }
+        throw error;
+      });
+      if (signal?.aborted || epoch !== roomRequestEpoch.current) return;
       const parsed = messageResponse.data.messages
         .map(mapRoomMessage)
         .filter((message): message is RoomMessage => message !== null);
       const viewer = mineResponse.find(
         (item) => item._id === communityId,
       )?.viewerMembership;
-      setCommunity(detail.data.community);
-      setMessages(parsed);
-      setOlderCursor(messageResponse.data.pageInfo?.nextCursor ?? null);
-      setHasOlderMessages(messageResponse.data.pageInfo?.hasMore ?? false);
+      setRoom((current) => {
+        const merged = mergeRefreshedMessages(
+          current.messages,
+          parsed,
+          atRequestStart,
+        );
+        const keptOlderPages =
+          parsed.length > 0 &&
+          merged.some(
+            (message) =>
+              message.createdAt <
+              parsed.reduce(
+                (oldest, next) =>
+                  next.createdAt < oldest ? next.createdAt : oldest,
+                parsed[0].createdAt,
+              ),
+          );
+        return {
+          community: detail.data.community,
+          messages: merged,
+          olderCursor: keptOlderPages
+            ? current.olderCursor
+            : (messageResponse.data.pageInfo?.nextCursor ?? null),
+          hasOlderMessages: keptOlderPages
+            ? current.hasOlderMessages
+            : (messageResponse.data.pageInfo?.hasMore ?? false),
+        };
+      });
+      setRoomRefreshError(null);
+      setAccessChecked(Boolean(viewer));
       setMembershipRole((viewer?.role as CommunityRole | undefined) ?? null);
       setNotificationLevel(
         viewer?.notificationLevel ?? (viewer?.muted ? "muted" : "unknown"),
@@ -491,117 +573,160 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
           scrollRef.current?.scrollToEnd({ animated: false }),
         );
     },
-    [communityId],
+    [communityId, setRoom, user?._id],
   );
 
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-    load(controller.signal, true)
-      .catch((error: unknown) => {
-        if (error instanceof ApiError && error.code === "REQUEST_CANCELLED")
+  useFocusEffect(
+    useCallback(() => {
+      const controller = new AbortController();
+      const epoch = ++roomRequestEpoch.current;
+      setLoading(
+        !user?._id || roomCache.read(user._id, communityId) === undefined,
+      );
+      setAccessChecked(false);
+      const handleLoadFailure = (error: unknown) => {
+        if (controller.signal.aborted || epoch !== roomRequestEpoch.current)
           return;
-        setAlert({
-          title: "Community room unavailable",
-          message:
-            error instanceof ApiError
-              ? error.message
-              : "Unable to load this room.",
-        });
-      })
-      .finally(() => setLoading(false));
-
-    const joinRealtimeCommunity = () => {
-      chatSocket.joinCommunity(communityId, (response) => {
         if (
-          !response.success &&
-          response.code !== "COMMUNITY_SOCKET_UNAVAILABLE"
+          error instanceof ApiError &&
+          [401, 403, 404].includes(error.status)
         ) {
-          setAlert({
-            title: "Realtime unavailable",
-            message:
-              response.message || "Unable to join live community updates.",
-          });
+          if (user?._id) roomCache.invalidate(user._id, communityId);
+          setAccessChecked(false);
+          setMembershipRole(null);
         }
+        const message =
+          error instanceof ApiError
+            ? error.message
+            : "Unable to refresh this room. Showing your last loaded messages.";
+        if (user?._id && roomCache.read(user._id, communityId))
+          setRoomRefreshError(message);
+        else setAlert({ title: "Community room unavailable", message });
+      };
+      load(controller.signal, true)
+        .then(() => {
+          if (!controller.signal.aborted && epoch === roomRequestEpoch.current)
+            joinRealtimeCommunity();
+        })
+        .catch(handleLoadFailure)
+        .finally(() => {
+          if (!controller.signal.aborted && epoch === roomRequestEpoch.current)
+            setLoading(false);
+        });
+
+      const joinRealtimeCommunity = () => {
+        chatSocket.joinCommunity(communityId, (response) => {
+          if (
+            !response.success &&
+            response.code !== "COMMUNITY_SOCKET_UNAVAILABLE"
+          ) {
+            setAlert({
+              title: "Realtime unavailable",
+              message:
+                response.message || "Unable to join live community updates.",
+            });
+          }
+        });
+      };
+      const stopSocketConnect = chatSocket.onConnect(() => {
+        void load(controller.signal)
+          .then(() => {
+            if (
+              !controller.signal.aborted &&
+              epoch === roomRequestEpoch.current
+            )
+              joinRealtimeCommunity();
+          })
+          .catch(handleLoadFailure);
       });
-    };
-    joinRealtimeCommunity();
-    const stopSocketConnect = chatSocket.onConnect(joinRealtimeCommunity);
-    const stopNewMessage = chatSocket.onCommunityMessage((payload) => {
-      const message = mapRoomMessage(payload);
-      if (message?.communityId === communityId) upsertMessage(message);
-    });
-    const stopUpdatedMessage = chatSocket.onCommunityMessageUpdated(
-      (payload) => {
+      const stopNewMessage = chatSocket.onCommunityMessage((payload) => {
         const message = mapRoomMessage(payload);
         if (message?.communityId === communityId) upsertMessage(message);
-      },
-    );
-    const stopDeletedMessage = chatSocket.onCommunityMessageDeleted(
-      (payload) => {
-        if (payload.communityId === communityId)
-          setMessages((current) =>
-            current.filter((message) => message._id !== payload.messageId),
-          );
-      },
-    );
-    const stopCommunityPost = chatSocket.onCommunityPost((payload) => {
-      if (isCommunityPayload(payload, communityId)) void load();
-    });
-    const stopCommunityAnnouncement = chatSocket.onCommunityAnnouncement(
-      (payload) => {
-        if (isCommunityPayload(payload, communityId)) void load();
-      },
-    );
-    const stopMemberUpdated = chatSocket.onCommunityMemberUpdated((payload) => {
-      if (isCommunityPayload(payload, communityId)) void load();
-    });
-    const stopCommunityTyping = chatSocket.onCommunityTyping(
-      (payload: CommunityTypingPayload) => {
-        if (payload.communityId !== communityId || payload.userId === user?._id)
-          return;
-        setTypingMembers((current) => {
-          const next = { ...current };
-          if (payload.typing)
-            next[payload.userId] = payload.firstName || "A member";
-          else delete next[payload.userId];
-          return next;
-        });
-      },
-    );
-    const updateActiveCall = (payload: CommunityCallPayload) => {
-      if (!isCommunityPayload(payload, communityId)) return;
-      setActiveCall(mapCommunityCall(payload));
-    };
-    const stopCallStarted = chatSocket.onCommunityCallStarted(updateActiveCall);
-    const stopCallUpdated = chatSocket.onCommunityCallUpdated(updateActiveCall);
-    const stopCallEnded = chatSocket.onCommunityCallEnded((payload) => {
-      if (isCommunityPayload(payload, communityId)) setActiveCall(null);
-    });
+      });
+      const stopUpdatedMessage = chatSocket.onCommunityMessageUpdated(
+        (payload) => {
+          const message = mapRoomMessage(payload);
+          if (message?.communityId === communityId) upsertMessage(message);
+        },
+      );
+      const stopDeletedMessage = chatSocket.onCommunityMessageDeleted(
+        (payload) => {
+          if (payload.communityId === communityId)
+            setMessages((current) =>
+              current.filter((message) => message._id !== payload.messageId),
+            );
+        },
+      );
+      const stopCommunityPost = chatSocket.onCommunityPost((payload) => {
+        if (isCommunityPayload(payload, communityId))
+          void load(controller.signal).catch(handleLoadFailure);
+      });
+      const stopCommunityAnnouncement = chatSocket.onCommunityAnnouncement(
+        (payload) => {
+          if (isCommunityPayload(payload, communityId))
+            void load(controller.signal).catch(handleLoadFailure);
+        },
+      );
+      const stopMemberUpdated = chatSocket.onCommunityMemberUpdated(
+        (payload) => {
+          if (isCommunityPayload(payload, communityId))
+            void load(controller.signal).catch(handleLoadFailure);
+        },
+      );
+      const stopCommunityTyping = chatSocket.onCommunityTyping(
+        (payload: CommunityTypingPayload) => {
+          if (
+            payload.communityId !== communityId ||
+            payload.userId === user?._id
+          )
+            return;
+          setTypingMembers((current) => {
+            const next = { ...current };
+            if (payload.typing)
+              next[payload.userId] = payload.firstName || "A member";
+            else delete next[payload.userId];
+            return next;
+          });
+        },
+      );
+      const updateActiveCall = (payload: CommunityCallPayload) => {
+        if (!isCommunityPayload(payload, communityId)) return;
+        setActiveCall(mapCommunityCall(payload));
+      };
+      const stopCallStarted =
+        chatSocket.onCommunityCallStarted(updateActiveCall);
+      const stopCallUpdated =
+        chatSocket.onCommunityCallUpdated(updateActiveCall);
+      const stopCallEnded = chatSocket.onCommunityCallEnded((payload) => {
+        if (isCommunityPayload(payload, communityId)) setActiveCall(null);
+      });
 
-    return () => {
-      controller.abort();
-      if (typingTimer.current) clearTimeout(typingTimer.current);
-      chatSocket.setCommunityTyping(communityId, false);
-      chatSocket.leaveCommunity(communityId);
-      stopSocketConnect();
-      stopNewMessage();
-      stopUpdatedMessage();
-      stopDeletedMessage();
-      stopCommunityPost();
-      stopCommunityAnnouncement();
-      stopMemberUpdated();
-      stopCommunityTyping();
-      stopCallStarted();
-      stopCallUpdated();
-      stopCallEnded();
-    };
-  }, [communityId, load, upsertMessage, user?._id]);
+      return () => {
+        roomRequestEpoch.current += 1;
+        controller.abort();
+        if (typingTimer.current) clearTimeout(typingTimer.current);
+        chatSocket.setCommunityTyping(communityId, false);
+        chatSocket.leaveCommunity(communityId);
+        stopSocketConnect();
+        stopNewMessage();
+        stopUpdatedMessage();
+        stopDeletedMessage();
+        stopCommunityPost();
+        stopCommunityAnnouncement();
+        stopMemberUpdated();
+        stopCommunityTyping();
+        stopCallStarted();
+        stopCallUpdated();
+        stopCallEnded();
+      };
+    }, [communityId, load, upsertMessage, user?._id]),
+  );
 
   const refresh = async () => {
     setRefreshing(true);
     try {
       await load(undefined, false);
+      setRoomRefreshError(null);
     } catch (error) {
       setAlert({
         title: "Unable to refresh",
@@ -631,8 +756,11 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
           ...current,
         ];
       });
-      setOlderCursor(response.data.pageInfo?.nextCursor ?? null);
-      setHasOlderMessages(response.data.pageInfo?.hasMore ?? false);
+      setRoom((current) => ({
+        ...current,
+        olderCursor: response.data.pageInfo?.nextCursor ?? null,
+        hasOlderMessages: response.data.pageInfo?.hasMore ?? false,
+      }));
     } catch (error) {
       setAlert({
         title: "Unable to load older messages",
@@ -1150,7 +1278,13 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
               </View>
             ) : null}
           </View>
-          {loading ? (
+          {roomRefreshError ? (
+            <CacheRefreshNotice
+              message={roomRefreshError}
+              onRetry={() => void refresh()}
+            />
+          ) : null}
+          {loading && !hasCachedRoom ? (
             <View style={styles.loading}>
               <AppLoader color="#00c95a" size="large" />
               <Text style={styles.loadingText}>Loading messages...</Text>
