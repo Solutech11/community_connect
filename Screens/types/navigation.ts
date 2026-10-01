@@ -108,9 +108,6 @@ export type RootStackParamList = {
   Transactions: undefined;
   TransactionDetails: { transactionId: string };
   BankAccounts: undefined;
-  WalletTopUp: undefined;
-  WalletWithdraw: undefined;
-  WalletTransfer: undefined;
   WalletDispute: {
     transaction: {
       id?: string;

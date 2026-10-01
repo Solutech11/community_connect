@@ -1,7 +1,9 @@
 ﻿import { Ionicons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
   Pressable,
   StyleSheet,
@@ -9,7 +11,10 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import { colors, fonts } from "../../styles/theme";
 
@@ -45,6 +50,18 @@ export default function AppSelectSheet({
   allowCustomValue = false,
 }: AppSelectSheetProps) {
   const [query, setQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    if (!visible) return;
+
+    // Dismiss a focused form input keyboard behind the native Modal so it cannot
+    // cover the selection sheet search field when the sheet opens.
+    Keyboard.dismiss();
+    setQuery("");
+    setSearchFocused(false);
+  }, [visible]);
 
   const filteredOptions = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -57,6 +74,8 @@ export default function AppSelectSheet({
   }, [options, query]);
 
   const close = () => {
+    Keyboard.dismiss();
+    setSearchFocused(false);
     setQuery("");
     onClose();
   };
@@ -76,6 +95,8 @@ export default function AppSelectSheet({
       return;
     }
 
+    Keyboard.dismiss();
+    setSearchFocused(false);
     setQuery("");
     onSelect(option);
     onClose();
@@ -94,6 +115,7 @@ export default function AppSelectSheet({
     <Modal
       animationType="slide"
       onRequestClose={close}
+      statusBarTranslucent
       transparent
       visible={visible}
     >
@@ -103,101 +125,122 @@ export default function AppSelectSheet({
           onPress={close}
           style={StyleSheet.absoluteFillObject}
         />
-        <SafeAreaView edges={["bottom"]} style={styles.sheet}>
-          <View style={styles.handle} />
-          <View style={styles.heading}>
-            <Text style={styles.title}>{title}</Text>
-            {multiple ? (
-              <Text style={styles.selectionCount}>
-                {selectedValues.length}
-                {maxSelections ? `/${maxSelections}` : ""} selected
-              </Text>
+        <KeyboardAvoidingView
+          behavior="padding"
+          pointerEvents="box-none"
+          style={[styles.keyboardArea, { paddingTop: insets.top }]}
+        >
+          <SafeAreaView
+            edges={["bottom"]}
+            style={[styles.sheet, searchFocused && styles.searchingSheet]}
+          >
+            <View style={styles.handle} />
+            <View style={styles.heading}>
+              <Text style={styles.title}>{title}</Text>
+              {multiple ? (
+                <Text style={styles.selectionCount}>
+                  {selectedValues.length}
+                  {maxSelections ? `/${maxSelections}` : ""} selected
+                </Text>
+              ) : null}
+              <Pressable
+                hitSlop={10}
+                onPress={close}
+                style={styles.closeButton}
+              >
+                <Ionicons color={colors.ink} name="close" size={24} />
+              </Pressable>
+            </View>
+            <View style={styles.search}>
+              <Ionicons color="#37955e" name="search" size={20} />
+              <TextInput
+                accessibilityLabel={"Search " + title.toLowerCase()}
+                autoCapitalize="none"
+                autoCorrect={false}
+                onBlur={() => setSearchFocused(false)}
+                onChangeText={setQuery}
+                onFocus={() => setSearchFocused(true)}
+                returnKeyType="search"
+                onSubmitEditing={Keyboard.dismiss}
+                placeholder={"Search " + title.toLowerCase()}
+                placeholderTextColor="#718096"
+                style={styles.searchInput}
+                value={query}
+              />
+            </View>
+            {canUseCustomValue && !disabled ? (
+              <Pressable
+                onPress={() => select(customValue)}
+                style={styles.customOption}
+              >
+                <Ionicons color="#08ad54" name="add-circle-outline" size={22} />
+                <Text style={styles.customText}>
+                  Use &quot;{customValue}&quot;
+                </Text>
+              </Pressable>
             ) : null}
-            <Pressable hitSlop={10} onPress={close} style={styles.closeButton}>
-              <Ionicons color={colors.ink} name="close" size={24} />
-            </Pressable>
-          </View>
-          <View style={styles.search}>
-            <Ionicons color="#37955e" name="search" size={20} />
-            <TextInput
-              autoCapitalize="words"
-              onChangeText={setQuery}
-              placeholder={"Search " + title.toLowerCase()}
-              placeholderTextColor="#718096"
-              style={styles.searchInput}
-              value={query}
-            />
-          </View>
-          {canUseCustomValue && !disabled ? (
-            <Pressable
-              onPress={() => select(customValue)}
-              style={styles.customOption}
-            >
-              <Ionicons color="#08ad54" name="add-circle-outline" size={22} />
-              <Text style={styles.customText}>
-                Use &quot;{customValue}&quot;
-              </Text>
-            </Pressable>
-          ) : null}
-          <FlatList
-            data={filteredOptions}
-            keyExtractor={(item) => item}
-            keyboardShouldPersistTaps="handled"
-            ListEmptyComponent={<Text style={styles.empty}>No matching options found.</Text>}
-            style={styles.optionsList}
-            renderItem={({ item }) => {
-              const selected = multiple
-                ? selectedValues.includes(item)
-                : item === value;
-              const atSelectionLimit = Boolean(
-                multiple &&
+            <FlatList
+              data={filteredOptions}
+              keyExtractor={(item) => item}
+              keyboardShouldPersistTaps="handled"
+              ListEmptyComponent={
+                <Text style={styles.empty}>No matching options found.</Text>
+              }
+              style={styles.optionsList}
+              renderItem={({ item }) => {
+                const selected = multiple
+                  ? selectedValues.includes(item)
+                  : item === value;
+                const atSelectionLimit = Boolean(
+                  multiple &&
                   maxSelections &&
                   selectedValues.length >= maxSelections &&
                   !selected,
-              );
-              return (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ selected, disabled }}
-                  disabled={disabled}
-                  onPress={() => select(item)}
-                  style={[
-                    styles.option,
-                    selected && styles.optionSelected,
-                    (disabled || atSelectionLimit) && styles.optionDisabled,
-                  ]}
-                >
-                  <Text
+                );
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ selected, disabled }}
+                    disabled={disabled}
+                    onPress={() => select(item)}
                     style={[
-                      styles.optionText,
-                      selected && styles.optionTextSelected,
+                      styles.option,
+                      selected && styles.optionSelected,
+                      (disabled || atSelectionLimit) && styles.optionDisabled,
                     ]}
                   >
-                    {item}
-                  </Text>
-                  {selected ? (
-                    <Ionicons
-                      color="#08ad54"
-                      name="checkmark-circle"
-                      size={22}
-                    />
-                  ) : null}
-                </Pressable>
-              );
-            }}
-            showsVerticalScrollIndicator={false}
-          />
-          {multiple ? (
-            <Pressable
-              accessibilityRole="button"
-              disabled={disabled}
-              onPress={close}
-              style={[styles.doneButton, disabled && styles.optionDisabled]}
-            >
-              <Text style={styles.doneButtonText}>Done</Text>
-            </Pressable>
-          ) : null}
-        </SafeAreaView>
+                    <Text
+                      style={[
+                        styles.optionText,
+                        selected && styles.optionTextSelected,
+                      ]}
+                    >
+                      {item}
+                    </Text>
+                    {selected ? (
+                      <Ionicons
+                        color="#08ad54"
+                        name="checkmark-circle"
+                        size={22}
+                      />
+                    ) : null}
+                  </Pressable>
+                );
+              }}
+              showsVerticalScrollIndicator={false}
+            />
+            {multiple ? (
+              <Pressable
+                accessibilityRole="button"
+                disabled={disabled}
+                onPress={close}
+                style={[styles.doneButton, disabled && styles.optionDisabled]}
+              >
+                <Text style={styles.doneButtonText}>Done</Text>
+              </Pressable>
+            ) : null}
+          </SafeAreaView>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -207,16 +250,23 @@ const styles = StyleSheet.create({
   overlay: {
     backgroundColor: "rgba(4, 15, 10, 0.36)",
     flex: 1,
+  },
+  keyboardArea: {
+    flex: 1,
     justifyContent: "flex-end",
   },
   sheet: {
     backgroundColor: colors.white,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    maxHeight: "78%",
-    minHeight: "48%",
+    height: "78%",
+    maxHeight: "100%",
+    flexShrink: 1,
     paddingHorizontal: 22,
     paddingTop: 10,
+  },
+  searchingSheet: {
+    height: "100%",
   },
   handle: {
     alignSelf: "center",
@@ -294,6 +344,7 @@ const styles = StyleSheet.create({
   },
   optionsList: {
     flex: 1,
+    minHeight: 0,
   },
   optionSelected: {
     backgroundColor: "#f0fbf5",

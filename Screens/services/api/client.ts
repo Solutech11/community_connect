@@ -709,11 +709,6 @@ const operations: Record<
     path: "/wallet/transactions/{id}",
     authenticated: true,
   },
-  post__wallet_topups: {
-    method: "POST",
-    path: "/wallet/topups",
-    authenticated: true,
-  },
   get__wallet_topups_reference_verify: {
     method: "GET",
     path: "/wallet/topups/{reference}/verify",
@@ -729,6 +724,11 @@ const operations: Record<
     path: "/wallet/bank-accounts",
     authenticated: true,
   },
+  post__wallet_bank_accounts_resolve: {
+    method: "POST",
+    path: "/wallet/bank-accounts/resolve",
+    authenticated: true,
+  },
   post__wallet_bank_accounts: {
     method: "POST",
     path: "/wallet/bank-accounts",
@@ -737,16 +737,6 @@ const operations: Record<
   delete__wallet_bank_accounts_id_: {
     method: "DELETE",
     path: "/wallet/bank-accounts/{id}",
-    authenticated: true,
-  },
-  post__wallet_transfers: {
-    method: "POST",
-    path: "/wallet/transfers",
-    authenticated: true,
-  },
-  post__wallet_withdrawals: {
-    method: "POST",
-    path: "/wallet/withdrawals",
     authenticated: true,
   },
   post__wallet_withdrawals_reference_finalize: {

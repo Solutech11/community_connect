@@ -4451,16 +4451,30 @@ export type GetWalletHeaders = {
 
 };
 export type GetWalletResponse = {
-  "success": true;
+  "success": boolean;
   "message": string;
   "data": {
     "wallet": {
       "_id": string;
       "walletNumber": string;
-      "currency": string;
+      "currency": "NGN";
       "availableBalanceKobo": number;
       "pendingBalanceKobo": number;
-      "status": string;
+      "status": "active" | "frozen" | "closed";
+    };
+    "payout": {
+      "automatic": true;
+      "minimumAmountKobo": 100000;
+      "timezone": "Africa/Lagos";
+      "serverTime": string;
+      "nextPayoutAt": string;
+      "status": "paused" | "bank_required" | "processing" | "below_minimum" | "scheduled" | "empty";
+      "bankAccount": ({
+        "_id": string;
+        "bankName": string;
+        "accountName": string;
+        "maskedAccountNumber": string;
+      }) | null;
     };
   };
 };
@@ -4530,44 +4544,10 @@ export type GetWalletTransactionsIdResponse = {
   };
 };
 
-export type PostWalletTopupsBody = {
-  "amountKobo": number;
-};
-export type PostWalletTopupsQuery = {
 
-};
-export type PostWalletTopupsPath = {
 
-};
-export type PostWalletTopupsHeaders = {
-  "Idempotency-Key": string;
-};
-export type PostWalletTopupsResponse = {
-  "success": true;
-  "message": string;
-  "data": {
-    "transaction": {
-      "_id": string;
-      "reference": string;
-      "type": string;
-      "direction": string;
-      "amountKobo": number;
-      "feeKobo": number;
-      "status": string;
-      "provider": string;
-      "createdAt": string;
-    };
-    "authorizationUrl": string;
-    "accessCode": string;
-    "reference": string;
-    "publicKey": string;
-    "charge": {
-      "walletCreditKobo": number;
-      "feeKobo": number;
-      "totalPayableKobo": number;
-    };
-  };
-};
+
+
 
 export type GetWalletTopupsReferenceVerifyBody = never;
 export type GetWalletTopupsReferenceVerifyQuery = {
@@ -4647,6 +4627,26 @@ export type GetWalletBankAccountsResponse = {
   };
 };
 
+export type PostWalletBankAccountsResolveBody = {
+  "accountNumber": string;
+  "bankCode": string;
+};
+export type PostWalletBankAccountsResolveQuery = {};
+export type PostWalletBankAccountsResolvePath = {};
+export type PostWalletBankAccountsResolveHeaders = {};
+export type PostWalletBankAccountsResolveResponse = {
+  "success": true;
+  "message": string;
+  "data": {
+    "resolution": {
+      "bankCode": string;
+      "bankName": string;
+      "accountName": string;
+      "maskedAccountNumber": string;
+    };
+  };
+};
+
 export type PostWalletBankAccountsBody = {
   "accountNumber": string;
   "bankCode": string;
@@ -4690,73 +4690,15 @@ export type DeleteWalletBankAccountsIdResponse = {
   "message": string;
 };
 
-export type PostWalletTransfersBody = {
-  "recipient": string;
-  "amountKobo": number;
-  "note"?: string;
-};
-export type PostWalletTransfersQuery = {
 
-};
-export type PostWalletTransfersPath = {
 
-};
-export type PostWalletTransfersHeaders = {
-  "Idempotency-Key": string;
-};
-export type PostWalletTransfersResponse = {
-  "success": true;
-  "message": string;
-  "data": {
-    "transaction": {
-      "_id": string;
-      "reference": string;
-      "type": string;
-      "direction": string;
-      "amountKobo": number;
-      "feeKobo": number;
-      "status": string;
-      "provider": string;
-      "createdAt": string;
-    };
-  };
-};
 
-export type PostWalletWithdrawalsBody = {
-  "bankAccountId": string;
-  "amountKobo": number;
-};
-export type PostWalletWithdrawalsQuery = {
 
-};
-export type PostWalletWithdrawalsPath = {
 
-};
-export type PostWalletWithdrawalsHeaders = {
-  "Idempotency-Key": string;
-};
-export type PostWalletWithdrawalsResponse = {
-  "success": true;
-  "message": string;
-  "data": {
-    "transaction": {
-      "_id": string;
-      "reference": string;
-      "type": string;
-      "direction": string;
-      "amountKobo": number;
-      "feeKobo": number;
-      "status": string;
-      "provider": string;
-      "createdAt": string;
-    };
-    "charge": {
-      "withdrawalAmountKobo": number;
-      "feeKobo": number;
-      "payoutAmountKobo": number;
-    };
-  };
-};
+
+
+
+
 
 export type PostWalletWithdrawalsReferenceFinalizeBody = {
   "otp": string;
@@ -6982,16 +6924,6 @@ export interface ApiOperationMap {
     headers: GetWalletTransactionsIdHeaders;
     response: GetWalletTransactionsIdResponse;
   };
-  "post__wallet_topups": {
-    method: "POST";
-    path: "/wallet/topups";
-    authenticated: true;
-    body: PostWalletTopupsBody;
-    query: PostWalletTopupsQuery;
-    pathParams: PostWalletTopupsPath;
-    headers: PostWalletTopupsHeaders;
-    response: PostWalletTopupsResponse;
-  };
   "get__wallet_topups_reference_verify": {
     method: "GET";
     path: "/wallet/topups/{reference}/verify";
@@ -7022,6 +6954,16 @@ export interface ApiOperationMap {
     headers: GetWalletBankAccountsHeaders;
     response: GetWalletBankAccountsResponse;
   };
+  "post__wallet_bank_accounts_resolve": {
+    method: "POST";
+    path: "/wallet/bank-accounts/resolve";
+    authenticated: true;
+    body: PostWalletBankAccountsResolveBody;
+    query: PostWalletBankAccountsResolveQuery;
+    pathParams: PostWalletBankAccountsResolvePath;
+    headers: PostWalletBankAccountsResolveHeaders;
+    response: PostWalletBankAccountsResolveResponse;
+  };
   "post__wallet_bank_accounts": {
     method: "POST";
     path: "/wallet/bank-accounts";
@@ -7041,26 +6983,6 @@ export interface ApiOperationMap {
     pathParams: DeleteWalletBankAccountsIdPath;
     headers: DeleteWalletBankAccountsIdHeaders;
     response: DeleteWalletBankAccountsIdResponse;
-  };
-  "post__wallet_transfers": {
-    method: "POST";
-    path: "/wallet/transfers";
-    authenticated: true;
-    body: PostWalletTransfersBody;
-    query: PostWalletTransfersQuery;
-    pathParams: PostWalletTransfersPath;
-    headers: PostWalletTransfersHeaders;
-    response: PostWalletTransfersResponse;
-  };
-  "post__wallet_withdrawals": {
-    method: "POST";
-    path: "/wallet/withdrawals";
-    authenticated: true;
-    body: PostWalletWithdrawalsBody;
-    query: PostWalletWithdrawalsQuery;
-    pathParams: PostWalletWithdrawalsPath;
-    headers: PostWalletWithdrawalsHeaders;
-    response: PostWalletWithdrawalsResponse;
   };
   "post__wallet_withdrawals_reference_finalize": {
     method: "POST";

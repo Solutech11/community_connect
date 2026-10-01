@@ -37,9 +37,6 @@ import TermsConditionsScreen from "../pages/tabs/terms-conditions";
 import UpdateProfileScreen from "../pages/tabs/update-profile-connected";
 import WalletScreen from "../pages/tabs/wallet-connected";
 import TransactionsScreen from "../pages/tabs/transactions-connected";
-import WalletTopUpScreen from "../pages/tabs/wallet-top-up-connected";
-import WalletWithdrawScreen from "../pages/tabs/wallet-withdraw-connected";
-import WalletTransferScreen from "../pages/tabs/wallet-transfer-connected";
 import WalletDisputeScreen from "../pages/tabs/wallet-dispute-connected";
 import BankAccountsScreen from "../pages/tabs/bank-accounts";
 import TransactionDetailsScreen from "../pages/tabs/transaction-details";
@@ -119,9 +116,6 @@ const DashboardTermsConditions = withDashboardLayout(TermsConditionsScreen);
 const DashboardUpdateProfile = withDashboardLayout(UpdateProfileScreen);
 const DashboardWallet = withDashboardLayout(WalletScreen);
 const DashboardTransactions = withDashboardLayout(TransactionsScreen);
-const DashboardWalletTopUp = withDashboardLayout(WalletTopUpScreen);
-const DashboardWalletWithdraw = withDashboardLayout(WalletWithdrawScreen);
-const DashboardWalletTransfer = withDashboardLayout(WalletTransferScreen);
 const DashboardWalletDispute = withDashboardLayout(WalletDisputeScreen);
 const DashboardBankAccounts = withDashboardLayout(BankAccountsScreen);
 const DashboardTransactionDetails = withDashboardLayout(
@@ -362,21 +356,6 @@ export default function RootStackNavigator({
           <Stack.Screen
             name="Transactions"
             component={DashboardTransactions}
-            options={{ animation: "slide_from_right" }}
-          />
-          <Stack.Screen
-            name="WalletTopUp"
-            component={DashboardWalletTopUp}
-            options={{ animation: "slide_from_right" }}
-          />
-          <Stack.Screen
-            name="WalletWithdraw"
-            component={DashboardWalletWithdraw}
-            options={{ animation: "slide_from_right" }}
-          />
-          <Stack.Screen
-            name="WalletTransfer"
-            component={DashboardWalletTransfer}
             options={{ animation: "slide_from_right" }}
           />
           <Stack.Screen

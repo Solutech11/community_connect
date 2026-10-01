@@ -6,6 +6,7 @@ const quote = (value) => JSON.stringify(value);
 
 function schemaType(schema, depth = 0) {
   if (!schema) return 'never';
+  if (schema.const !== undefined) return JSON.stringify(schema.const);
   if (schema.enum) return schema.enum.map(quote).join(' | ');
   if (schema.oneOf) return schema.oneOf.map((item) => schemaType(item, depth)).join(' | ');
   if (schema.anyOf) return schema.anyOf.map((item) => schemaType(item, depth)).join(' | ');
@@ -91,6 +92,7 @@ for (const [path, pathItem] of Object.entries(input.paths ?? {})) {
       authenticated: Boolean(operation.security?.length),
       body: requestMedia?.schema,
       response: successJson?.example,
+      responseSchema: operation.operationId === 'get__wallet' ? successJson?.schema : undefined,
       query: { type: 'object', properties: queryProperties, required: queryRequired, additionalProperties: false },
       pathParams: { type: 'object', properties: pathProperties, required: pathRequired, additionalProperties: false },
       headers: { type: 'object', properties: headerProperties, required: headerRequired, additionalProperties: false },
@@ -108,7 +110,7 @@ for (const operation of operations) {
   lines.push(`export type ${operation.name}Query = ${schemaType(operation.query)};`);
   lines.push(`export type ${operation.name}Path = ${schemaType(operation.pathParams)};`);
   lines.push(`export type ${operation.name}Headers = ${schemaType(operation.headers)};`);
-  lines.push(`export type ${operation.name}Response = ${operation.response ? exampleType(operation.response) : '{ success: true; message: string; data?: never }'};`);
+  lines.push(`export type ${operation.name}Response = ${operation.responseSchema ? schemaType(operation.responseSchema) : operation.response ? exampleType(operation.response) : '{ success: true; message: string; data?: never }'};`);
   lines.push('');
 }
 

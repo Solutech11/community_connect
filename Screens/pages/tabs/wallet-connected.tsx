@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Text,
   View,
+  AppState,
 } from "react-native";
 import AppLoader from "../../components/ui/app-loader";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -22,6 +23,7 @@ import type { RootStackParamList } from "../../types/navigation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Wallet">;
 type Wallet = GetWalletResponse["data"]["wallet"];
+type Payout = GetWalletResponse["data"]["payout"];
 type Transaction = GetWalletTransactionsResponse["data"]["transactions"][number];
 
 function money(kobo: number) {
@@ -34,30 +36,72 @@ function transactionTitle(type: string) {
 
 export default function WalletConnectedScreen({ navigation }: Props) {
   const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [payout, setPayout] = useState<Payout | null>(null);
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const clock = useRef({ remainingMs: 0, sampledAt: 0 });
+  const loadingRequest = useRef<{ signal?: AbortSignal } | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (refresh = false) => {
+  const load = useCallback(async (refresh = false, signal?: AbortSignal) => {
+    if (signal?.aborted || (loadingRequest.current && !loadingRequest.current.signal?.aborted)) return;
+    const activeRequest = { signal };
+    loadingRequest.current = activeRequest;
     refresh ? setRefreshing(true) : setLoading(true);
     setError(null);
     try {
       const [walletResponse, transactionsResponse] = await Promise.all([
-        walletApi.get(),
-        walletApi.transactions({ page: 1, limit: 5 }),
+        walletApi.get(signal),
+        walletApi.transactions({ page: 1, limit: 5 }, signal),
       ]);
+      if (signal?.aborted) return;
       setWallet(walletResponse.data.wallet);
+      setPayout(walletResponse.data.payout);
+      const schedule = walletResponse.data.payout;
+      clock.current = {
+        remainingMs: Math.max(0, Date.parse(schedule.nextPayoutAt) - Date.parse(schedule.serverTime)),
+        sampledAt: performance.now(),
+      };
+      setRemainingSeconds(Math.ceil(clock.current.remainingMs / 1000));
       setTransactions(transactionsResponse.data.transactions);
     } catch (requestError) {
+      if (signal?.aborted) return;
       setError(requestError instanceof ApiError ? requestError.message : "Unable to load your wallet.");
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (loadingRequest.current === activeRequest) loadingRequest.current = null;
+      if (!signal?.aborted) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  useFocusEffect(useCallback(() => {
+    const controller = new AbortController();
+    void load(false, controller.signal);
+    // Use a monotonic elapsed clock; changing the phone's time cannot move the
+    // server's midnight schedule. Refetch on foreground and across settlement.
+    const countdown = setInterval(() => {
+      const remaining = Math.max(0, clock.current.remainingMs - (performance.now() - clock.current.sampledAt));
+      setRemainingSeconds(Math.ceil(remaining / 1000));
+    }, 1000);
+    const refresh = setInterval(() => { void load(true, controller.signal); }, 30_000);
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") void load(true, controller.signal);
+    });
+    return () => {
+      controller.abort();
+      clearInterval(countdown);
+      clearInterval(refresh);
+      subscription.remove();
+    };
+  }, [load]));
+
+  const hours = String(Math.floor(remainingSeconds / 3600)).padStart(2, "0");
+  const minutes = String(Math.floor((remainingSeconds % 3600) / 60)).padStart(2, "0");
+  const seconds = String(remainingSeconds % 60).padStart(2, "0");
 
   return (
     <SafeAreaView edges={[]} style={styles.safe}>
@@ -67,32 +111,48 @@ export default function WalletConnectedScreen({ navigation }: Props) {
         {error ? <View style={styles.state}><Text style={styles.error}>{error}</Text><Pressable onPress={() => void load()} style={styles.retry}><Text style={styles.retryText}>Try again</Text></Pressable></View> : null}
         {wallet ? <>
           <View style={styles.card}>
-            <Text style={styles.label}>Available Balance</Text>
-            <Text style={styles.balance}>{money(wallet.availableBalanceKobo)}</Text>
+            <Text style={styles.label}>Wallet balance</Text>
+            <Text style={styles.balance}>{money(wallet.availableBalanceKobo + wallet.pendingBalanceKobo)}</Text>
             <View style={styles.footer}>
               <Text style={styles.mask}>{wallet.walletNumber}</Text>
               <Text style={styles.active}>{wallet.status}</Text>
             </View>
-            {wallet.pendingBalanceKobo ? <Text style={styles.pending}>Pending: {money(wallet.pendingBalanceKobo)}</Text> : null}
+            {wallet.pendingBalanceKobo ? <Text style={styles.pending}>Payout processing: {money(wallet.pendingBalanceKobo)}</Text> : null}
           </View>
-          <View style={styles.actions}>
-            {[
-              ["add-circle", "Top Up", "WalletTopUp"],
-              ["arrow-up", "Withdraw", "WalletWithdraw"],
-              ["swap-horizontal", "Transfer", "WalletTransfer"],
-              ["business-outline", "Banks", "BankAccounts"],
-            ].map(([icon, label, route]) => (
-              <Pressable key={label} onPress={() => {
-                if (route === "WalletTopUp") navigation.navigate("WalletTopUp");
-                else if (route === "WalletWithdraw") navigation.navigate("WalletWithdraw");
-                else if (route === "WalletTransfer") navigation.navigate("WalletTransfer");
-                else navigation.navigate("BankAccounts");
-              }} style={styles.action}>
-                <View style={styles.circle}><Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={25} color={label === "Top Up" ? "#08b657" : colors.ink} /></View>
-                <Text style={styles.actionText}>{label}</Text>
+          {payout ? (
+            <View style={styles.payoutCard}>
+              <View style={styles.payoutHeading}>
+                <Ionicons name="time-outline" size={22} color="#08b657" />
+                <Text style={styles.title}>Automatic payout</Text>
+              </View>
+              <Text style={styles.countdown}>{hours}:{minutes}:{seconds}</Text>
+              <Text style={styles.payoutCopy}>Daily at midnight (Africa/Lagos)</Text>
+              <Text style={styles.payoutCopy}>Minimum payout: {money(payout.minimumAmountKobo)}</Text>
+              <Text style={styles.payoutCopy}>
+                {payout.status === "paused"
+                  ? "Your wallet is paused. Contact support about your payout."
+                  : payout.status === "processing"
+                    ? "Your payout is processing. Your balance clears when the bank transfer is confirmed."
+                    : payout.status === "bank_required"
+                      ? "Your funds stay pending until you link a bank account. We will email you a reminder at each daily payout."
+                      : payout.status === "below_minimum"
+                        ? `Your balance is below ${money(payout.minimumAmountKobo)}. Funds stay in your wallet until you reach the minimum.`
+                        : payout.status === "empty"
+                        ? "Ticket and community earnings will appear here and be paid automatically."
+                        : "Your wallet balance will be sent to your linked bank at the next daily payout."}
+              </Text>
+              {payout.bankAccount ? (
+                <View style={styles.bankDetails}>
+                  <Text style={styles.txTitle}>{payout.bankAccount.bankName}</Text>
+                  <Text style={styles.payoutCopy}>{payout.bankAccount.accountName} - {payout.bankAccount.maskedAccountNumber}</Text>
+                </View>
+              ) : null}
+              <Pressable onPress={() => navigation.navigate("BankAccounts")} style={styles.bankButton}>
+                <Ionicons name="business-outline" size={19} color={colors.ink} />
+                <Text style={styles.retryText}>{payout.bankAccount ? "Manage bank accounts" : "Link bank account"}</Text>
               </Pressable>
-            ))}
-          </View>
+            </View>
+          ) : null}
           <View style={styles.heading}><Text style={styles.title}>Recent Transactions</Text><Pressable onPress={() => navigation.navigate("Transactions")}><Text style={styles.see}>See All</Text></Pressable></View>
           <View style={styles.list}>
             {transactions.length ? transactions.map((transaction) => (
@@ -102,7 +162,7 @@ export default function WalletConnectedScreen({ navigation }: Props) {
                 style={styles.row}
               >
                 <View style={[styles.txIcon, transaction.direction === "credit" && styles.credit]}><Ionicons name={transaction.direction === "credit" ? "arrow-down" : "arrow-up"} size={21} color={transaction.direction === "credit" ? "#08b657" : colors.ink} /></View>
-                <View style={styles.copy}><Text style={styles.txTitle}>{transactionTitle(transaction.type)}</Text><Text style={styles.date}>{transaction.status}</Text></View>
+                <View style={styles.copy}><Text style={styles.txTitle}>{transaction.type === "withdrawal" ? "Bank payout" : transactionTitle(transaction.type)}</Text><Text style={styles.date}>{transaction.status}</Text></View>
                 <Text style={[styles.amount, transaction.direction === "credit" && styles.green]}>{transaction.direction === "credit" ? "+" : "-"}{money(transaction.amountKobo)}</Text>
               </Pressable>
             )) : <Text style={styles.empty}>No wallet transactions yet.</Text>}
@@ -128,10 +188,32 @@ const styles = StyleSheet.create({
   mask: { color: "#d3ddd8", fontFamily: fonts.bold },
   active: { color: "#0ed666", fontFamily: fonts.bold, textTransform: "capitalize" },
   pending: { color: "#a9c4b7", fontFamily: fonts.medium, fontSize: 10, marginTop: 8 },
-  actions: { flexDirection: "row", justifyContent: "space-around", marginTop: 30 },
-  action: { alignItems: "center", width: 85 },
-  circle: { alignItems: "center", backgroundColor: colors.white, borderRadius: 30, height: 56, justifyContent: "center", width: 56 },
-  actionText: { color: colors.ink, fontFamily: fonts.bold, fontSize: 12, marginTop: 8 },
+  payoutCard: {
+    backgroundColor: colors.white,
+    borderRadius: 26,
+    marginTop: 20,
+    padding: 22,
+  },
+  payoutHeading: { alignItems: "center", flexDirection: "row", gap: 10 },
+  countdown: {
+    color: colors.ink,
+    fontFamily: fonts.extraBold,
+    fontSize: 32,
+    fontVariant: ["tabular-nums"],
+    marginTop: 16,
+  },
+  payoutCopy: { color: "#526b5f", fontFamily: fonts.medium, fontSize: 12, lineHeight: 19, marginTop: 7 },
+  bankDetails: { borderTopColor: "#e9efec", borderTopWidth: 1, marginTop: 16, paddingTop: 14 },
+  bankButton: {
+    alignItems: "center",
+    backgroundColor: colors.lime,
+    borderRadius: 24,
+    flexDirection: "row",
+    gap: 9,
+    justifyContent: "center",
+    marginTop: 18,
+    paddingVertical: 13,
+  },
   heading: { flexDirection: "row", justifyContent: "space-between", marginTop: 33 },
   title: { color: colors.ink, fontFamily: fonts.extraBold, fontSize: 19 },
   see: { color: "#08b657", fontFamily: fonts.bold },
