@@ -1,4 +1,4 @@
-const DEFAULT_API_URL = "http://192.168.1.10:5000/api/v1";
+const DEFAULT_API_URL = "https://communty-connect-api.onrender.com/api/v1";
 
 function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, "");
