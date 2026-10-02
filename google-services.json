@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "350619962710",
+    "project_id": "communityconnect-6c368",
+    "storage_bucket": "communityconnect-6c368.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:350619962710:android:ed00625fe64f156e5bdaf7",
+        "android_client_info": {
+          "package_name": "com.solutech.community_connect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAluvM-PPE766ktLg0Y7IR3VhUQzXe63_M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -46,7 +46,8 @@
         "android.permission.BLUETOOTH"
       ],
       "softwareKeyboardLayoutMode": "pan",
-      "package": "com.solutech.community_connect"
+      "package": "com.solutech.community_connect",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/community-connect-app-icon.png"
