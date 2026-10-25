@@ -230,7 +230,8 @@ async function rawRequest<T>(
   }
 
   const shouldRefreshAfterUnauthorized =
-    authenticated || (options.includeAccessToken === true && accessToken !== null);
+    authenticated ||
+    (options.includeAccessToken === true && accessToken !== null);
   if (
     response.status === 401 &&
     shouldRefreshAfterUnauthorized &&
@@ -357,28 +358,103 @@ function interpolatePath(path: string, params?: Record<string, string>) {
   });
 }
 
-const operations: Record<
-  ApiOperationId,
-  { method: HttpMethod; path: string; authenticated: boolean }
-> = {
-  get__roommates_questions: { method: "GET", path: "/roommates/questions", authenticated: true },
-  get__roommates_profiles_me: { method: "GET", path: "/roommates/profiles/me", authenticated: true },
-  put__roommates_profiles_me: { method: "PUT", path: "/roommates/profiles/me", authenticated: true },
-  patch__roommates_profiles_me_visibility: { method: "PATCH", path: "/roommates/profiles/me/visibility", authenticated: true },
-  get__roommates_candidates: { method: "GET", path: "/roommates/candidates", authenticated: true },
-  put__roommates_decisions_userId_: { method: "PUT", path: "/roommates/decisions/:userId", authenticated: true },
-  get__roommates_connections: { method: "GET", path: "/roommates/connections", authenticated: true },
-  get__roommates_connections_id_: { method: "GET", path: "/roommates/connections/:id", authenticated: true },
-  delete__roommates_connections_id_: { method: "DELETE", path: "/roommates/connections/:id", authenticated: true },
-  put__roommates_connections_id_contact_consents_me: { method: "PUT", path: "/roommates/connections/:id/contact-consents/me", authenticated: true },
-  delete__roommates_connections_id_contact_consents_me: { method: "DELETE", path: "/roommates/connections/:id/contact-consents/me", authenticated: true },
-  get__roommates_connections_id_contacts: { method: "GET", path: "/roommates/connections/:id/contacts", authenticated: true },
-  post__roommates_connections_id_requests: { method: "POST", path: "/roommates/connections/:id/requests", authenticated: true },
-  patch__roommates_connections_id_requests_requestId_: { method: "PATCH", path: "/roommates/connections/:id/requests/:requestId", authenticated: true },
-  delete__roommates_connections_id_pairing: { method: "DELETE", path: "/roommates/connections/:id/pairing", authenticated: true },
-  get__users_me_blocks: { method: "GET", path: "/users/me/blocks", authenticated: true },
-  put__users_me_blocks_userId_: { method: "PUT", path: "/users/me/blocks/:userId", authenticated: true },
-  delete__users_me_blocks_userId_: { method: "DELETE", path: "/users/me/blocks/:userId", authenticated: true },
+// Keep runtime routes identical to the generated OpenAPI contracts.
+const operations: {
+  [Id in ApiOperationId]: Pick<
+    ApiOperationMap[Id],
+    "method" | "path" | "authenticated"
+  >;
+} = {
+  get__roommates_questions: {
+    method: "GET",
+    path: "/roommates/questions",
+    authenticated: true,
+  },
+  get__roommates_profiles_me: {
+    method: "GET",
+    path: "/roommates/profiles/me",
+    authenticated: true,
+  },
+  put__roommates_profiles_me: {
+    method: "PUT",
+    path: "/roommates/profiles/me",
+    authenticated: true,
+  },
+  patch__roommates_profiles_me_visibility: {
+    method: "PATCH",
+    path: "/roommates/profiles/me/visibility",
+    authenticated: true,
+  },
+  get__roommates_candidates: {
+    method: "GET",
+    path: "/roommates/candidates",
+    authenticated: true,
+  },
+  put__roommates_decisions_userId_: {
+    method: "PUT",
+    path: "/roommates/decisions/{userId}",
+    authenticated: true,
+  },
+  get__roommates_connections: {
+    method: "GET",
+    path: "/roommates/connections",
+    authenticated: true,
+  },
+  get__roommates_connections_id_: {
+    method: "GET",
+    path: "/roommates/connections/{id}",
+    authenticated: true,
+  },
+  delete__roommates_connections_id_: {
+    method: "DELETE",
+    path: "/roommates/connections/{id}",
+    authenticated: true,
+  },
+  put__roommates_connections_id_contact_consents_me: {
+    method: "PUT",
+    path: "/roommates/connections/{id}/contact-consents/me",
+    authenticated: true,
+  },
+  delete__roommates_connections_id_contact_consents_me: {
+    method: "DELETE",
+    path: "/roommates/connections/{id}/contact-consents/me",
+    authenticated: true,
+  },
+  get__roommates_connections_id_contacts: {
+    method: "GET",
+    path: "/roommates/connections/{id}/contacts",
+    authenticated: true,
+  },
+  post__roommates_connections_id_requests: {
+    method: "POST",
+    path: "/roommates/connections/{id}/requests",
+    authenticated: true,
+  },
+  patch__roommates_connections_id_requests_requestId_: {
+    method: "PATCH",
+    path: "/roommates/connections/{id}/requests/{requestId}",
+    authenticated: true,
+  },
+  delete__roommates_connections_id_pairing: {
+    method: "DELETE",
+    path: "/roommates/connections/{id}/pairing",
+    authenticated: true,
+  },
+  get__users_me_blocks: {
+    method: "GET",
+    path: "/users/me/blocks",
+    authenticated: true,
+  },
+  put__users_me_blocks_userId_: {
+    method: "PUT",
+    path: "/users/me/blocks/{userId}",
+    authenticated: true,
+  },
+  delete__users_me_blocks_userId_: {
+    method: "DELETE",
+    path: "/users/me/blocks/{userId}",
+    authenticated: true,
+  },
   post__auth_register: {
     method: "POST",
     path: "/auth/register",

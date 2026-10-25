@@ -6,7 +6,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "api:roommates": "node scripts/generate-roommate-types.ts"
+    "api:roommates": "node scripts/generate-roommate-types.ts",
+    "test:roommates": "node --experimental-strip-types --test scripts/roommates-integration.test.mts"
   },
   "dependencies": {
     "@config-plugins/react-native-webrtc": "15.0.2",
