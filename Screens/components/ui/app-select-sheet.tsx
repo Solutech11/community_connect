@@ -1,4 +1,4 @@
-﻿import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
@@ -123,7 +123,7 @@ export default function AppSelectSheet({
         <Pressable
           accessibilityLabel="Close selection"
           onPress={close}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         />
         <KeyboardAvoidingView
           behavior="padding"

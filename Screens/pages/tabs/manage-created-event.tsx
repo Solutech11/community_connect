@@ -251,7 +251,7 @@ const s = StyleSheet.create({
   shade: {
     backgroundColor: "rgba(0,0,0,.38)",
     borderRadius: 38,
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   live: {
     alignSelf: "flex-start",

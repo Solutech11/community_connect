@@ -348,7 +348,7 @@ export default function CommunityRoomScreen({ navigation, route }: Props) {
 
       <Modal animationType="fade" transparent visible={menuVisible} onRequestClose={() => setMenuVisible(false)}>
         <View style={styles.menuOverlay}>
-          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setMenuVisible(false)} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setMenuVisible(false)} />
           <View style={styles.menuSheet}>
             <Pressable onPress={handleLeaveGroup} style={styles.menuItem}>
               <View style={styles.menuIconWrap}>

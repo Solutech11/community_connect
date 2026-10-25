@@ -126,7 +126,7 @@ export default function EventTicketSheet({
         <Pressable
           accessibilityLabel="Close ticket selection"
           onPress={onClose}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         />
         <SafeAreaView edges={["bottom"]} style={styles.sheet}>
           <View style={styles.handle} />

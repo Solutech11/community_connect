@@ -186,7 +186,7 @@ export default function NotificationsScreen({ navigation }: Props) {
           <Pressable
             accessibilityLabel="Close notification details"
             onPress={() => setSelectedNotification(null)}
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
           />
           {selectedNotification ? (
             <View accessibilityViewIsModal style={styles.detailCard}>

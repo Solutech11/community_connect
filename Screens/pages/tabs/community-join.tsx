@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 52,
   },
   heroShade: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.16)',
   },
   heroCopy: {

@@ -91,7 +91,7 @@ export default function AppAlertModal(props: AppAlertModalProps) {
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
 
         <View style={styles.card}>
           <Text style={styles.title}>{title}</Text>

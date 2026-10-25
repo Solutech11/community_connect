@@ -119,7 +119,7 @@ The user's request to keep Paystack inside the app is still outstanding.
 
 Recommended implementation:
 
-1. Check Expo SDK 54 documentation and install the compatible package with Yarn/Expo, normally `yarn expo install react-native-webview`.
+1. Check Expo SDK 57 documentation and install the compatible package with Yarn/Expo, normally `yarn expo install react-native-webview`.
 2. Build one reusable typed Paystack WebView screen/modal rather than duplicating WebViews.
 3. Allow only expected HTTPS Paystack/navigation URLs and handle cancel, back, load error, and close states.
 4. Treat WebView redirects/callbacks only as a signal to call the documented backend verification endpoint.
@@ -200,7 +200,7 @@ Latest completed checks:
 
 Read the root `AGENTS.md` before continuing. In particular:
 
-- Use Yarn and remain compatible with Expo SDK 54.
+- Use Yarn and remain compatible with Expo SDK 57.
 - Do not call `fetch` or Axios directly from route screens.
 - Do not invent API fields, routes, or Socket.IO events.
 - Store refresh tokens and biometric credentials only in SecureStore, never AsyncStorage.

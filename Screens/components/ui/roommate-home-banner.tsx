@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   photoShade: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     paddingHorizontal: 8,
     paddingBottom: 12,
     justifyContent: "flex-end",

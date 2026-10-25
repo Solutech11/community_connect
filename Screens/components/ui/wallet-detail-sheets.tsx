@@ -1,4 +1,4 @@
-﻿import { Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, fonts } from "../../styles/theme";
 
@@ -20,7 +20,7 @@ function Shell({
       onRequestClose={onClose}
     >
       <View style={s.overlay}>
-        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={s.sheet}>
           <View style={s.handle} />
           {children}

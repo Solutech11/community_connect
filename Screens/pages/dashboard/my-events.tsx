@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 30,
   },
   imageShade: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(7, 19, 13, 0.4)',
   },
   dateBadge: {

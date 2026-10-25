@@ -57,7 +57,7 @@ export default function TicketSelectionScreen({ navigation, route }: Props) {
 
   return (
     <View style={styles.overlay}>
-      <Pressable style={StyleSheet.absoluteFillObject} onPress={() => navigation.goBack()} />
+      <Pressable style={StyleSheet.absoluteFill} onPress={() => navigation.goBack()} />
 
       <SafeAreaView style={styles.safeArea} edges={[]}>
         <View style={styles.sheetWrap}>

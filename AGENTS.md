@@ -8,7 +8,7 @@ The companion website lives at `C:\Users\soluw\Documents\Lincoln\Community_Conne
 
 ## Expo Version
 
-- The app is currently aligned to Expo SDK 54 by project decision.
+- The app is currently aligned to Expo SDK 57 by project decision.
 - Before changing Expo, React Native, navigation, animation, or native package setup, check the exact Expo docs for the target SDK version.
 - Use Yarn for dependency changes.
 

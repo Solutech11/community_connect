@@ -33,7 +33,7 @@ export default function AppLoadingScreen({ message = "Preparing your community e
 
   return (
     <LinearGradient colors={["#03150e", colors.forest, "#0a3525"]} end={{ x: 1, y: 1 }} start={{ x: 0, y: 0 }} style={styles.screen}>
-      <StatusBar style="light" backgroundColor="#03150e" />
+      <StatusBar style="light" />
       <View pointerEvents="none" style={styles.ambientTop} />
       <View pointerEvents="none" style={styles.ambientBottom} />
       <Animated.View style={[styles.stage, { transform: [{ translateY: driftY }] }]}>

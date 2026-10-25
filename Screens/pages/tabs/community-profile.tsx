@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.paper },
   content: { backgroundColor: colors.paper, paddingBottom: 24 },
   hero: { height: android ? 218 : 300 },
-  heroShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.2)' },
+  heroShade: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.2)' },
   backButton: { position: 'absolute', top: android ? 14 : 28, left: android ? 18 : 28, width: android ? 44 : 58, height: android ? 44 : 58, borderRadius: 30, backgroundColor: 'rgba(7,31,23,0.58)', alignItems: 'center', justifyContent: 'center' },
   identity: { alignItems: 'center', backgroundColor: colors.white, paddingBottom: android ? 16 : 20, elevation: android ? 2 : 0 },
   avatar: { width: android ? 104 : 150, height: android ? 104 : 150, borderRadius: 80, borderWidth: android ? 4 : 5, borderColor: colors.white, marginTop: android ? -52 : -76 },

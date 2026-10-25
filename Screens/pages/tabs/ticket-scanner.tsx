@@ -209,7 +209,7 @@ export default function TicketScannerScreen({ navigation, route }: Props) {
           <View style={styles.body}>
             <View style={styles.cameraWrap}>
               <CameraView
-                style={StyleSheet.absoluteFillObject}
+                style={StyleSheet.absoluteFill}
                 barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
                 onBarcodeScanned={result ? undefined : handleBarcodeScanned}
               />
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     height: 440,
     overflow: "hidden",
   },
-  dim: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,.18)" },
+  dim: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,.18)" },
   frame: { alignSelf: "center", height: 230, marginTop: 82, width: 230 },
   corner: {
     borderColor: colors.lime,

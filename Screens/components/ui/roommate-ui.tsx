@@ -592,7 +592,7 @@ export const roommateStyles = StyleSheet.create({
     backgroundColor: colors.forest,
   },
   heroShade: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: "flex-end",
     padding: 22,
     gap: 8,

@@ -739,7 +739,7 @@ const styles = StyleSheet.create({
   coverImage: { height: 164, justifyContent: "flex-end", padding: 14 },
   coverImageRadius: { borderTopLeftRadius: 24, borderTopRightRadius: 24 },
   coverShade: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(3, 25, 14, 0.22)",
   },
   dateBadge: {

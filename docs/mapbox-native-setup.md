@@ -1,6 +1,6 @@
 # Mapbox native setup
 
-The event location picker uses `@rnmapbox/maps` and requires an Expo development build. It does not run in Expo Go. Expo SDK 54 defaults to React Native's New Architecture, which is required by the installed Mapbox package.
+The event location picker uses `@rnmapbox/maps` and requires an Expo development build. It does not run in Expo Go. Expo SDK 57 uses React Native's New Architecture, which is required by the installed Mapbox package.
 
 ## Public map token
 

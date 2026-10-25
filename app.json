@@ -3,15 +3,9 @@
     "name": "Community Connect",
     "slug": "community_connect",
     "version": "1.0.0",
-    "newArchEnabled": true,
     "orientation": "portrait",
     "icon": "./assets/community-connect-app-icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/community-connect-android-foreground.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0E3B2A"
-    },
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
@@ -53,6 +47,14 @@
       "favicon": "./assets/community-connect-app-icon.png"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/community-connect-android-foreground.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0E3B2A"
+        }
+      ],
       [
         "expo-camera",
         {

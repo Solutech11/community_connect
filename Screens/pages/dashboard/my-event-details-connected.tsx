@@ -267,7 +267,7 @@ export default function MyEventDetailsConnectedScreen({
   if (loading || !details) {
     return (
       <SafeAreaView style={styles.loadingPage}>
-        <StatusBar style="dark" backgroundColor={colors.paper} />
+        <StatusBar style="dark" />
         {loading ? (
           <AppLoader color="#08b657" size="large" />
         ) : (
@@ -492,7 +492,7 @@ export default function MyEventDetailsConnectedScreen({
 
   return (
     <View style={styles.page}>
-      <StatusBar style="light" backgroundColor="transparent" translucent />
+      <StatusBar style="light" />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -504,7 +504,7 @@ export default function MyEventDetailsConnectedScreen({
         >
           <LinearGradient
             colors={["rgba(0,0,0,0.36)", "rgba(0,0,0,0)"]}
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
           />
           <View style={[styles.heroActions, { paddingTop: insets.top + 10 }]}>
             <Pressable

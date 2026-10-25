@@ -20,7 +20,7 @@ export default function TicketQrModal({ eventId, eventTitle, visible, onClose }:
   return (
     <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <Pressable accessibilityLabel="Close QR code" onPress={onClose} style={StyleSheet.absoluteFillObject} />
+        <Pressable accessibilityLabel="Close QR code" onPress={onClose} style={StyleSheet.absoluteFill} />
         <View style={styles.card}>
           <Pressable accessibilityLabel="Close" onPress={onClose} style={styles.closeButton}>
             <Ionicons name="close" size={20} color={colors.ink} />

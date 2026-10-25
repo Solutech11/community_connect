@@ -1407,7 +1407,7 @@ const styles = StyleSheet.create({
     paddingTop: 54,
   },
   heroShade: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(4,24,15,0.28)",
   },
   heroAction: {

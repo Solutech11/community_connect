@@ -80,7 +80,9 @@ function AppNavigation() {
           title: content.title ?? "New community update",
           message: content.body ?? undefined,
           tone: "info",
-          onPress: () => navigateFromNotification(content.data),
+          onPress: () => {
+            if (content.data) navigateFromNotification(content.data);
+          },
         });
       },
     );
@@ -146,9 +148,9 @@ function AppNavigation() {
       pendingNotificationResponse.notification.request.identifier;
     if (lastHandledNotificationId.current !== notificationId) {
       lastHandledNotificationId.current = notificationId;
-      navigateFromNotification(
-        pendingNotificationResponse.notification.request.content.data,
-      );
+      const notificationData =
+        pendingNotificationResponse.notification.request.content.data;
+      if (notificationData) navigateFromNotification(notificationData);
     }
     setPendingNotificationResponse(null);
     void Notifications.clearLastNotificationResponseAsync().catch(() => {
@@ -164,7 +166,7 @@ function AppNavigation() {
       ref={navigationRef}
       onReady={() => setNavigationReady(true)}
     >
-      <StatusBar style="dark" backgroundColor="#f7fbf9" />
+      <StatusBar style="dark" />
       <RootStackNavigator
         authenticated={isAuthenticated}
         authenticatedStartRoute={authenticatedStartRoute}

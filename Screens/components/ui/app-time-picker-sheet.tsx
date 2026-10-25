@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -67,7 +67,7 @@ export default function AppTimePickerSheet({
         <Pressable
           accessibilityLabel="Close time picker"
           onPress={onClose}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         />
         <SafeAreaView edges={["bottom"]} style={styles.sheet}>
           <View style={styles.handle} />

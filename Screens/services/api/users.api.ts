@@ -7,6 +7,7 @@ import type {
 } from "../../types/api.generated";
 import type { ImageUpload } from "../../types/api";
 import { apiClient } from "./client";
+import { appendUploadFile } from "./upload-form-data";
 
 export const usersApi = {
   me: (signal?: AbortSignal) => apiClient.request("get__users_me", { signal }),
@@ -14,7 +15,7 @@ export const usersApi = {
     apiClient.request("patch__users_me", { body, signal }),
   updateAvatar: async (image: ImageUpload, signal?: AbortSignal) => {
     const formData = new FormData();
-    formData.append("image", image as unknown as Blob);
+    appendUploadFile(formData, "image", image);
     return apiClient.upload<PatchUsersMeAvatarResponse>(
       "/users/me/avatar",
       formData,

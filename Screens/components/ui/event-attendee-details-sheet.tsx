@@ -101,7 +101,7 @@ export default function EventAttendeeDetailsSheet({
         <Pressable
           accessibilityLabel="Close attendee details"
           onPress={onClose}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         />
         <SafeAreaView edges={["bottom"]} style={styles.sheet}>
           <View style={styles.handle} />

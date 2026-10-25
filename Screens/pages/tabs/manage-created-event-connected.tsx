@@ -1287,7 +1287,7 @@ const styles = StyleSheet.create({
   },
   heroImage: { borderRadius: 30 },
   heroShade: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0, 0, 0, 0.42)",
   },
   coverEdit: {
