@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, type ComponentProps } from 'react';
 import {
   Modal,
   Pressable,
@@ -24,13 +25,16 @@ import type { RootStackParamList } from '../../types/navigation';
 type Props = NativeStackScreenProps<RootStackParamList, 'Notifications'>;
 type NotificationDto = GetNotificationsResponse['data']['notifications'][number];
 type NotificationView = NotificationDto & { readAt?: string };
-type NotificationFilter = 'All' | 'Events' | 'Communities' | 'Friends' | 'Roommates';
+type NotificationFilter = 'All' | 'Activity' | 'Events' | 'Communities' | 'Friends' | 'Roommates';
+const NOTIFICATION_PAGE_SIZE = 100;
 
 function categoryFor(type: string): Exclude<NotificationFilter, 'All'> {
+  if (/^activity_|^account_welcome$/i.test(type)) return 'Activity';
   if (/^roommate_/i.test(type)) return 'Roommates';
-  if (/friend|connection|request/i.test(type)) return 'Friends';
   if (/community|group|member/i.test(type)) return 'Communities';
-  return 'Events';
+  if (/friend|connection|request/i.test(type)) return 'Friends';
+  if (/event|ticket/i.test(type)) return 'Events';
+  return 'Activity';
 }
 
 function wasRead(item: NotificationView) {
@@ -40,36 +44,55 @@ function wasRead(item: NotificationView) {
 export default function NotificationsScreen({ navigation }: Props) {
   const [filter, setFilter] = useState<NotificationFilter>('All');
   const [notifications, setNotifications] = useState<NotificationView[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const [nextPage, setNextPage] = useState<number | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
   const [selectedNotification, setSelectedNotification] = useState<NotificationView | null>(null);
   const readRequests = useRef(new Set<string>());
 
-  const load = useCallback(async (refresh = false) => {
-    refresh ? setRefreshing(true) : setLoading(true);
+  const load = useCallback(async (refresh = false, signal?: AbortSignal, page = 1) => {
+    if (page === 1) {
+      refresh ? setRefreshing(true) : setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
     try {
-      const response = await notificationsApi.list({ page: 1, limit: 100 });
-      setNotifications(response.data.notifications);
+      const response = await notificationsApi.list({ page, limit: NOTIFICATION_PAGE_SIZE }, signal);
+      setNotifications((current) => {
+        if (page === 1) return response.data.notifications;
+        const existingIds = new Set(current.map((notification) => notification._id));
+        return [
+          ...current,
+          ...response.data.notifications.filter((notification) => !existingIds.has(notification._id)),
+        ];
+      });
+      setUnreadCount(response.data.unread);
+      setTotalCount(response.data.pagination.total);
+      setNextPage(page * NOTIFICATION_PAGE_SIZE < response.data.pagination.total ? page + 1 : null);
     } catch (error) {
+      if (error instanceof ApiError && error.code === 'REQUEST_CANCELLED') return;
       setNotice({ title: 'Notifications unavailable', message: error instanceof ApiError ? error.message : 'Unable to load notifications.' });
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (!signal?.aborted) {
+        if (page === 1) {
+          setLoading(false);
+          setRefreshing(false);
+        } else {
+          setLoadingMore(false);
+        }
+      }
     }
   }, []);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     const controller = new AbortController();
-    notificationsApi.list({ page: 1, limit: 100 }, controller.signal)
-      .then((response) => setNotifications(response.data.notifications))
-      .catch((error: unknown) => {
-        if (error instanceof ApiError && error.code === 'REQUEST_CANCELLED') return;
-        setNotice({ title: 'Notifications unavailable', message: error instanceof ApiError ? error.message : 'Unable to load notifications.' });
-      })
-      .finally(() => setLoading(false));
+    void load(false, controller.signal);
     return () => controller.abort();
-  }, []);
+  }, [load]));
 
   const visible = useMemo(
     () => notifications.filter((item) => filter === 'All' || categoryFor(item.type) === filter),
@@ -86,6 +109,10 @@ export default function NotificationsScreen({ navigation }: Props) {
     }
   };
 
+  const loadOlder = () => {
+    if (nextPage === null || loadingMore) return;
+    void load(false, undefined, nextPage);
+  };
   const openNotification = (item: NotificationView) => {
     lightTap();
     if (item.type.startsWith('roommate_')) {
@@ -108,6 +135,7 @@ export default function NotificationsScreen({ navigation }: Props) {
 
     void notificationsApi.markRead(item._id)
       .then((response) => {
+        setUnreadCount((count) => Math.max(0, count - 1));
         setNotifications((current) =>
           current.map((notification) =>
             notification._id === item._id
@@ -149,12 +177,16 @@ export default function NotificationsScreen({ navigation }: Props) {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.filters}>
-            {(['All', 'Events', 'Communities', 'Friends', 'Roommates'] as NotificationFilter[]).map((item) => (
+            {(['All', 'Activity', 'Events', 'Communities', 'Friends', 'Roommates'] as NotificationFilter[]).map((item) => (
               <Pressable key={item} onPress={() => setFilter(item)} style={[styles.filter, filter === item && styles.filterActive]}>
                 <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>{item}</Text>
               </Pressable>
             ))}
           </View>
+
+          <Text accessibilityLiveRegion="polite" style={styles.summary}>
+            {totalCount} updates · {unreadCount} unread
+          </Text>
 
           <View style={styles.list}>
             {loading ? <Text style={styles.stateText}>Loading notifications...</Text> : null}
@@ -162,7 +194,7 @@ export default function NotificationsScreen({ navigation }: Props) {
             {visible.map((item) => (
               <Pressable key={item._id} onPress={() => openNotification(item)} style={[styles.card, !wasRead(item) && styles.cardUnread]}>
                 <View style={styles.iconWrap}>
-                  <Ionicons color="#08b657" name={categoryFor(item.type) === 'Roommates' ? 'home-outline' : categoryFor(item.type) === 'Friends' ? 'person-add' : categoryFor(item.type) === 'Communities' ? 'people' : 'calendar'} size={22} />
+                  <Ionicons color="#08b657" name={iconFor(item.type)} size={22} />
                 </View>
                 <View style={styles.copy}>
                   <Text style={styles.messageStrong}>{item.title}</Text>
@@ -172,6 +204,13 @@ export default function NotificationsScreen({ navigation }: Props) {
                 {!wasRead(item) ? <View style={styles.unreadDot} /> : null}
               </Pressable>
             ))}
+            {nextPage !== null ? (
+              <Pressable accessibilityRole="button" disabled={loadingMore} onPress={loadOlder} style={styles.loadMore}>
+                <Text style={styles.loadMoreText}>
+                  {loadingMore ? 'Loading older updates...' : 'Load older updates'}
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -194,15 +233,7 @@ export default function NotificationsScreen({ navigation }: Props) {
                 <View style={styles.detailIcon}>
                   <Ionicons
                     color="#08b657"
-                    name={
-                      categoryFor(selectedNotification.type) === 'Roommates'
-                        ? 'home-outline'
-                        : categoryFor(selectedNotification.type) === 'Friends'
-                          ? 'person-add'
-                          : categoryFor(selectedNotification.type) === 'Communities'
-                            ? 'people'
-                            : 'calendar'
-                    }
+                    name={iconFor(selectedNotification.type)}
                     size={22}
                   />
                 </View>
@@ -237,10 +268,22 @@ export default function NotificationsScreen({ navigation }: Props) {
   );
 }
 
+function iconFor(type: string): ComponentProps<typeof Ionicons>['name'] {
+  const category = categoryFor(type);
+  if (category === 'Roommates') return 'home-outline';
+  if (category === 'Friends') return 'person-add';
+  if (category === 'Communities') return 'people';
+  if (category === 'Activity') return 'time-outline';
+  return 'calendar';
+}
+
 const styles = StyleSheet.create({
   safeArea: { backgroundColor: colors.paper, flex: 1 },
   content: { paddingBottom: 48, paddingHorizontal: 24 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 18 },
+  summary: { color: colors.muted, fontFamily: fonts.bold, fontSize: 12, marginTop: 18 },
+  loadMore: { alignItems: 'center', backgroundColor: colors.white, borderColor: '#e5eee9', borderRadius: 18, borderWidth: 1, paddingVertical: 14 },
+  loadMoreText: { color: '#38945f', fontFamily: fonts.bold, fontSize: 13 },
   filter: { alignItems: 'center', backgroundColor: colors.white, borderColor: '#e5eee9', borderRadius: 22, borderWidth: 1, paddingHorizontal: 18, paddingVertical: 9 },
   filterActive: { backgroundColor: '#08b657', borderColor: '#08b657' },
   filterText: { color: '#38945f', fontFamily: fonts.bold, fontSize: 13 },
